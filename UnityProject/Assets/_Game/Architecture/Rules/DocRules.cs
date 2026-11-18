@@ -119,7 +119,7 @@ namespace Game.Architecture.Rules
             {
                 string path = (unity ? Layout.Unity : "") + Regex.Replace(token, @":\d+$", "").TrimEnd('/');
                 var segments = path.Split('/');
-                if (path.IndexOfAny(new[] { '<', '>', '*', '{', ' ', '|' }) >= 0 || segments.Any(s => Placeholders.Contains(s) || s.StartsWith("<", StringComparison.Ordinal)))
+                if (path.IndexOfAny(new[] { '<', '>', '*', '{', ' ', '|' }) >= 0 || segments.Any(s => Placeholders.Contains(s) || s.StartsWith("<", StringComparison.Ordinal) || s.EndsWith("...", StringComparison.Ordinal) || s.EndsWith("…", StringComparison.Ordinal))) // "..." = "and so on"
                     return null;
                 return File.Exists(Path.Combine(_root, path)) || Directory.Exists(Path.Combine(_root, path)) ? null : "path does not exist";
             }

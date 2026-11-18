@@ -530,6 +530,7 @@ namespace Game.Architecture.Tests
             MinimalProject();
             Write("Docs/guide.md",
                 "Valid: `Assets/_Game/Core/Runtime/Foo.cs` `Foo.Baz()` `Game.Core.Foo` `Activator.CreateInstance` `Assets/_Game/Features/X/Logic`\n" +
+                "Placeholders (on every OS; Windows drops trailing dots, Linux does not): `Assets/_Game/...` `UnityProject/Assets/...` `Tools/Gone...`\n" +
                 "Broken: `Assets/_Game/Core/Runtime/Gone.cs` `Foo.Removed` `Game.Nope.Contracts`\n" +
                 "```\n`Assets/_Game/InsideFence.cs`\n```\n");
 
