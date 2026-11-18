@@ -157,24 +157,21 @@ namespace TestGate.AgentControl
                 string trust = TrustOf(e);
                 string title = TitleOf(e);
 
-                // Collapse runs of browsing (Read/Grep/...) in the same lane into one node.
-                bool browse = e.Type == EventTypes.ToolUsed && Browsing.Contains(e.Get("tool") ?? "");
-                if (browse && last != null && last.Lane == lane.Id && last.Kind == "browse")
+                // Collapse runs of the same group in the same lane into one node (StepGroups); the evidence below still sees every event.
+                string group = StepGroups.Of(e);
+                if (StepGroups.Joins(e, group, last, lane.Id))
+                    StepGroups.Join(last, e, trust);
+                else
                 {
-                    last.Seqs.Add(e.Seq);
-                    last.Title = "Đọc / tìm × " + last.Seqs.Count;
-                    last.Detail = last.Detail.Split('\n').Length < 25 ? last.Detail + "\n" + Describe(e) : last.Detail;
-                    continue;
+                    var step = new StepView
+                    {
+                        Seq = e.Seq, Seqs = { e.Seq }, Ts = e.Ts, Lane = lane.Id, Kind = group ?? KindOf(e),
+                        Title = group != null ? StepGroups.FirstTitle(group, e) : title, Detail = Describe(e), Trust = trust, Source = e.Source, Hash = e.Hash
+                    };
+                    m.Steps.Add(step);
+                    last = step;
+                    lane.Steps++;
                 }
-
-                var step = new StepView
-                {
-                    Seq = e.Seq, Seqs = { e.Seq }, Ts = e.Ts, Lane = lane.Id, Kind = browse ? "browse" : KindOf(e),
-                    Title = browse ? "Đọc / tìm × 1" : title, Detail = Describe(e), Trust = trust, Source = e.Source, Hash = e.Hash
-                };
-                m.Steps.Add(step);
-                last = step;
-                lane.Steps++;
 
                 if (trust == Trust.Violation || trust == Trust.Unobserved)
                     violationsSinceClaim[lane.Id] = (violationsSinceClaim.TryGetValue(lane.Id, out var vc) ? vc : 0) + 1;
@@ -202,7 +199,7 @@ namespace TestGate.AgentControl
                     case EventTypes.UnobservedChange:
                     case EventTypes.FileBaseline:
                         string path = e.Get("path");
-                        if (path == null)
+                        if (path == null || StepGroups.IsOutsideRepo(e))
                             break;
                         if (!fileMap.TryGetValue(path, out var f))
                             fileMap[path] = f = new FileView { Path = path, Trust = Trust.Observed };
@@ -267,7 +264,7 @@ namespace TestGate.AgentControl
             m.Counts["events"] = events.Count;
             m.Counts["denied"] = events.Count(e => e.Type == EventTypes.PolicyDenied);
             m.Counts["violations"] = events.Count(e => TrustOf(e) == Trust.Violation);
-            m.Counts["unobserved"] = events.Count(e => e.Type == EventTypes.UnobservedChange);
+            m.Counts["unobserved"] = events.Count(e => TrustOf(e) == Trust.Unobserved);
             m.Counts["gatesPassed"] = m.Gates.Count(g => g.Result == "passed");
             m.Counts["gatesFailed"] = m.Gates.Count(g => g.Result == "failed");
             m.Counts["gatesPending"] = m.Gates.Count(g => g.Result == "pending");
@@ -283,6 +280,9 @@ namespace TestGate.AgentControl
 
         public static string TrustOf(AgentEvent e)
         {
+            // The gate governs the repository; scratchpad/memory files outside it are recorded, but they are not anomalies.
+            if ((e.Type == EventTypes.FileModified || e.Type == EventTypes.UnobservedChange) && StepGroups.IsOutsideRepo(e))
+                return Trust.Info;
             switch (e.Type)
             {
                 case EventTypes.PolicyDenied: return Trust.Denied;

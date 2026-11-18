@@ -291,6 +291,89 @@ namespace LogicTests.AgentControl
         }
 
         [Test]
+        public void ReadOnlyCommands_McpCalls_AndGateRuns_CollapseIntoOneNodeEach()
+        {
+            _seq = 0;
+            var ev = new List<AgentEvent>
+            {
+                E(EventTypes.CommandRun, kv: new[] { "command", "cat a.cs", "changedFiles", "0" }),
+                E(EventTypes.CommandRun, kv: new[] { "command", "sed -n 1,9p b.cs", "changedFiles", "0" }),
+                E(EventTypes.CommandRun, kv: new[] { "command", "grep -n X c.cs", "changedFiles", "0" }),
+                E(EventTypes.CommandRun, kv: new[] { "command", "sed -i s/a/b/ d.cs", "changedFiles", "1" }),
+                E(EventTypes.ToolUsed, kv: new[] { "tool", "mcp__hearthbot__post_message" }),
+                E(EventTypes.ToolUsed, kv: new[] { "tool", "mcp__hearthbot__update_progress_checklist" }),
+                E(EventTypes.GateStarted, "testgate", kv: new[] { "plan", "1 changed file(s)" }),
+                E(EventTypes.TestResult, "testgate", kv: new[] { "suite", "G0 static rules", "result", "passed" }),
+                E(EventTypes.TestResult, "testgate", kv: new[] { "suite", "G1 dotnet", "result", "passed" }),
+                E(EventTypes.GateFinished, "testgate", kv: new[] { "result", "passed" }),
+                E(EventTypes.StopAllowed, "testgate", kv: new[] { "reason", "gate green" }),
+                E(EventTypes.Claim, "agent", kv: new[] { "text", "Done." }),
+                E(EventTypes.GateStarted, "testgate", kv: new[] { "plan", "1 changed file(s)" }),
+                E(EventTypes.TestResult, "testgate", kv: new[] { "suite", "G1 dotnet", "result", "failed" }),
+                E(EventTypes.GateFinished, "testgate", kv: new[] { "result", "failed" }),
+                E(EventTypes.StopBlocked, "testgate", kv: new[] { "reason", "gate red" }),
+            };
+            var m = Build(ev);
+
+            Assert.That(m.Steps.Select(s => s.Kind), Is.EqualTo(new[] { "command-ro", "bash", "mcp", "gate", "claim", "gate", "stop" }));
+            Assert.That(m.Steps[0].Seqs, Has.Count.EqualTo(3));
+            Assert.That(m.Steps[0].Title, Does.Contain("× 3"));
+            Assert.That(m.Steps[2].Seqs, Has.Count.EqualTo(2));
+            Assert.That(m.Steps[3].Seqs, Has.Count.EqualTo(5), "gate start, 2 suites, finish, stop allowed");
+            Assert.That(m.Steps[3].Trust, Is.EqualTo(Trust.Verified));
+            Assert.That(m.Steps[5].Trust, Is.EqualTo(Trust.Failed), "the worst event of a group decides its colour");
+            Assert.That(m.Steps[6].Trust, Is.EqualTo(Trust.Failed), "a blocked Stop stays its own node");
+            Assert.That(m.Steps.SelectMany(s => s.Seqs).OrderBy(x => x), Is.EqualTo(ev.Select(e => e.Seq)), "every event stays reachable from a node");
+            Assert.That(m.Gates.Select(g => g.Result), Is.EqualTo(new[] { "passed", "failed" }), "collapsing changes the picture, not the evidence");
+            Assert.That(m.Gates[0].Tests, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void FilesChangedByOneBashCommand_AreOneNode_AndAViolationStillColoursIt()
+        {
+            _seq = 0;
+            var ev = new List<AgentEvent>
+            {
+                E(EventTypes.CommandRun, kv: new[] { "command", "unity -batchmode -quit", "changedFiles", "3" }),
+                E(EventTypes.FileModified, "git-observer", kv: new[] { "path", "UnityProject/Library/Bee/a", "via", "Bash", "inScope", "true", "after", "a1" }),
+                E(EventTypes.FileModified, "git-observer", kv: new[] { "path", "UnityProject/Assets/_Game/Bootstrap/B.cs", "via", "Bash", "inScope", "false", "after", "b1" }),
+                E(EventTypes.FileModified, "git-observer", kv: new[] { "path", "C:/Users/x/scratch/c.txt", "via", "Bash", "inScope", "true", "scope", "outside the repository", "after", "c1" }),
+                E(EventTypes.FileModified, kv: new[] { "path", "UnityProject/Assets/_Game/Features/A/X.cs", "via", "Edit", "inScope", "true", "after", "x1" }),
+                E(EventTypes.FileModified, "git-observer", kv: new[] { "path", "UnityProject/Library/Bee/d", "via", "Bash", "inScope", "true", "after", "d1" }),
+                E(EventTypes.FileModified, "git-observer", kv: new[] { "path", "UnityProject/Library/Bee/e", "via", "Bash", "inScope", "true", "after", "e1" }),
+            };
+            var m = Build(ev);
+
+            Assert.That(m.Steps.Select(s => s.Kind), Is.EqualTo(new[] { "bash", "file", "bash" }));
+            Assert.That(m.Steps[0].Seqs, Has.Count.EqualTo(4));
+            Assert.That(m.Steps[0].Title, Does.StartWith("Bash: unity -batchmode").And.Contains("đổi 3 file"));
+            Assert.That(m.Steps[0].Trust, Is.EqualTo(Trust.Violation), "one out-of-scope file in the batch makes the whole node red");
+            Assert.That(m.Steps[2].Title, Is.EqualTo("Bash đổi 2 file"), "Bash changes with no command event before them still collapse");
+            Assert.That(m.Files.Single(f => f.Path.EndsWith("B.cs")).Trust, Is.EqualTo(Trust.Violation), "the evidence still sees each file");
+        }
+
+        [Test]
+        public void FilesOutsideTheRepository_AreOneInfoNode_NotAnomalies()
+        {
+            _seq = 0;
+            var ev = new List<AgentEvent>
+            {
+                E(EventTypes.FileModified, kv: new[] { "path", "C:/Users/x/AppData/Local/Temp/claude/scratch/a.cs", "via", "Edit", "inScope", "true", "scope", "outside the repository", "after", "aa" }),
+                E(EventTypes.FileModified, kv: new[] { "path", "C:/Users/x/AppData/Local/Temp/claude/scratch/b.cs", "via", "Write", "inScope", "true", "scope", "outside the repository", "after", "bb" }),
+                E(EventTypes.UnobservedChange, "git-observer", kv: new[] { "path", "C:/Users/x/AppData/Local/Temp/claude/scratch/a.cs", "before", "aa", "after", "clean" }),
+                E(EventTypes.UnobservedChange, "git-observer", kv: new[] { "path", "README.md", "after", "cc" }),
+            };
+            var m = Build(ev);
+
+            Assert.That(m.Steps.Select(s => s.Kind), Is.EqualTo(new[] { "outside", "file" }));
+            Assert.That(m.Steps[0].Seqs, Has.Count.EqualTo(3));
+            Assert.That(m.Steps[0].Trust, Is.EqualTo(Trust.Info));
+            Assert.That(m.Steps[1].Trust, Is.EqualTo(Trust.Unobserved), "an unexplained change INSIDE the repository is still an anomaly");
+            Assert.That(m.Files.Select(f => f.Path), Is.EqualTo(new[] { "README.md" }));
+            Assert.That(m.Counts["unobserved"], Is.EqualTo(1));
+        }
+
+        [Test]
         public void AClaim_IsJudgedByEvidence()
         {
             var m = Build(Session());
