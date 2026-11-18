@@ -1,0 +1,5 @@
+# Plan: New Game
+
+<!-- OWNED BY THE HUMAN. Agents read it, never edit it: they propose changes in Docs/Plan/Inbox/ (`test-gate.sh plan propose`).
+     Statuses are not written here: they are computed from tests ([Covers("R-..")]) and evidence (`test-gate.sh plan status`).
+     Syntax: Docs/PLANNING.md. Feature = a capability a player can see and accept; Requirement = one testable behaviour. -->

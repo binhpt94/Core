@@ -1,0 +1,44 @@
+using System;
+using Game.Core;
+using UnityEngine;
+
+namespace Game.Bootstrap
+{
+    /// <summary>
+    /// Composition root: the ONLY place where concrete implementations are chosen and wired.
+    /// The scene contains just this component. Add a feature: `./Tools/test-gate.sh new-feature Name`, then call its
+    /// public Installer here (Feature.Install(assets, transform, streams, clock, frames, lifetime, logger)).
+    ///
+    /// Determinism boundary: the session SEED enters here, once, and is logged.
+    /// </summary>
+    [DefaultExecutionOrder(-1000)]
+    public sealed class GameCompositionRoot : MonoBehaviour
+    {
+        [Tooltip("0 = new seed every launch (logged). Paste a seed from a log/replay to reproduce that session's randomness.")]
+        [SerializeField] private long randomSeed = 0;
+
+        private Lifetime _appLifetime;
+
+        public ulong Seed { get; private set; }
+
+        private void Awake()
+        {
+            IGameLogger logger = new UnityGameLogger();
+            _appLifetime = new Lifetime("app", logger);
+            Seed = randomSeed != 0 ? (ulong)randomSeed : NewSeed();
+            logger.Info("session seed = " + Seed + " (set GameRoot > Random Seed to reproduce)");
+            UiInfrastructure.EnsureEventSystem(transform);
+            // Features are installed here, e.g.:
+            //   _game = MyFeatureInstaller.Install(assets, transform, new RandomStreams(Seed), new UnityGameClock(), new UnityFrameSource(), _appLifetime, logger);
+        }
+
+        /// <summary>The only non-deterministic number in the game; it is logged and stored in every replay.</summary>
+        private static ulong NewSeed()
+        {
+            ulong x = (ulong)DateTime.UtcNow.Ticks ^ ((ulong)(uint)Environment.TickCount << 32);
+            return x == 0 ? 1 : x;
+        }
+
+        private void OnDestroy() => _appLifetime?.Dispose(); // plain C# object: ?. is safe here
+    }
+}

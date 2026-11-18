@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Blocks commits that break static architecture rules (same engine as CI/Unity). Works for every
-# agent and human, including tools without Claude hooks. Install once: ./tools/install-git-hooks.sh
-set -euo pipefail
-cd "$(dirname "$0")/../.."     # this file lives in <unity-project>/tools/git-hooks/
-exec ./tools/test-gate.sh check --staged

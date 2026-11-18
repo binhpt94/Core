@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Incremental test gate. Run it through Tools/test-gate.sh (usage is documented there). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The same rule engine the tests and the Unity gates use (linked, not copied). -->
+    <Compile Include="../../UnityProject/Assets/_Game/Architecture/Rules/*.cs" Link="Rules/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

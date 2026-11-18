@@ -1,0 +1,25 @@
+{
+    "name": "Game.Bootstrap",
+    "rootNamespace": "Game.Bootstrap",
+    "references": [
+        "UniTask",
+        "Game.Core",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "GAME_HAS_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}
