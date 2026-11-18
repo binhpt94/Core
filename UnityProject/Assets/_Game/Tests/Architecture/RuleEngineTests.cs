@@ -593,12 +593,33 @@ namespace Game.Architecture.Tests
             Assert.That(v.Any(x => x.RuleId == "ARCH095" && x.Message.Contains("owner= and reason")), Is.True, all);
         }
 
-        [Test, Order(int.MaxValue)]
+        [Test]
         public void Coverage_EveryStaticRuleHasAPositiveFixture()
         {
-            // Runs last (Order) after the fixtures above have recorded which rules fired.
+            // Runs every fixture of this class itself, so it never depends on test order (NUnit runs [Order] tests FIRST,
+            // which made the old "Order(int.MaxValue) + Assume" version inconclusive on every run: it never asserted).
+            var self = new RuleEngineTests();
+            foreach (var m in typeof(RuleEngineTests).GetMethods().Where(m => m.Name != nameof(Coverage_EveryStaticRuleHasAPositiveFixture)))
+            {
+                var runs = m.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().Select(a => a.Arguments).ToList();
+                if (m.GetCustomAttributes(typeof(TestAttribute), false).Length > 0 && m.GetParameters().Length == 0)
+                    runs.Add(new object[0]);
+                foreach (var args in runs)
+                {
+                    var full = m.GetParameters().Select((p, i) => i < args.Length ? args[i] : p.DefaultValue).ToArray();
+                    self.CreateTemp();
+                    try
+                    {
+                        m.Invoke(self, full);
+                    }
+                    finally
+                    {
+                        self.DeleteTemp();
+                    }
+                }
+            }
             var missing = RuleCatalog.All.Where(r => r.IsStatic && !Fired.Contains(r.Id)).Select(r => r.Id).ToList();
-            Assume.That(Fired.Count, Is.GreaterThan(10), "run the whole fixture, not a single test");
+            Assert.That(Fired.Count, Is.GreaterThan(10), "the fixtures above record which rules fired");
             Assert.That(missing, Is.Empty, "Add a positive fixture for each static rule");
         }
     }

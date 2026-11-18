@@ -377,7 +377,8 @@ internal static class Program
         if (Directory.Exists(results))
             Directory.Delete(results, true);
 
-        var (code, output) = Exec("dotnet", "test Tools/LogicTests --nologo -v q --logger \"trx;LogFileName=gate.trx\" --results-directory \"" + results + "\"");
+        var (code, output) = Exec("dotnet", "test Tools/LogicTests --nologo -v q --logger \"trx;LogFileName=gate.trx\" --results-directory \"" + results + "\"",
+            timeout: Budget("DOTNET_TEST_TIMEOUT_MIN", 20));
 
         var trx = Directory.Exists(results) ? Directory.GetFiles(results, "*.trx", SearchOption.AllDirectories).FirstOrDefault() : null;
         if (trx == null)
@@ -390,14 +391,10 @@ internal static class Program
             return false;
         }
 
-        XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
-        var doc = XDocument.Load(trx);
-        var all = doc.Descendants(ns + "UnitTestResult").ToList();
-        var failed = all.Where(r => (string)r.Attribute("outcome") == "Failed").ToList();
-        RecordTests("G1 dotnet", failed.Count == 0 && code == 0 ? "passed" : "failed", all.Count - failed.Count, failed.Count, all.Count, trx,
-            failed.Count == 0 ? null : string.Join("; ", failed.Take(3).Select(r => (string)r.Attribute("testName"))));
+        var verdict = TestGate.Planning.TestVerdict.FromTrx(code, XDocument.Load(trx));
+        RecordVerdict("G1 dotnet", verdict, trx);
 
-        if (failed.Count == 0 && code == 0)
+        if (verdict.IsPassed)
         {
             try
             {
@@ -413,27 +410,46 @@ internal static class Program
             {
                 Console.WriteLine("roadmap ledger not updated: " + e.Message);
             }
-            Console.WriteLine("G0+G1 passed: " + all.Count + " tests.");
+            Console.WriteLine("G0+G1 passed: " + verdict.Passed + " tests.");
             return true;
         }
 
         _lastFailedStage = "G1";
-        _lastFailedTests.AddRange(failed.Select(r => (string)r.Attribute("testName")));
-        if (!AgentShell.IsAgent)
+        _lastFailedTests.AddRange(verdict.FailedCases.Concat(verdict.UnknownCases).Select(c => c.Name));
+        if (!AgentShell.IsAgent && verdict.Failed > 0)
             Console.WriteLine("Nếu do bạn (người) gây ra: " + Attribution.TestHint(_lastFailedTests,
                 (ChangedFiles(null, out _) ?? new List<string>()).Where(Attribution.IsCode).ToList()));
-        Console.WriteLine("G0+G1 FAILED: " + failed.Count + "/" + all.Count + " tests");
-        foreach (var r in failed.Take(15))
-        {
-            Console.WriteLine("- " + (string)r.Attribute("testName"));
-            var message = (string)r.Descendants(ns + "Message").FirstOrDefault() ?? "";
-            foreach (var line in message.Split('\n').Where(l => l.Trim().Length > 0).Take(MaxMessageLines))
-                Console.WriteLine("    " + line.Trim());
-        }
-        if (failed.Count > 15)
-            Console.WriteLine("  ... and " + (failed.Count - 15) + " more");
+        PrintVerdict("G0+G1", verdict);
         return false;
     }
+
+    /// <summary>Dashboard and return value come from the same verdict, so they can never disagree.</summary>
+    private static void RecordVerdict(string suite, TestGate.Planning.Verdict v, string resultsFile, string note = null)
+    {
+        string rel = resultsFile != null && File.Exists(resultsFile) ? Rel(resultsFile) : null;
+        Recorder.Emit(Recorder.New(EventTypes.TestResult, "testgate").With("suite", suite).With("result", v.Status)
+            .With("passed", v.Passed.ToString()).With("failed", v.Failed.ToString()).With("unknown", v.Unknown.ToString())
+            .With("excluded", v.Excluded.ToString()).With("total", v.Total.ToString())
+            .With("resultsFile", rel).With("resultsHash", rel != null ? WorkSnapshot.HashFile(resultsFile) : null)
+            .With("note", v.IsPassed ? note : v.Reason + (note != null ? " · " + note : "")));
+    }
+
+    private static void PrintVerdict(string stage, TestGate.Planning.Verdict v)
+    {
+        Console.WriteLine(stage + (v.Kind == TestGate.Planning.VerdictKind.Failed ? " FAILED: " : " UNKNOWN (not a pass): ") +
+                          v.Failed + " failed, " + v.Unknown + " unproven, " + v.Passed + "/" + v.Total + " passed. " + v.Reason);
+        foreach (var c in v.FailedCases.Concat(v.UnknownCases).Take(15))
+        {
+            Console.WriteLine("- " + c.Name + (c.Outcome != "Failed" ? " [" + (string.IsNullOrEmpty(c.Outcome) ? "no result" : c.Outcome) + "]" : ""));
+            foreach (var line in (c.Message ?? "").Split('\n').Where(l => l.Trim().Length > 0).Take(MaxMessageLines))
+                Console.WriteLine("    " + line.Trim());
+        }
+        if (v.Failed + v.Unknown > 15)
+            Console.WriteLine("  ... and " + (v.Failed + v.Unknown - 15) + " more");
+    }
+
+    private static TimeSpan Budget(string variable, int defaultMinutes) =>
+        TimeSpan.FromMinutes(int.TryParse(Environment.GetEnvironmentVariable(variable), out var m) && m > 0 ? m : defaultMinutes);
 
     private static bool RunUnityTests(string unity, string platform, List<string> assemblies, string categories = null, string label = null)
     {
@@ -450,45 +466,34 @@ internal static class Program
             "-batchmode -nographics -projectPath \"" + Path.Combine(_root, "UnityProject") + "\" -runTests -testPlatform " + platform +
             " -assemblyNames \"" + string.Join(";", assemblies) + "\"" +
             (categories != null ? " -testCategory \"" + categories + "\"" : "") +
-            " -testResults \"" + results + "\" -logFile \"" + log + "\"");
+            " -testResults \"" + results + "\" -logFile \"" + log + "\"",
+            timeout: Budget("UNITY_TIMEOUT_MIN", 60));
 
         if (!File.Exists(results))
         {
             RecordTests("Unity " + name, "failed", 0, 0, 0, null, "Unity did not produce results (exit " + code + ")");
-            Console.WriteLine("Unity " + name + " FAILED to run (exit " + code + "). Compile errors from the log:");
+            _lastFailedStage = "unity";
+            Console.WriteLine("Unity " + name + " FAILED to run (exit " + code + (code == TimedOut ? ", timed out" : "") + "). Compile errors from the log:");
             if (File.Exists(log))
                 foreach (var line in File.ReadLines(log).Where(l => l.Contains("error CS")).Distinct().Take(20))
                     Console.WriteLine("  " + ShortenPath(line.Trim()));
             return false;
         }
 
-        var doc = XDocument.Load(results);
-        var cases = doc.Descendants("test-case").ToList();
-        // Inconclusive/Skipped is UNKNOWN, and UNKNOWN never counts as passed.
-        var failed = cases.Where(c => (string)c.Attribute("result") == "Failed" || (string)c.Attribute("result") == "Inconclusive").ToList();
-        RecordTests("Unity " + name, failed.Count == 0 && cases.Count > 0 ? "passed" : "failed", cases.Count - failed.Count, failed.Count, cases.Count, results,
-            categories != null ? "categories " + categories : null);
-        if (cases.Count == 0 && categories != null)
+        // One decision (whitelist): Skipped/Ignored/Inconclusive/Warning/odd = UNKNOWN, 0 tests = UNKNOWN, exit ≠ 0 = FAILED.
+        var verdict = TestGate.Planning.TestVerdict.FromNUnit(code, XDocument.Load(results));
+        RecordVerdict("Unity " + name, verdict, results, categories != null ? "categories " + categories : null);
+        if (verdict.IsPassed)
         {
-            Console.WriteLine("Unity " + name + " UNKNOWN: 0 tests matched " + categories + " (view cases missing or failed to load?)");
-            return false;
-        }
-        if (failed.Count == 0)
-        {
-            Console.WriteLine("Unity " + name + " passed: " + cases.Count + " tests.");
+            Console.WriteLine("Unity " + name + " passed: " + verdict.Passed + " tests" + (verdict.Excluded > 0 ? " (" + verdict.Excluded + " explicit, not selected)" : "") + ".");
             return true;
         }
 
         _lastFailedStage = "unity";
-        _lastFailedTests.AddRange(failed.Select(c => (string)c.Attribute("name")));
-        Console.WriteLine("Unity " + name + " FAILED: " + failed.Count + "/" + cases.Count);
-        foreach (var c in failed.Take(15))
-        {
-            Console.WriteLine("- " + (string)c.Attribute("fullname"));
-            var message = (string)c.Descendants("message").FirstOrDefault() ?? "";
-            foreach (var line in message.Split('\n').Where(l => l.Trim().Length > 0).Take(MaxMessageLines))
-                Console.WriteLine("    " + line.Trim());
-        }
+        _lastFailedTests.AddRange(verdict.FailedCases.Concat(verdict.UnknownCases).Select(c => c.Name));
+        PrintVerdict("Unity " + name, verdict);
+        if (verdict.Total == 0 && categories != null)
+            Console.WriteLine("  0 tests matched " + categories + " (view cases missing or failed to load?)");
         return false;
     }
 
@@ -799,7 +804,10 @@ internal static class Program
             set.Add(line);
     }
 
-    private static (int code, string output) Exec(string file, string arguments, bool quiet = false)
+    /// <summary>Exit code returned when a runner exceeded its time budget (like `timeout`): never a pass.</summary>
+    private const int TimedOut = 124;
+
+    private static (int code, string output) Exec(string file, string arguments, bool quiet = false, TimeSpan? timeout = null)
     {
         var psi = new ProcessStartInfo(file, arguments)
         {
@@ -812,9 +820,14 @@ internal static class Program
         {
             using var p = Process.Start(psi);
             var stderr = p.StandardError.ReadToEndAsync();
-            string stdout = p.StandardOutput.ReadToEnd();
+            var stdout = p.StandardOutput.ReadToEndAsync();
+            if (!p.WaitForExit(timeout.HasValue ? (int)timeout.Value.TotalMilliseconds : -1))
+            {
+                try { p.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+                return (TimedOut, "timed out after " + timeout.Value.TotalMinutes + " min: " + file + " " + arguments);
+            }
             p.WaitForExit();
-            return (p.ExitCode, stdout + stderr.Result);
+            return (p.ExitCode, stdout.Result + stderr.Result);
         }
         catch (System.ComponentModel.Win32Exception) when (quiet)
         {
