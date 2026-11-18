@@ -1,0 +1,20 @@
+{
+    "name": "Game.Bootstrap.Editor",
+    "rootNamespace": "Game.Bootstrap.EditorTools",
+    "references": [
+        "Game.Architecture.Rules",
+        "Game.Core",
+        "Game.Bootstrap"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

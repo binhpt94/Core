@@ -308,7 +308,7 @@ namespace TestGate.AgentControl
                 data.Append(SessionJs(events, ss.Id));
             return html
                 .Replace("<link rel=\"stylesheet\" href=\"style.css\">", "<style>\n" + File.ReadAllText(Path.Combine(view, "style.css")) + "</style>")
-                .Replace("<script src=\"../../" + DataDir + "/data.js\"></script>", "<script>\n" + data + "</script>")
+                .Replace("<script src=\"Data/data.js\"></script>","<script>\n" + data + "</script>")
                 .Replace("<script src=\"app.js\"></script>", "<script>\nwindow.BUNDLED = true;\n" + File.ReadAllText(Path.Combine(view, "app.js")) + "</script>");
         }
 

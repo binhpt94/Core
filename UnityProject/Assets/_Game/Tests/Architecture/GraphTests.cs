@@ -115,7 +115,12 @@ namespace Game.Architecture.Tests
                 }
             }
             Assert.That(checkedTables, Is.EqualTo(graph.StateMachines.Count), "diagram contains tables that don't exist at runtime");
-            Assert.That(checkedTables, Is.GreaterThan(0), "expected at least QuizSession.Transitions");
+            // The scanner must not silently miss tables: if the source declares any, at least one was checked.
+            // (A project without state tables yet, e.g. the Core template, has nothing to check.)
+            bool sourceHasTables = Directory.EnumerateFiles(Path.Combine(root, "UnityProject", "Assets", "_Game"), "*.cs", SearchOption.AllDirectories)
+                .Select(f => f.Replace('\\', '/'))
+                .Any(f => !f.Contains("/Tests/") && !f.Contains("/Architecture/") && File.ReadAllText(f).Contains("new Transition<"));
+            Assert.That(checkedTables > 0 || !sourceHasTables, Is.True, "expected at least one runtime table (e.g. QuizSession.Transitions)");
         }
 
         private static bool IsTransitionTable(Type t)

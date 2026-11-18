@@ -183,21 +183,28 @@ Agent quyết định **làm gì**. Chương trình quyết định **có đư�
 
 ## Cấu trúc
 
-```
-CLAUDE.md · AGENTS.md            rule cho AI (ngắn; chi tiết ở Docs/RULES.md)
-Tools/ArchitecturePolicy.txt           vendor (tier, adapter, version/hash) + ngoại lệ có hạn dùng [bảo vệ]
-Docs/Architecture/overview.md    sơ đồ hệ thống SINH TỰ ĐỘNG (không sửa tay)
-Assets/ThirdParty/DemoAdsSdk/    SDK giả để minh họa ranh giới vendor
-Docs/ARCHITECTURE.md · RULES.md  kiến trúc · từng rule: cấm gì, vì sao, sửa thế nào
-.claude/settings.json            hook PostToolUse + Stop, quyền (deny file rule/prefab/meta/baseline, --no-verify)
-.github/CODEOWNERS · workflows/  owner cho file rule (thay ARCHITECTURE_OWNERS) · CI
-Tools/test-gate.sh               plan · run · check · refs · new-feature · new-view · roadmap · art · files · task · events · dash · serve · reset (TestGate, build sẵn → ~0,1 giây)
-Tools/claude-hook.sh             cầu nối hook của Claude Code
-Tools/GitHooks/pre-commit       + install-git-hooks.sh
-ProjectSettings/EditorSettings.asset   Force Text + Enter Play Mode không Domain Reload
-Tools/LogicTests/                      dotnet test (UniTask NuGet)
+**Bố cục Root (hard rule ARCH130).** Root là thư mục có `AGENTS.md`. Ở Root chỉ có 5 thư mục (PascalCase), ba file `*.md` và các mục bắt đầu bằng dấu chấm.
+Đường dẫn của tool tính từ Root (`UnityProject/Assets/...`). Đường dẫn trong Unity và trong tài liệu này tính từ `UnityProject/` (`Assets/_Game/...`).
 
-Assets/_Game/
+```
+AGENTS.md · CLAUDE.md · README.md   rule cho AI (ngắn; chi tiết ở Docs/RULES.md)
+.claude/settings.json            hook PreToolUse/PostToolUse/Stop, quyền (--no-verify, golden/layout, lệnh chỉ dành cho người)
+.github/CODEOWNERS · workflows/  owner cho file rule (thay ARCHITECTURE_OWNERS) · CI
+UnityProject/                    mọi thứ Unity cần: Assets/, Packages/, ProjectSettings/ (+ Library/, Temp/, *.csproj sinh ra, bị ignore)
+Tools/
+├── test-gate.sh                 plan · run · check · refs · new-feature · new-view · roadmap · art · files · task · events · dash · serve · reset
+├── TestGate/                    gate (build sẵn → ~0,1 giây) · claude-hook.sh: cầu nối hook của Claude Code
+├── LogicTests/                  dotnet test Tools/LogicTests (UniTask NuGet)
+├── GitHooks/pre-commit          + install-git-hooks.sh
+├── ArchitecturePolicy.txt       vendor (tier, adapter, version/hash) + ngoại lệ có hạn dùng [bảo vệ]
+└── make-template.sh · TemplateKit/   sinh Template/ (Core sạch)
+Dashboard/                       index.html · app.js · style.css (viết tay) + Data/ (gate ghi ra, bị ignore) · demo.html
+Docs/                            ARCHITECTURE.md · RULES.md · PLANNING.md · Architecture/ (sơ đồ SINH TỰ ĐỘNG) · Plan/ (roadmap của người)
+Template/                        Core sạch không có MathQuiz/Progress, sinh bởi ./Tools/make-template.sh, bị ignore
+
+UnityProject/Assets/ThirdParty/DemoAdsSdk/   SDK giả để minh họa ranh giới vendor
+UnityProject/ProjectSettings/EditorSettings.asset   Force Text + Enter Play Mode không Domain Reload
+UnityProject/Assets/_Game/
 ├── Core/Runtime/          public, khóa bằng PublicApi.txt: Result, IRandom, IDelay, Lifetime, [OptionalReference], [VisualTuning], [AllowStatic]
 ├── Core/DevTools/         ViewFixture, LayoutChecks, LayoutSnapshot (text), DeviceProfile (thuần, chỉ Editor/GAME_DEVTOOLS)
 ├── Core/Editor/           ViewStage, LayoutProbe, View Preview · Tests/ = layout gate cho MỌI view [bảo vệ]

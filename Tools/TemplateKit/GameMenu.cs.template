@@ -1,0 +1,30 @@
+using UnityEditor;
+using UnityEngine;
+
+namespace Game.Bootstrap.EditorTools
+{
+    /// <summary>Editor shortcuts so nobody (human or AI) has to hand-edit scene files.</summary>
+    public static class GameMenu
+    {
+        [MenuItem("Tools/Game/Create Game Root In Scene")]
+        public static void CreateGameRoot()
+        {
+#if UNITY_2023_1_OR_NEWER
+            var existing = Object.FindFirstObjectByType<GameCompositionRoot>();
+#else
+            var existing = Object.FindObjectOfType<GameCompositionRoot>();
+#endif
+            if (existing != null)
+            {
+                Selection.activeGameObject = existing.gameObject;
+                Debug.Log("[Game] GameCompositionRoot already exists in the scene.");
+                return;
+            }
+
+            var go = new GameObject("GameRoot");
+            go.AddComponent<GameCompositionRoot>();
+            Undo.RegisterCreatedObjectUndo(go, "Create Game Root");
+            Selection.activeGameObject = go;
+        }
+    }
+}
