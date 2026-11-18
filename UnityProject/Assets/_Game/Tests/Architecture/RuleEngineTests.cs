@@ -215,6 +215,20 @@ namespace Game.Architecture.Tests
         }
 
         [Test]
+        public void ScanFiles_SkipsDeletedPaths_EvenAfterACaseOnlyRename()
+        {
+            Write("Tools/test-gate.sh", "#!/usr/bin/env bash\n");
+            // git still lists the old spelling (deleted in the branch); on Windows/macOS File.Exists("tools/...") is true.
+            var v = ArchitectureScanner.ScanFiles(_tmp, new[] { "tools/test-gate.sh", "Tools/test-gate.sh", "notes.txt" }, projectRules: false);
+            Assert.That(v.Select(x => x.Path), Is.Empty, string.Join("\n", v));
+            Assert.That(ArchitectureScanner.ExistsExactly(_tmp, "Tools/test-gate.sh"), Is.True);
+            Assert.That(ArchitectureScanner.ExistsExactly(_tmp, "tools/test-gate.sh"), Is.False);
+            Write("notes.txt", "x");
+            Assert.That(ArchitectureScanner.ScanFiles(_tmp, new[] { "notes.txt" }, projectRules: false).Select(x => x.RuleId), Does.Contain("ARCH130"),
+                "a file that really exists is still judged");
+        }
+
+        [Test]
         public void ProjectSettings_MustBeForceText()
         {
             Write("UnityProject/Assets/_Game/Core/Runtime/X.cs", "class X {}");

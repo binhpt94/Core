@@ -78,10 +78,32 @@ namespace Game.Architecture.Rules
             else if (paths.Any(p => p.EndsWith(".asmdef", StringComparison.Ordinal)))
                 result.AddRange(AsmdefRules.Check(repoRoot));
 
-            foreach (var p in paths.Where(p => File.Exists(Path.Combine(repoRoot, p))))
+            foreach (var p in paths.Where(p => ExistsExactly(repoRoot, p)))
                 result.AddRange(CheckOne(repoRoot, p, assets, docs));
 
             return Finish(repoRoot, result, today);
+        }
+
+        /// <summary>
+        /// The file exists with exactly this spelling. On Windows/macOS File.Exists ignores case, so after a case-only rename
+        /// (tools/x.sh → Tools/x.sh) the deleted old path would still "exist" and be judged; git paths are case-sensitive.
+        /// </summary>
+        public static bool ExistsExactly(string root, string relative)
+        {
+            string dir = root;
+            var parts = PathInfo.Normalize(relative).Split('/');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                bool last = i == parts.Length - 1;
+                if (!Directory.Exists(dir))
+                    return false;
+                string match = (last ? Directory.EnumerateFiles(dir) : Directory.EnumerateDirectories(dir))
+                    .Select(Path.GetFileName).FirstOrDefault(n => string.Equals(n, parts[i], StringComparison.Ordinal));
+                if (match == null)
+                    return false;
+                dir = Path.Combine(dir, match);
+            }
+            return true;
         }
 
         private static IEnumerable<RuleViolation> CheckOne(string root, string rel, AssetRules assets, DocRules docs) =>
