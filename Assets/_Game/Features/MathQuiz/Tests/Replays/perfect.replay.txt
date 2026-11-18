@@ -1,0 +1,30 @@
+replay 1
+meta arena=lives:3,spawn:40-80,speed:4-8,hop:25,rage:40-175,penalty:1,max:12,feedback:30 quiz=min:1,max:10,questions:8,options:3,offset:3,seconds:8 rng=xoshiro128**+splitmix64+fnv1a64/v1 seed=1007 sim=1 tickRate=20
+cmd 1 Start
+cmd 16 Answer 0
+hash 20 b5496fd76691f844
+hash 40 7052bdceac06b004
+hash 60 ad9cbf5b971daf54
+cmd 61 Answer 1
+hash 80 7fac9c3abc1edbf0
+hash 100 99188597eee3626e
+cmd 106 Answer 0
+hash 120 6cc227dbd8187155
+hash 140 bacd6d12f6da885d
+cmd 151 Answer 1
+hash 160 e4ec547af772a24a
+hash 180 0b1fdecf4731b622
+cmd 196 Answer 2
+hash 200 d1835b13e2928912
+hash 220 8129c0dcc2216686
+hash 240 99eb9a6c17bbebab
+cmd 241 Answer 2
+hash 260 30f987bf7c17a318
+hash 280 faea64ef0d90055e
+cmd 286 Answer 2
+hash 300 5167a83e67530302
+hash 320 1c5c124ec80bfb5c
+cmd 331 Answer 1
+hash 340 3808adc94438ab3f
+hash 360 b87f87f6181a61f3
+end 361 69a56a520cc60f11

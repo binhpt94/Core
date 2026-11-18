@@ -1,0 +1,39 @@
+name: logic-tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # TestGate diffs against origin/main
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Test plan (which Unity tests this change needs)
+        run: ./tools/test-gate.sh plan
+      - name: G0 static architecture rules (whole project)
+        run: ./tools/test-gate.sh check --all
+      - name: G0+G1 pure C# + architecture tests
+        run: dotnet test LogicTests --nologo --logger "trx;LogFileName=results.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logic-test-results
+          path: LogicTests/TestResults/
+
+  # Unity tests need a Unity license (e.g. game-ci/unity-test-runner with UNITY_LICENSE secret).
+  # Enable when the license is configured:
+  # unity:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: game-ci/unity-test-runner@v4
+  #       env:
+  #         UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  #       with:
+  #         testMode: all          # PRs: use TestGate's plan to pass only affected assemblies

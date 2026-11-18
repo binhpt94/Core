@@ -1,0 +1,3 @@
+interface Game.Progress.Contracts.IBestScoreService
+  System.Boolean SubmitScore(System.Int32 score)
+  System.Int32 BestScore { get; }

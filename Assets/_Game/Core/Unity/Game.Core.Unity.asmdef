@@ -1,0 +1,17 @@
+{
+    "name": "Game.Core.Unity",
+    "rootNamespace": "Game.Core.Presentation",
+    "references": [
+        "Game.Core",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

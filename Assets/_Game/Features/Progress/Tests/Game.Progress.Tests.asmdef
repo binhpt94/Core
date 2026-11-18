@@ -1,0 +1,27 @@
+{
+    "name": "Game.Progress.Tests",
+    "rootNamespace": "Game.Progress.Tests",
+    "references": [
+        "Game.TestSupport",
+        "Game.Core",
+        "Game.Progress",
+        "Game.Progress.Contracts",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

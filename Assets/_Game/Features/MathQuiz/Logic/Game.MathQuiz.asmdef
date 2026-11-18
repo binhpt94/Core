@@ -1,0 +1,18 @@
+{
+    "name": "Game.MathQuiz",
+    "rootNamespace": "Game.MathQuiz",
+    "references": [
+        "UniTask",
+        "Game.Core",
+        "Game.Progress.Contracts"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

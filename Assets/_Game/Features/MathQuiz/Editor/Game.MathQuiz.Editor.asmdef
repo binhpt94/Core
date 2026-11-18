@@ -1,0 +1,24 @@
+{
+    "name": "Game.MathQuiz.Editor",
+    "rootNamespace": "Game.MathQuiz.EditorTools",
+    "references": [
+        "Game.Core",
+        "Game.Core.DevTools",
+        "Game.Core.Editor",
+        "Game.MathQuiz",
+        "Game.MathQuiz.DevTools",
+        "Game.MathQuiz.Unity",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

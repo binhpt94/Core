@@ -1,0 +1,22 @@
+{
+    "name": "Game.MathQuiz.DevTools",
+    "rootNamespace": "Game.MathQuiz.DevTools",
+    "references": [
+        "UniTask",
+        "Game.Core",
+        "Game.Core.DevTools",
+        "Game.MathQuiz",
+        "Game.Progress.Contracts"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR || GAME_DEVTOOLS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

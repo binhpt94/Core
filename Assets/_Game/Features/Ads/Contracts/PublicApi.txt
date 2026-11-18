@@ -1,0 +1,2 @@
+interface Game.Ads.Contracts.IAdsService
+  Cysharp.Threading.Tasks.UniTask<System.Boolean> ShowRewardedAsync(System.Threading.CancellationToken cancellationToken)

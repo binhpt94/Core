@@ -1,0 +1,51 @@
+replay 1
+meta arena=lives:3,spawn:40-80,speed:4-8,hop:25,rage:40-175,penalty:1,max:12,feedback:30 quiz=min:1,max:10,questions:8,options:3,offset:3,seconds:8 rng=xoshiro128**+splitmix64+fnv1a64/v1 seed=1007 sim=1 tickRate=20
+cmd 1 Start
+cmd 11 Answer 1
+hash 20 d8c0a3583775f81b
+hash 40 a2309106a94801a6
+cmd 58 Answer 1
+cmd 58 Next
+hash 60 7a10a369592787cb
+cmd 65 Answer 0
+hash 80 ad3978f407746d55
+hash 100 1d5a8aaa2747852e
+hash 120 287facda143346be
+cmd 126 Answer 2
+cmd 126 Next
+cmd 133 Answer 2
+cmd 133 Start
+cmd 140 Answer 1
+cmd 140 Next
+hash 140 f9d33a0af09b4fcc
+cmd 147 Answer 1
+hash 160 34b44d3b676b6f70
+hash 180 164703960377ace6
+hash 200 068822253f72fa35
+hash 220 7a572aa8399aeaa9
+cmd 236 Answer 1
+cmd 236 Next
+hash 240 0688b061adc4dcbf
+hash 260 12c2928d34652509
+hash 280 40ea22bb4dfaea4d
+hash 300 5caea67076e806ba
+hash 320 a345080199896141
+hash 340 a3ff417d6455d419
+hash 360 a644385217de2daa
+hash 380 96619a7dcbd7b0af
+hash 400 e1e4bf0c61b7029f
+hash 420 c934dfdccf203df7
+hash 440 8456b75197ed6e81
+cmd 442 Answer 2
+hash 460 37a614cb1f62a753
+hash 480 41f53a9d8b82101c
+cmd 495 Answer 0
+cmd 495 Next
+hash 500 9036b2bb718514a7
+cmd 502 Answer 1
+hash 520 86bad469cb80e567
+hash 540 49bf8e4b0e6b24bf
+hash 560 5d1f1977377a483c
+cmd 569 Answer 1
+cmd 569 Next
+end 569 50e66bdd00e1bd89

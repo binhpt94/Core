@@ -1,0 +1,31 @@
+{
+    "name": "Game.MathQuiz.Tests",
+    "rootNamespace": "Game.MathQuiz.Tests",
+    "references": [
+        "Game.TestSupport",
+        "Game.Architecture.Rules",
+        "UniTask",
+        "Game.Core",
+        "Game.MathQuiz.DevTools",
+        "Game.Core.DevTools",
+        "Game.MathQuiz",
+        "Game.Progress.Contracts",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

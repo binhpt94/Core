@@ -1,0 +1,52 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+*.apk
+*.aab
+*.unitypackage
+crashlytics-build.properties
+
+# IDE / generated project files
+.vs/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+!LogicTests/LogicTests.csproj
+!tools/TestGate/TestGate.csproj
+tools/TestGate/bin/
+tools/TestGate/obj/
+
+# dotnet test project
+LogicTests/bin/
+LogicTests/obj/
+LogicTests/TestResults/
+TestResults/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
+TestResults/
+/Replays/
+
+# Agent Flight Recorder: event log + task (local; CI re-verifies)
+/.agent/
+
+# AI/human scratch work: outside Assets/ (Unity never imports it), never committed. `files clean --regenerable` empties it.
+/.scratch/

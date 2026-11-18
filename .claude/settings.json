@@ -1,0 +1,134 @@
+{
+  "env": {
+    "GAME_AGENT_SHELL": "claude"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh session",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash|Task|Agent|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh pre",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh post",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh subagent-stop",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh stop",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(dotnet test:*)",
+      "Bash(dotnet build:*)",
+      "Bash(./tools/test-gate.sh:*)",
+      "Bash(./tools/run-tests.sh:*)",
+      "Bash(./tools/run-unity-tests.sh:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Edit(**/*.unity)",
+      "Edit(**/*.prefab)",
+      "Edit(**/*.meta)",
+      "Edit(**/PublicApi.txt)",
+      "Edit(ProjectSettings/**)",
+      "Edit(LogicTests/LogicTests.csproj)",
+      "Edit(tools/**)",
+      "Edit(Assets/_Game/Architecture/**)",
+      "Edit(Assets/_Game/Tests/Architecture/**)",
+      "Edit(.claude/**)",
+      "Edit(.github/**)",
+      "Write(**/PublicApi.txt)",
+      "Write(tools/**)",
+      "Write(Assets/_Game/Architecture/**)",
+      "Write(Assets/_Game/Tests/Architecture/**)",
+      "Write(.claude/**)",
+      "Write(.github/**)",
+      "Bash(git commit --no-verify:*)",
+      "Bash(git commit -n:*)",
+      "Bash(git config core.hooksPath:*)",
+      "Bash(git push --force:*)",
+      "Edit(ArchitecturePolicy.txt)",
+      "Write(ArchitecturePolicy.txt)",
+      "Edit(docs/architecture/**)",
+      "Write(docs/architecture/**)",
+      "Edit(Assets/ThirdParty/**)",
+      "Write(Assets/ThirdParty/**)",
+      "Edit(Assets/Plugins/**)",
+      "Write(Assets/Plugins/**)",
+      "Bash(GOLDEN_WRITE=1 dotnet test:*)",
+      "Edit(**/Tests/Replays/**)",
+      "Write(**/Tests/Replays/**)",
+      "Bash(LAYOUT_WRITE=1:*)",
+      "Bash(export LAYOUT_WRITE:*)",
+      "Edit(**/Tests/Layout/**)",
+      "Write(**/Tests/Layout/**)",
+      "Edit(Assets/_Game/Core/Editor/**)",
+      "Write(Assets/_Game/Core/Editor/**)",
+      "Edit(.agent/**)",
+      "Write(.agent/**)",
+      "Bash(./tools/test-gate.sh task approve:*)",
+      "Bash(tools/test-gate.sh task approve:*)",
+      "Edit(plan/features.md)",
+      "Write(plan/features.md)",
+      "Edit(plan/accepted.txt)",
+      "Write(plan/accepted.txt)",
+      "Bash(./tools/test-gate.sh roadmap accept:*)",
+      "Bash(tools/test-gate.sh roadmap accept:*)",
+      "Edit(plan/art-accepted.txt)",
+      "Write(plan/art-accepted.txt)",
+      "Bash(./tools/test-gate.sh art accept:*)",
+      "Bash(tools/test-gate.sh art accept:*)",
+      "Write(**/*.unity)",
+      "Bash(./tools/test-gate.sh files clean --regenerable --library:*)",
+      "Read(TestResults/dashboard/**)",
+      "Read(.agent/**)"
+    ]
+  }
+}

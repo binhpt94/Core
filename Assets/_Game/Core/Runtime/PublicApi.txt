@@ -1,0 +1,163 @@
+sealed class Game.Core.AllowStaticAttribute
+  .ctor(System.String reason)
+  System.String Reason { get; }
+sealed class Game.Core.ArtAction
+  .ctor(System.String clip, System.String marker, System.Int32 minTick, System.Int32 maxTick, System.Int32 minSpeedPercent, System.Int32 maxSpeedPercent, System.Boolean required)
+  System.Boolean Required { get; }
+  System.Int32 MaxSpeedPercent { get; }
+  System.Int32 MaxTick { get; }
+  System.Int32 MinSpeedPercent { get; }
+  System.Int32 MinTick { get; }
+  System.String Clip { get; }
+  System.String Marker { get; }
+static class Game.Core.ArtChecks
+  static Game.Core.ArtMeasurement Graybox(Game.Core.ArtSlotContract c)
+  static System.Collections.Generic.List<System.String> Check(Game.Core.ArtSlotContract c, Game.Core.ArtMeasurement m)
+  static System.String Describe(System.String slot, System.String level, Game.Core.ArtMeasurement m)
+sealed class Game.Core.ArtClip
+  .ctor()
+  System.Collections.Generic.Dictionary<System.String, System.Int32> MarkersMs { get; }
+  System.Int32 LengthMs { get; set; }
+sealed class Game.Core.ArtMeasurement
+  .ctor()
+  System.Collections.Generic.Dictionary<System.String, Game.Core.ArtClip> Clips { get; }
+  System.Int32 Height { get; set; }
+  System.Int32 PivotXPercent { get; set; }
+  System.Int32 PivotYPercent { get; set; }
+  System.Int32 Width { get; set; }
+sealed class Game.Core.ArtSlotContract
+  .ctor(System.String id, Game.Core.ArtSlotKind kind, System.Int32 minWidth, System.Int32 maxWidth, System.Int32 minHeight, System.Int32 maxHeight, System.Int32 pivotXPercent, System.Int32 pivotYPercent, System.Int32 pivotTolerancePercent, System.Int32 tickRate, System.Collections.Generic.IReadOnlyList<Game.Core.ArtAction> actions)
+  Game.Core.ArtSlotKind Kind { get; }
+  System.Collections.Generic.IReadOnlyList<Game.Core.ArtAction> Actions { get; }
+  System.Collections.Generic.IReadOnlyList<System.String> Problems()
+  System.Int32 MaxHeight { get; }
+  System.Int32 MaxWidth { get; }
+  System.Int32 MinHeight { get; }
+  System.Int32 MinWidth { get; }
+  System.Int32 PivotTolerancePercent { get; }
+  System.Int32 PivotXPercent { get; }
+  System.Int32 PivotYPercent { get; }
+  System.Int32 TickRate { get; }
+  System.String Id { get; }
+enum Game.Core.ArtSlotKind
+  Model3D
+  Sprite2D
+  UiImage
+sealed class Game.Core.DeterministicRandom
+  .ctor(System.UInt64 seed)
+  System.Int32 Next(System.Int32 minInclusive, System.Int32 maxExclusive)
+  System.UInt32 NextUInt()
+  const System.String Algorithm
+struct Game.Core.Error
+  .ctor(System.String code, System.String message)
+  System.String Code { get; }
+  System.String Message { get; }
+  System.String ToString()
+interface Game.Core.IArtSlotCatalog
+  System.Collections.Generic.IReadOnlyList<Game.Core.ArtSlotContract> Slots { get; }
+interface Game.Core.IDelay
+  Cysharp.Threading.Tasks.UniTask Delay(System.TimeSpan duration, System.Threading.CancellationToken cancellationToken)
+interface Game.Core.IFrameSource
+  Cysharp.Threading.Tasks.UniTask NextFrame(System.Threading.CancellationToken cancellationToken)
+interface Game.Core.IGameClock
+  System.Int64 NowMicroseconds { get; }
+interface Game.Core.IGameLogger
+  System.Void Error(System.String message)
+  System.Void Info(System.String message)
+  System.Void Warning(System.String message)
+interface Game.Core.IRandom
+  System.Int32 Next(System.Int32 minInclusive, System.Int32 maxExclusive)
+interface Game.Core.IRandomStreams
+  Game.Core.IRandom For(System.String stream, System.Int32 key1, System.Int32 key2, System.Int32 key3)
+  System.UInt64 Seed { get; }
+interface Game.Core.IReplayableSimulation
+  System.Boolean Enqueue(System.String command)
+  System.Int64 Tick { get; }
+  System.String StateHash()
+  System.Void Step()
+sealed class Game.Core.Lifetime
+  .ctor(System.String name, Game.Core.IGameLogger logger)
+  Game.Core.Lifetime CreateChild(System.String name)
+  System.Boolean IsAlive { get; }
+  System.Int32 ActiveTaskCount { get; }
+  System.String Name { get; }
+  System.Threading.CancellationToken Token { get; }
+  System.Void Dispose()
+  System.Void Own(System.Action onDispose)
+  System.Void Run(System.Func<System.Threading.CancellationToken, Cysharp.Threading.Tasks.UniTask> work)
+  T Own<T>(T disposable)
+sealed class Game.Core.NullGameLogger
+  System.Void Error(System.String message)
+  System.Void Info(System.String message)
+  System.Void Warning(System.String message)
+  static readonly Game.Core.NullGameLogger Instance
+sealed class Game.Core.OptionalReferenceAttribute
+  .ctor()
+sealed class Game.Core.RandomStreams
+  .ctor(System.UInt64 seed)
+  Game.Core.IRandom For(System.String stream, System.Int32 key1, System.Int32 key2, System.Int32 key3)
+  System.UInt64 Seed { get; }
+  const System.String Version
+  static System.UInt64 Derive(System.UInt64 seed, System.String stream, System.Int32 key1, System.Int32 key2, System.Int32 key3)
+sealed class Game.Core.ReplayLog
+  .ctor()
+  System.Boolean Truncated { get; }
+  System.Collections.Generic.List<Game.Core.ReplayLog.Entry> Entries { get; }
+  System.Collections.Generic.SortedDictionary<System.String, System.String> Meta { get; }
+  System.Int32 Capacity { get; set; }
+  System.Int64 EndTick { get; }
+  System.String EndHash { get; }
+  System.String Serialize()
+  System.Void End(System.Int64 tick, System.String hash)
+  System.Void RecordCommand(System.Int64 tick, System.String command)
+  System.Void RecordHash(System.Int64 tick, System.String hash)
+  const System.Int32 FormatVersion
+  static Game.Core.ReplayLog Parse(System.String text)
+sealed class Game.Core.ReplayLog.Entry
+  .ctor(System.Int64 tick, System.String command, System.String hash)
+  System.Int64 Tick { get; }
+  System.String Command { get; }
+  System.String Hash { get; }
+sealed class Game.Core.ReplayResult
+  .ctor()
+  Game.Core.IReplayableSimulation Simulation { get; }
+  System.Boolean Matches { get; }
+  System.Int64 DivergedAtTick { get; }
+  System.String Actual { get; }
+  System.String Expected { get; }
+  System.String Message { get; }
+  System.String ToString()
+static class Game.Core.ReplayRunner
+  static Game.Core.ReplayResult Run(Game.Core.ReplayLog log, System.Func<System.Collections.Generic.IReadOnlyDictionary<System.String, System.String>, Game.Core.IReplayableSimulation> create)
+struct Game.Core.Result<T>
+  Game.Core.Error Error { get; }
+  System.Boolean IsSuccess { get; }
+  T Value { get; }
+  static Game.Core.Result<T> Fail(System.String code, System.String message)
+  static Game.Core.Result<T> Ok(T value)
+sealed class Game.Core.StateHashBuilder
+  .ctor()
+  Game.Core.StateHashBuilder Add(System.Boolean value)
+  Game.Core.StateHashBuilder Add(System.Int64 value)
+  Game.Core.StateHashBuilder Add(System.String value)
+  System.String Hex { get; }
+  System.UInt64 Value { get; }
+sealed class Game.Core.TickScheduler
+  .ctor(System.Int32 tickRate, System.Int32 maxTicksPerFrame, System.Int64 maxFrameMicroseconds)
+  System.Int32 Advance(System.Int64 nowMicroseconds)
+  System.Int32 MaxTicksPerFrame { get; }
+  System.Int32 TickRate { get; }
+  System.Int64 BacklogMicroseconds { get; }
+  System.Int64 MaxFrameMicroseconds { get; }
+  System.Int64 TickMicroseconds { get; }
+static class Game.Core.TransitionTable
+  static System.Boolean Allows<TState>(System.Collections.Generic.IReadOnlyList<Game.Core.Transition<TState>> table, TState from, System.String trigger)
+  static System.Void Ensure<TState>(System.Collections.Generic.IReadOnlyList<Game.Core.Transition<TState>> table, TState from, System.String trigger, TState to)
+struct Game.Core.Transition<TState>
+  .ctor(TState from, System.String trigger, TState to)
+  System.String ToString()
+  System.String Trigger { get; }
+  TState From { get; }
+  TState To { get; }
+sealed class Game.Core.VisualTuningAttribute
+  .ctor()

@@ -1,0 +1,4 @@
+# Codex CLI, project config. Marks every shell Codex spawns as an agent shell, so human-only commands
+# (task approve, roadmap accept, art accept) refuse there. Hooks for Codex: see docs/ARCHITECTURE.md §15 (not wired yet).
+[shell_environment_policy]
+set = { GAME_AGENT_SHELL = "codex" }

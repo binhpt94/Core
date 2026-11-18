@@ -1,0 +1,19 @@
+{
+    "name": "Game.Ads.Unity",
+    "rootNamespace": "Game.Ads.Infrastructure",
+    "references": [
+        "UniTask",
+        "Game.Core",
+        "Game.Ads.Contracts",
+        "DemoAdsSdk"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,17 @@
+{
+    "name": "Game.Ads.Contracts",
+    "rootNamespace": "Game.Ads.Contracts",
+    "references": [
+        "UniTask",
+        "Game.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

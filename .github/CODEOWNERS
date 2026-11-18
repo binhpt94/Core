@@ -1,0 +1,23 @@
+# Architecture enforcement must not be changed by the agent that is being checked.
+# Replace ARCHITECTURE_OWNERS with your GitHub user or team (e.g. a team slug), then enable
+# branch protection: "Require review from Code Owners" + required status check "logic-tests".
+/Assets/_Game/Architecture/        ARCHITECTURE_OWNERS
+/Assets/_Game/Tests/Architecture/  ARCHITECTURE_OWNERS
+/tools/                            ARCHITECTURE_OWNERS
+/LogicTests/LogicTests.csproj      ARCHITECTURE_OWNERS
+/.claude/                          ARCHITECTURE_OWNERS
+/.github/                          ARCHITECTURE_OWNERS
+/CLAUDE.md                         ARCHITECTURE_OWNERS
+/docs/RULES.md                     ARCHITECTURE_OWNERS
+**/PublicApi.txt                   ARCHITECTURE_OWNERS
+/ProjectSettings/                  ARCHITECTURE_OWNERS
+/ArchitecturePolicy.txt            ARCHITECTURE_OWNERS
+/Assets/ThirdParty/                ARCHITECTURE_OWNERS
+/Assets/Plugins/                   ARCHITECTURE_OWNERS
+/docs/architecture/                ARCHITECTURE_OWNERS
+**/Tests/Replays/                 ARCHITECTURE_OWNERS
+**/Tests/Layout/                  ARCHITECTURE_OWNERS
+/Assets/_Game/Core/Editor/         ARCHITECTURE_OWNERS
+/plan/features.md                  ARCHITECTURE_OWNERS
+/plan/accepted.txt                 ARCHITECTURE_OWNERS
+/plan/art-accepted.txt             ARCHITECTURE_OWNERS

@@ -1,0 +1,19 @@
+replay 1
+meta arena=lives:3,spawn:40-80,speed:4-8,hop:25,rage:40-175,penalty:1,max:12,feedback:30 quiz=min:1,max:10,questions:8,options:3,offset:3,seconds:8 rng=xoshiro128**+splitmix64+fnv1a64/v1 seed=1003 sim=1 tickRate=20
+cmd 1 Start
+hash 20 7a705efdadf7015f
+hash 40 9ccb8a6a74f704e2
+hash 60 4ee99888b0047076
+hash 80 703f5d4b1d7f149d
+hash 100 290cbe4a026c1073
+hash 120 a446510724be7eac
+hash 140 990c59262eee1a7c
+hash 160 82088b454fb7c84b
+hash 180 a0b000d5117340bb
+hash 200 f7d9b0a7b6471d2f
+hash 220 f7629b2aebdc9ee1
+hash 240 755f1afe5612f05c
+hash 260 546c037fe07e184a
+hash 280 cfe2e47211d1fe90
+hash 300 585b99298b8ab0f3
+end 318 af1af833322e41fc

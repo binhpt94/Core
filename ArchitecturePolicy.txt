@@ -1,0 +1,12 @@
+# ArchitecturePolicy.txt: the only hand-maintained architecture allowlist (CODEOWNERS-protected, denied to agents).
+# It holds what cannot be derived from source. Details: docs/RULES.md#arch093 … #arch095.
+#
+# vendor   id=<id> tier=foundation|presentation|sdk assemblies=<A,B> (package=<upm-name> version=<v> | source=<folder> sha256=<hash>) [adapter=<Game.F.Unity>]
+#   foundation   = usable everywhere, also pure code   (UniTask)
+#   presentation = Unity layers only, never Logic      (DOTween, TextMeshPro)
+#   sdk          = ONLY in its adapter assembly        (ads, IAP, analytics, Firebase)
+# exception rule=<ARCHxxx> assembly=<Game.*> owner=<who> expires=<yyyy-mm-dd> reason="<why + exit plan>"
+#   first-party only, one assembly, time-boxed. Policy rules (ARCH09x) cannot be excepted.
+
+vendor id=unitask tier=foundation assemblies=UniTask package=com.cysharp.unitask version=2.5.10
+vendor id=demo-ads tier=sdk assemblies=DemoAdsSdk adapter=Game.Ads.Unity source=Assets/ThirdParty/DemoAdsSdk sha256=ccec26a8f26271bed3dbfc5621277360908bd271c8ca94c0be6e061415f121fb
