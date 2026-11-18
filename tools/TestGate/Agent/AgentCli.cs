@@ -14,6 +14,7 @@ namespace TestGate.AgentControl
     /// <summary>
     ///   task start "&lt;what&gt;" --feature F [--feature G] [--path P] [--tests]   one feature = active at once; wider = waits for approval
     ///   task request --feature G | --path P | --tests "&lt;why&gt;"               ask for more scope (current scope keeps working)
+    ///   task request --core "&lt;why&gt;"                                          core maintenance: owner-only files writable (human approves)
     ///   task approve                                                         HUMAN ONLY: needs a terminal, refused inside Claude Code
     ///   task show | task close
     ///   events verify | events tail [n] | reconcile
@@ -30,6 +31,7 @@ namespace TestGate.AgentControl
             var features = Values(args, "--feature");
             var paths = Values(args, "--path");
             bool tests = args.Contains("--tests");
+            bool core = args.Contains("--core");
             string text = args.Skip(2).Where((a, i) => !a.StartsWith("--", StringComparison.Ordinal) && !IsValueOf(args, i + 2)).FirstOrDefault();
 
             switch (sub)
@@ -92,11 +94,12 @@ namespace TestGate.AgentControl
                         Console.Error.WriteLine("No open task.");
                         return 1;
                     }
-                    ScopePolicy.Request(task, features, paths, tests, text);
+                    ScopePolicy.Request(task, features, paths, tests, text, core);
                     TaskStore.Save(root, task);
                     Recorder.Emit(Recorder.New(EventTypes.TaskScopeRequested, "task-cli").With("id", task.Id)
                         .With("features", string.Join(",", task.RequestedFeatures)).With("paths", string.Join(",", task.RequestedPaths))
-                        .With("tests", task.RequestedTestChanges ? "true" : "false").With("reason", text));
+                        .With("tests", task.RequestedTestChanges ? "true" : "false")
+                        .With("core", task.RequestedCoreMaintenance ? "true" : null).With("reason", text));
                     Console.WriteLine("Requested. Current scope stays " + task.ScopeText + ". Ask the human to run: ./tools/test-gate.sh task approve");
                     return 0;
 
@@ -127,7 +130,7 @@ namespace TestGate.AgentControl
                         if (task.Requirements.Count > 0)
                             Console.WriteLine("requirements: " + string.Join(", ", task.Requirements.Keys));
                         Console.WriteLine(task.Id + " \"" + task.Title + "\" " + task.Status + " · scope " + task.ScopeText +
-                                          (task.HasPendingRequest ? " · requested: " + string.Join(", ", task.RequestedFeatures.Concat(task.RequestedPaths)) + (task.RequestedTestChanges ? " +tests" : "") + " (" + task.RequestReason + ")" : ""));
+                                          (task.HasPendingRequest ? " · requested: " + string.Join(", ", task.RequestedFeatures.Concat(task.RequestedPaths)) + (task.RequestedTestChanges ? " +tests" : "") + (task.RequestedCoreMaintenance ? " +core maintenance" : "") + " (" + task.RequestReason + ")" : ""));
                     }
                     return 0;
             }
@@ -151,7 +154,8 @@ namespace TestGate.AgentControl
             Console.WriteLine("  current scope : " + task.ScopeText + (task.Status == AgentTask.PendingApproval ? " (not active yet)" : ""));
             if (task.HasPendingRequest)
                 Console.WriteLine("  requested     : " + string.Join(", ", task.RequestedFeatures.Select(f => "Features/" + f).Concat(task.RequestedPaths)) +
-                                  (task.RequestedTestChanges ? " + permission to change test expectations" : "") + "  (" + task.RequestReason + ")");
+                                  (task.RequestedTestChanges ? " + permission to change test expectations" : "") +
+                                  (task.RequestedCoreMaintenance ? " + CORE MAINTENANCE (owner-only files: tools/, rules, .claude/, .github/, docs, PublicApi...)" : "") + "  (" + task.RequestReason + ")");
             Console.Write("Type the task id to approve: ");
             if ((Console.ReadLine() ?? "").Trim() != task.Id)
             {

@@ -165,6 +165,24 @@ namespace LogicTests.AgentControl
             Assert.That(t.HasPendingRequest, Is.False);
         }
 
+        [Test]
+        public void CoreMaintenance_OpensOwnerOnlyFiles_OnlyAfterApproval_NeverTheGateLog()
+        {
+            var t = Task("MathQuiz");
+            ScopePolicy.Request(t, new string[0], new string[0], false, "restructure the core", coreMaintenance: true);
+            Assert.That(t.HasPendingRequest, Is.True);
+            Assert.That(ScopePolicy.Check(t, "tools/TestGate/Program.cs").Allowed, Is.False, "requested is not approved");
+            ScopePolicy.Approve(t, "later");
+            Assert.That(t.ScopeText, Does.Contain("core maintenance"));
+            foreach (var p in new[] { "tools/TestGate/Program.cs", ".claude/settings.json", "Assets/_Game/Architecture/Rules/FileRules.cs",
+                                      "Assets/_Game/Core/Runtime/PublicApi.txt", "Assets/_Game/Bootstrap/Editor/X.cs.meta", "Assets/_Game/Features/Progress/Logic/X.cs" })
+                Assert.That(ScopePolicy.Check(t, p).Allowed, Is.True, p);
+            Assert.That(ScopePolicy.Check(t, ScopePolicy.GateLog + "task.json").Allowed, Is.False, "the gate's own log stays owner-only");
+            Assert.That(t.AllowTestChanges, Is.False, "core maintenance does not allow weakening tests");
+            t.Status = AgentTask.Closed;
+            Assert.That(ScopePolicy.Check(t, "tools/TestGate/Program.cs").Allowed, Is.False, "a closed task opens nothing");
+        }
+
         [TestCase("cat .agent/events.jsonl > /dev/null")]
         [TestCase("echo '{}' > .agent/task.json")]
         [TestCase("./tools/test-gate.sh task approve")]
@@ -524,8 +542,15 @@ namespace LogicTests.AgentControl
             finally
             {
                 Recorder.Root = null;
-                Directory.Delete(root, true);
+                DeleteTree(root); // git marks its objects read-only: a plain Directory.Delete fails on Windows
             }
+        }
+
+        private static void DeleteTree(string dir)
+        {
+            foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+                File.SetAttributes(f, FileAttributes.Normal);
+            Directory.Delete(dir, true);
         }
     }
 }

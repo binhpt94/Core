@@ -12,3 +12,7 @@
 deny  mcp__blender__execute_blender_code
 # Unity: menu items and C# execution can do anything in the editor.
 deny  mcp__unity__execute_menu_item
+
+# Chat with the human (project threads): never changes files. Must work even while a task waits for approval.
+read  mcp__hearthbot__*
+read  mcp__claude-code-remote__*

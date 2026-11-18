@@ -22,6 +22,9 @@ namespace TestGate.AgentControl
         public List<string> RequestedFeatures { get; set; } = new List<string>();
         public List<string> RequestedPaths { get; set; } = new List<string>();
         public bool RequestedTestChanges { get; set; }
+        /// <summary>Core maintenance (human-approved): owner-only paths become writable, except the gate's own log folder.</summary>
+        public bool CoreMaintenance { get; set; }
+        public bool RequestedCoreMaintenance { get; set; }
         public string RequestReason { get; set; }
         public string CreatedTs { get; set; }
         public string ApprovedTs { get; set; }
@@ -38,10 +41,11 @@ namespace TestGate.AgentControl
         public const string Closed = "closed";
 
         public bool IsActive => Status == Active;
-        public bool HasPendingRequest => RequestedFeatures.Count > 0 || RequestedPaths.Count > 0 || RequestedTestChanges;
+        public bool HasPendingRequest => RequestedFeatures.Count > 0 || RequestedPaths.Count > 0 || RequestedTestChanges || RequestedCoreMaintenance;
 
         public string ScopeText =>
-            string.Join(", ", Features.Select(f => "Features/" + f).Concat(Paths)) + (AllowTestChanges ? " (+test changes)" : "");
+            string.Join(", ", Features.Select(f => "Features/" + f).Concat(Paths)) + (AllowTestChanges ? " (+test changes)" : "")
+            + (CoreMaintenance ? " (+core maintenance)" : "");
     }
 
     public static class TaskStore
@@ -87,6 +91,9 @@ namespace TestGate.AgentControl
             Game + "Architecture/", Game + "Tests/Architecture/", Game + "Core/Editor/", "Assets/ThirdParty/", "Assets/Plugins/", "docs/RULES.md"
         };
 
+        /// <summary>The gate's own event log + task: never writable by an agent, not even in core maintenance.</summary>
+        public const string GateLog = "." + "agent/";
+
         private static readonly string[] ProtectedSegments = { "/Tests/Replays/", "/Tests/Layout/" };
 
         /// <summary>Written only by generators whose output a rule verifies (ARCH090): safe for any active task.</summary>
@@ -104,6 +111,8 @@ namespace TestGate.AgentControl
                 return ScopeDecision.Allow("outside the repository");
             if (path.StartsWith(".scratch/", StringComparison.Ordinal))
                 return ScopeDecision.Allow("scratch (gitignored, outside Assets/)");
+            if (task != null && task.IsActive && task.CoreMaintenance && !path.StartsWith(GateLog, StringComparison.Ordinal))
+                return ScopeDecision.Allow("core maintenance (approved by a human)");
             if (IsProtected(path))
                 return ScopeDecision.Deny(path + " is owner-only (protected); ask the human");
             if (task == null || task.Status == AgentTask.Closed)
@@ -142,11 +151,12 @@ namespace TestGate.AgentControl
         }
 
         /// <summary>Asks for more scope; the task keeps its current scope until a human approves.</summary>
-        public static void Request(AgentTask task, IEnumerable<string> features, IEnumerable<string> paths, bool testChanges, string reason)
+        public static void Request(AgentTask task, IEnumerable<string> features, IEnumerable<string> paths, bool testChanges, string reason, bool coreMaintenance = false)
         {
             task.RequestedFeatures = task.RequestedFeatures.Union(features).Where(f => !task.Features.Contains(f)).ToList();
             task.RequestedPaths = task.RequestedPaths.Union(paths.Select(p => p.Replace('\\', '/').TrimStart('.', '/'))).Where(p => !task.Paths.Contains(p)).ToList();
             task.RequestedTestChanges |= testChanges;
+            task.RequestedCoreMaintenance |= coreMaintenance;
             task.RequestReason = reason;
         }
 
@@ -155,9 +165,11 @@ namespace TestGate.AgentControl
             task.Features = task.Features.Union(task.RequestedFeatures).ToList();
             task.Paths = task.Paths.Union(task.RequestedPaths).ToList();
             task.AllowTestChanges |= task.RequestedTestChanges;
+            task.CoreMaintenance |= task.RequestedCoreMaintenance;
             task.RequestedFeatures.Clear();
             task.RequestedPaths.Clear();
             task.RequestedTestChanges = false;
+            task.RequestedCoreMaintenance = false;
             task.Status = AgentTask.Active;
             task.ApprovedTs = ts;
         }
