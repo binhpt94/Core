@@ -57,5 +57,3 @@ flowchart LR
 |---|---|---|---|---|---|
 | demo-ads | sdk | DemoAdsSdk | Game.Ads.Unity only | Ads | sha256 of Assets/ThirdParty/DemoAdsSdk |
 | unitask | foundation | UniTask | everywhere | Ads, Ads.Contracts, Bootstrap, Core, MathQuiz | package com.cysharp.unitask@2.5.10 |
-
-> Asset references: **UNKNOWN** until Unity has generated `.meta` files (open the project once). Any asset without its `.meta` fails ARCH084.

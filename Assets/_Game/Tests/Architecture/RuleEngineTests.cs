@@ -401,6 +401,11 @@ namespace Game.Architecture.Tests
         [TestCase("Assets/_Game/Features/A/Assets/Private/Slime (1).prefab", "ARCH131")]
         [TestCase("Assets/_Game/Features/A/Logic/Arena.cs.orig", "ARCH131")]
         [TestCase("Assets/_Game/Features/A/Assets/Private/Test.unity", "ARCH131")]
+        [TestCase("Assets/_Game/Core.meta", null)]
+        [TestCase("Assets/_Game/Core/Runtime.meta", null)]
+        [TestCase("Assets/_Game/Features.meta", null)]
+        [TestCase("Assets/_Game/Core/Foo.meta", "ARCH130")]
+        [TestCase("Assets/_Game/Core/loose.cs.meta", "ARCH130")]
         public void FilePlacement(string path, string rule)
         {
             var ids = FileRules.CheckPath(path).Select(v => v.RuleId).ToList();
