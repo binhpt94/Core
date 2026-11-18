@@ -124,7 +124,7 @@ namespace TestGate.AgentControl
                 switch (e.Type)
                 {
                     case EventTypes.PolicyDenied: denied++; break;
-                    case EventTypes.UnobservedChange: unobserved++; break;
+                    case EventTypes.UnobservedChange: if (trust == Trust.Unobserved) unobserved++; break;
                     case EventTypes.StopBlocked: stopBlocked++; break;
                     case EventTypes.Claim: claims++; break;
                     case EventTypes.GateFinished:
@@ -143,7 +143,7 @@ namespace TestGate.AgentControl
                 }
 
                 string path = e.Get("path");
-                if (path != null && (e.Type == EventTypes.FileModified || e.Type == EventTypes.UnobservedChange))
+                if (path != null && (e.Type == EventTypes.FileModified || e.Type == EventTypes.UnobservedChange) && !StepGroups.IsOutsideRepo(e))
                 {
                     if (!files.TryGetValue(path, out var f))
                         files[path] = f = new FileView { Path = path };
@@ -169,7 +169,7 @@ namespace TestGate.AgentControl
                 ss.Task = e.Task ?? ss.Task;
                 if (problem)
                     ss.Problems++;
-                if (e.Type == EventTypes.FileModified && path != null)
+                if (e.Type == EventTypes.FileModified && path != null && !StepGroups.IsOutsideRepo(e))
                     sessionFiles[e.Session].Add(path);
                 if (e.Type == EventTypes.GateFinished)
                     ss.Gate = e.Get("result");
