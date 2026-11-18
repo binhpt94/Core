@@ -46,7 +46,7 @@ namespace Game.Architecture.Tests
         public void EveryRule_IsDocumented()
         {
             // Keeps Docs/RULES.md in sync: agents read one section on demand instead of the whole rulebook.
-            string docs = File.ReadAllText(Path.Combine(_root, "docs", "RULES.md"));
+            string docs = File.ReadAllText(Path.Combine(_root, "Docs", "RULES.md"));
             var missing = RuleCatalog.All.Where(r => !docs.Contains("## " + r.Id)).Select(r => r.Id).ToList();
             Assert.That(missing, Is.Empty, "Add a '## ARCHxxx' section to Docs/RULES.md for each rule");
         }
