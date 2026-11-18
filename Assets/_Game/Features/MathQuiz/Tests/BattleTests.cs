@@ -62,7 +62,7 @@ namespace Game.MathQuiz.Tests
             b.Enqueue(QuizCommand.Answer(QuizHarness.Correct));
             b.Step();
 
-            Assert.That(b.Arena.Enemies.Select(e => e.Id), Does.Not.Contain(nearest));
+            Assert.That(b.Arena.Enemies.Select(e => e.Id), Has.No.Member(nearest));
             Assert.That(b.LastEvents.Any(e => e.Kind == ArenaEventKind.Zapped && e.EnemyId == nearest), Is.True);
         }
 

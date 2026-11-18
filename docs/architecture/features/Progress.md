@@ -22,7 +22,7 @@ flowchart LR
 | Implemented by | - |
 | Public face | IBestScoreService, ProgressInstaller, ProgressModule |
 | Vendors | - |
-| Assets (Public/Private) | 0/0 (refs UNKNOWN: no .meta yet) |
+| Assets (Public/Private) | 0/0 |
 | Tests | 8 |
 
 ## Constructor injection (L3)

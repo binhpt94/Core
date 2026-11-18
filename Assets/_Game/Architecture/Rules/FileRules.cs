@@ -43,6 +43,8 @@ namespace Game.Architecture.Rules
             string target = p.EndsWith(".meta", StringComparison.Ordinal) ? p.Substring(0, p.Length - 5) : p;
 
             string where = Misplaced(target);
+            if (where != null && p.EndsWith(".meta", StringComparison.Ordinal) && IsLayoutFolder(target))
+                where = null; // .meta of a folder that is part of the known layout
             if (where != null)
                 yield return new RuleViolation("ARCH130", p, 0, where);
 
@@ -84,6 +86,10 @@ namespace Game.Architecture.Rules
                 return "feature assets go to Assets/Public/ or Assets/Private/";
             return null;
         }
+
+        /// <summary>A folder of the known layout (its .meta is legal even where loose files are not).</summary>
+        private static bool IsLayoutFolder(string dir) =>
+            GameTop.Any(t => dir == PathInfo.GameRoot + t) || Misplaced(dir + "/_") == null;
 
         // ------------------------------------------------------------------ project-wide (needs git)
 

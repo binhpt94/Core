@@ -20,7 +20,7 @@ flowchart LR
 | Implemented by | - |
 | Public face | AdsInstaller, IAdsService |
 | Vendors | demo-ads, unitask |
-| Assets (Public/Private) | 0/0 (refs UNKNOWN: no .meta yet) |
+| Assets (Public/Private) | 0/0 |
 | Tests | 0 |
 
 ## Constructor injection (L3)
