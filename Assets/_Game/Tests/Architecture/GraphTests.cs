@@ -195,24 +195,37 @@ namespace Game.Architecture.Tests
         [Test]
         public void VendorHashCache_ReusesUntilSizeOrTimeChanges_AndCanBeDisabled()
         {
-            string dir = Path.Combine(_tmp, "Assets", "ThirdParty", "V");
-            Write("Assets/ThirdParty/V/lib.so", "AAAA");
-            string first = ThirdPartyRules.HashFolderCached(_tmp, dir);
-            Assert.That(File.Exists(Path.Combine(_tmp, ThirdPartyRules.CacheFile)), Is.True);
-
-            // Same size + same mtime: cache hit (this is why CI never uses the cache)
-            var file = Path.Combine(dir, "lib.so");
-            var time = File.GetLastWriteTimeUtc(file);
-            File.WriteAllText(file, "BBBB");
-            File.SetLastWriteTimeUtc(file, time);
-            Assert.That(ThirdPartyRules.HashFolderCached(_tmp, dir), Is.EqualTo(first));
-
-            Environment.SetEnvironmentVariable("GAME_ARCH_NO_CACHE", "1");
-            Assert.That(ThirdPartyRules.HashFolderCached(_tmp, dir), Is.Not.EqualTo(first), "no-cache mode always reads the content");
+            // CI runners set CI=true, which turns the cache off; this test checks the cache itself.
+            string savedCi = Environment.GetEnvironmentVariable("CI");
+            string savedNoCache = Environment.GetEnvironmentVariable("GAME_ARCH_NO_CACHE");
+            Environment.SetEnvironmentVariable("CI", null);
             Environment.SetEnvironmentVariable("GAME_ARCH_NO_CACHE", null);
+            try
+            {
+                string dir = Path.Combine(_tmp, "Assets", "ThirdParty", "V");
+                Write("Assets/ThirdParty/V/lib.so", "AAAA");
+                string first = ThirdPartyRules.HashFolderCached(_tmp, dir);
+                Assert.That(File.Exists(Path.Combine(_tmp, ThirdPartyRules.CacheFile)), Is.True);
 
-            File.WriteAllText(file, "CCCCC"); // size changes
-            Assert.That(ThirdPartyRules.HashFolderCached(_tmp, dir), Is.EqualTo(ThirdPartyRules.HashFolder(dir)));
+                // Same size + same mtime: cache hit (this is why CI never uses the cache)
+                var file = Path.Combine(dir, "lib.so");
+                var time = File.GetLastWriteTimeUtc(file);
+                File.WriteAllText(file, "BBBB");
+                File.SetLastWriteTimeUtc(file, time);
+                Assert.That(ThirdPartyRules.HashFolderCached(_tmp, dir), Is.EqualTo(first));
+
+                Environment.SetEnvironmentVariable("GAME_ARCH_NO_CACHE", "1");
+                Assert.That(ThirdPartyRules.HashFolderCached(_tmp, dir), Is.Not.EqualTo(first), "no-cache mode always reads the content");
+                Environment.SetEnvironmentVariable("GAME_ARCH_NO_CACHE", null);
+
+                File.WriteAllText(file, "CCCCC"); // size changes
+                Assert.That(ThirdPartyRules.HashFolderCached(_tmp, dir), Is.EqualTo(ThirdPartyRules.HashFolder(dir)));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("CI", savedCi);
+                Environment.SetEnvironmentVariable("GAME_ARCH_NO_CACHE", savedNoCache);
+            }
         }
 
         // ---------- fix 5: documentation rules never block Unity ----------
