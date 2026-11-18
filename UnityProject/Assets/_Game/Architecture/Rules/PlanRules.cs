@@ -19,7 +19,7 @@ namespace Game.Architecture.Rules
     }
 
     /// <summary>
-    /// ARCH110: plan/features.md parses and is consistent (unique ids, known deps, no cycles, modules exist).
+    /// ARCH110: Docs/Plan/features.md parses and is consistent (unique ids, known deps, no cycles, modules exist).
     /// ARCH111: every [Covers("R-...")] in tests names a requirement that exists in the plan.
     /// Requirement → test links live IN THE TEST CODE, so they move with the tests and can't drift in a separate table.
     /// </summary>
@@ -52,7 +52,7 @@ namespace Game.Architecture.Rules
             foreach (var f in plan.Features)
             {
                 foreach (var m in f.Modules)
-                    if (!Directory.Exists(Path.Combine(repoRoot, "Assets", "_Game", "Features", m)))
+                    if (!Directory.Exists(Path.Combine(repoRoot, "UnityProject", "Assets", "_Game", "Features", m)))
                         yield return new RuleViolation("ARCH110", P, f.Line, f.Id + ": module '" + m + "' is not a folder in Assets/_Game/Features");
                 if (f.Active && f.Modules.Count == 0)
                     yield return new RuleViolation("ARCH110", P, f.Line, f.Id + ": add [modules: X] (the code folders this feature lives in: task scope and change impact use it)");
@@ -112,7 +112,7 @@ namespace Game.Architecture.Rules
         public static List<CoverEntry> Covers(string repoRoot)
         {
             var result = new List<CoverEntry>();
-            string game = Path.Combine(repoRoot, "Assets", "_Game");
+            string game = Path.Combine(repoRoot, "UnityProject", "Assets", "_Game");
             if (!Directory.Exists(game))
                 return result;
             foreach (var file in Directory.EnumerateFiles(game, "*.cs", SearchOption.AllDirectories))

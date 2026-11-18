@@ -38,7 +38,7 @@ namespace Game.Architecture.Rules
         public static List<ArtSlotDeclaration> Declarations(string repoRoot)
         {
             var list = new List<ArtSlotDeclaration>();
-            string features = Path.Combine(repoRoot, "Assets", "_Game", "Features");
+            string features = Path.Combine(repoRoot, "UnityProject", "Assets", "_Game", "Features");
             if (!Directory.Exists(features))
                 return list;
             foreach (var file in Directory.EnumerateFiles(features, "*.cs", SearchOption.AllDirectories))
@@ -63,7 +63,7 @@ namespace Game.Architecture.Rules
         public static List<ArtSlotBindingFile> Bindings(string repoRoot)
         {
             var list = new List<ArtSlotBindingFile>();
-            string game = Path.Combine(repoRoot, "Assets", "_Game");
+            string game = Path.Combine(repoRoot, "UnityProject", "Assets", "_Game");
             if (!Directory.Exists(game))
                 return list;
             foreach (var file in Directory.EnumerateFiles(game, "*.asset", SearchOption.AllDirectories))

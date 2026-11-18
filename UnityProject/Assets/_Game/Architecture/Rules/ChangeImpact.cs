@@ -85,15 +85,15 @@ namespace Game.Architecture.Rules
 
             if (p.EndsWith(".meta", StringComparison.Ordinal))
                 return Classify(p.Substring(0, p.Length - 5));
-            if (p.StartsWith("plan/", StringComparison.Ordinal))
+            if (p.StartsWith("Docs/Plan/", StringComparison.Ordinal))
                 return Make(p, "product plan / proposal (ARCH110/111 static checks; roadmap status recomputes)", ChangeRole.Docs);
             if (p.EndsWith(".md", StringComparison.Ordinal))
                 return Make(p, "documentation", ChangeRole.Docs);
-            if (p.StartsWith("tools/", StringComparison.Ordinal) || p.StartsWith("LogicTests/", StringComparison.Ordinal) || info.Layer == PathLayer.Architecture
+            if (p.StartsWith("Tools/", StringComparison.Ordinal) || p.StartsWith("Tools/LogicTests/", StringComparison.Ordinal) || info.Layer == PathLayer.Architecture
                 || p.StartsWith(G + "Tests/Architecture/", StringComparison.Ordinal))
                 return Make(p, "rule engine / gate / pure test project", ChangeRole.Pure);
             if (p.StartsWith(".claude/", StringComparison.Ordinal) || p.StartsWith(".github/", StringComparison.Ordinal)
-                || p == "ArchitecturePolicy.txt" || p == ".gitignore" || p == ".editorconfig" || p == "CLAUDE.md" || p == "AGENTS.md")
+                || p == "Tools/ArchitecturePolicy.txt" || p == ".gitignore" || p == ".editorconfig" || p == "CLAUDE.md" || p == "AGENTS.md")
                 return Make(p, "repo configuration (static rules)", ChangeRole.Pure);
 
             // One view: its folder, its cases, its fixtures, its baseline.
@@ -154,7 +154,7 @@ namespace Game.Architecture.Rules
                     return Make(p, "composition / scene", ChangeRole.Integration);
             }
 
-            if (p.StartsWith("Packages/", StringComparison.Ordinal) || p.StartsWith("ProjectSettings/", StringComparison.Ordinal))
+            if (p.StartsWith("UnityProject/Packages/", StringComparison.Ordinal) || p.StartsWith("UnityProject/ProjectSettings/", StringComparison.Ordinal))
                 return Make(p, "packages / project settings", ChangeRole.Integration, ChangeRole.AllViews);
 
             return Make(p, "unrecognised path (fail-closed)", ChangeRole.Unknown);
@@ -178,7 +178,7 @@ namespace Game.Architecture.Rules
         {
             var bindings = ArtRules.Bindings(_root);
             var direct = bindings.Where(b => b.Path == p).Select(b => b.SlotId).ToList();
-            if (direct.Count > 0 || !p.StartsWith("Assets/", StringComparison.Ordinal))
+            if (direct.Count > 0 || !p.StartsWith("UnityProject/Assets/", StringComparison.Ordinal))
                 return direct;
             string guid = GuidOf(p);
             if (guid == null)
@@ -234,7 +234,7 @@ namespace Game.Architecture.Rules
             if (_guidToPath != null)
                 return _guidToPath;
             _guidToPath = new Dictionary<string, string>(StringComparer.Ordinal);
-            string assets = Path.Combine(_root, "Assets");
+            string assets = Path.Combine(_root, "UnityProject", "Assets");
             if (Directory.Exists(assets))
                 foreach (var meta in Directory.EnumerateFiles(assets, "*.meta", SearchOption.AllDirectories))
                 {

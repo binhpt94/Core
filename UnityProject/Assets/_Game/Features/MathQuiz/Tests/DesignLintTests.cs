@@ -31,7 +31,7 @@ namespace Game.MathQuiz.Tests
         {
             foreach (var (source, c) in Shipped())
                 Assert.That(ArenaDesign.FirstContactTicks(c), Is.GreaterThanOrEqualTo(ArenaDesign.BreatherSeconds * ArenaConfig.TickRate),
-                    source + " breaks R-ARENA-BREATHER. If a designer changed it on purpose, the human decides: change the numbers or the goal in plan/features.md");
+                    source + " breaks R-ARENA-BREATHER. If a designer changed it on purpose, the human decides: change the numbers or the goal in Docs/Plan/features.md");
         }
 
         [Test, Covers("R-ARENA-READABLE")]

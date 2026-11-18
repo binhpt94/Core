@@ -1,12 +1,12 @@
 # Product plan: features, requirements, gaps, rush
 
-The plan is **data the human owns** (`plan/features.md`), not a prompt. Agents read it, never edit it, and propose changes
-in `plan/inbox/`. Nothing in it says "done": every status is **computed** from tests and evidence.
+The plan is **data the human owns** (`Docs/Plan/features.md`), not a prompt. Agents read it, never edit it, and propose changes
+in `Docs/Plan/Inbox/`. Nothing in it says "done": every status is **computed** from tests and evidence.
 
 ```
-plan/features.md   the plan (human; CODEOWNERS; denied to agents)          ARCH110 checks it on every gate/commit
-plan/accepted.txt  human acceptances of [manual] requirements (`roadmap accept`)
-plan/inbox/*.md    proposals written by agents (`roadmap propose`), decided by the human
+Docs/Plan/features.md   the plan (human; CODEOWNERS; denied to agents)          ARCH110 checks it on every gate/commit
+Docs/Plan/accepted.txt  human acceptances of [manual] requirements (`roadmap accept`)
+Docs/Plan/Inbox/*.md    proposals written by agents (`roadmap propose`), decided by the human
 [Covers("R-ID")]   on tests: the link requirement → evidence (ARCH111: the id must exist)
 .agent/plan-ledger.json   requirement wording at its last verification (STALE detection; written by the gate)
 ```
@@ -73,12 +73,12 @@ active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human).
 ## Working with it
 
 ```bash
-./tools/test-gate.sh roadmap status [F-ID]   # feature table, or one feature with its requirements and evidence
-./tools/test-gate.sh roadmap gaps            # what is missing, most severe first; [agent] work vs [người] decisions
-./tools/test-gate.sh roadmap next            # parallel lanes (modules don't overlap) + the exact task command
-./tools/test-gate.sh task start "F-TIMER: ..." --req R-TIMER-DEADLINE --req R-TIMER-STOP
-./tools/test-gate.sh roadmap propose "Cần lưu trạng thái quảng cáo đã xem" --feature F-AD-CONTINUE
-./tools/test-gate.sh roadmap accept R-ARENA-FEEL     # HUMAN ONLY (terminal)
+./Tools/test-gate.sh roadmap status [F-ID]   # feature table, or one feature with its requirements and evidence
+./Tools/test-gate.sh roadmap gaps            # what is missing, most severe first; [agent] work vs [người] decisions
+./Tools/test-gate.sh roadmap next            # parallel lanes (modules don't overlap) + the exact task command
+./Tools/test-gate.sh task start "F-TIMER: ..." --req R-TIMER-DEADLINE --req R-TIMER-STOP
+./Tools/test-gate.sh roadmap propose "Cần lưu trạng thái quảng cáo đã xem" --feature F-AD-CONTINUE
+./Tools/test-gate.sh roadmap accept R-ARENA-FEEL     # HUMAN ONLY (terminal)
 ```
 
 - **Parallel work:** one git worktree per agent. `task start` refuses modules another worktree's open task is using
@@ -116,9 +116,9 @@ Three branches that move at different speeds. The rules that keep them from bloc
    requirement → gameplay work is blocked until a human accepts feasibility (decide wolf/tiger *before* coding 3 skills).
 
 ```bash
-./tools/test-gate.sh art status                 # every slot: level, bound file, art gate, measurement
-./tools/test-gate.sh art accept MathQuiz.Slime  # HUMAN ONLY: approve this exact content
-./tools/test-gate.sh roadmap next               # ...includes the art lane (artists / reviewers)
+./Tools/test-gate.sh art status                 # every slot: level, bound file, art gate, measurement
+./Tools/test-gate.sh art accept MathQuiz.Slime  # HUMAN ONLY: approve this exact content
+./Tools/test-gate.sh roadmap next               # ...includes the art lane (artists / reviewers)
 ```
 
 **Limits.** A `[Covers]` link proves a test is *meant* to check a requirement, not that it checks it well: review tests like

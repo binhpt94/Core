@@ -22,7 +22,7 @@ namespace TestGate.Files
         public long Bytes { get; set; }
 
         /// <summary>Deliverables waiting for a human (proposals): never cleanup material, whoever wrote them.</summary>
-        public bool ForHuman => Path.StartsWith("plan/inbox/", StringComparison.Ordinal);
+        public bool ForHuman => Path.StartsWith("Docs/Plan/Inbox/", StringComparison.Ordinal);
 
         /// <summary>Safe to delete without asking: never committed + made by an agent + untouched since + not a deliverable for a human.</summary>
         public bool SafeToDelete => Origin != "unknown" && Unchanged && !ForHuman;
@@ -116,19 +116,19 @@ namespace TestGate.Files
         {
             var guids = new AssetRules(root).GuidIndex; // guid → path
             var byPath = guids.GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.First().Key, StringComparer.Ordinal);
-            string assets = System.IO.Path.Combine(root, "Assets");
+            string assets = System.IO.Path.Combine(root, "UnityProject", "Assets");
             if (!Directory.Exists(assets))
                 return new List<UnusedAsset>();
             var all = Directory.EnumerateFiles(assets, "*", SearchOption.AllDirectories)
                 .Select(f => PathInfo.Normalize(f.Substring(root.Length))).Where(p => !p.EndsWith(".meta", StringComparison.Ordinal)).ToList();
 
             var roots = all.Where(p => p.EndsWith(".unity", StringComparison.Ordinal) || p.Contains("/Assets/Public/")).ToList();
-            string settings = System.IO.Path.Combine(root, "ProjectSettings");
+            string settings = System.IO.Path.Combine(root, "UnityProject", "ProjectSettings");
             if (Directory.Exists(settings))
                 roots.AddRange(Directory.GetFiles(settings, "*.asset").Select(f => PathInfo.Normalize(f.Substring(root.Length))));
             foreach (var cs in all.Where(p => p.EndsWith(".cs", StringComparison.Ordinal)))
                 foreach (Match m in AssetPathInCode.Matches(File.ReadAllText(System.IO.Path.Combine(root, cs))))
-                    roots.Add(m.Groups[1].Value);
+                    roots.Add(Layout.FromUnity(m.Groups[1].Value)); // code names Unity paths ("Assets/...")
 
             var reached = new HashSet<string>(StringComparer.Ordinal);
             var queue = new Queue<string>(roots.Distinct());
@@ -158,11 +158,11 @@ namespace TestGate.Files
 
         private static readonly (string Path, bool Regenerable, string Note)[] Known =
         {
-            ("Library", true, "Unity cache: regenerated on open (slow). Only `files clean --library`."),
-            ("Temp", true, "Unity temp"), ("Logs", true, "Unity logs"), ("TestResults", true, "gate results (dashboard reads them)"),
+            ("UnityProject/Library", true, "Unity cache: regenerated on open (slow). Only `files clean --library`."),
+            ("UnityProject/Temp", true, "Unity temp"), ("UnityProject/Logs", true, "Unity logs"), ("Dashboard/Data", true, "gate results (dashboard reads them)"),
             (".scratch", true, "scratch work (gitignored)"), (".agent", false, "event log + task: keep (evidence)"),
-            ("LogicTests/bin", true, "dotnet build"), ("LogicTests/obj", true, "dotnet build"),
-            ("Assets", false, "the game"), ("Packages", false, "package manifest (+ embedded packages)")
+            ("Tools/LogicTests/bin", true, "dotnet build"), ("Tools/LogicTests/obj", true, "dotnet build"),
+            ("UnityProject/Assets", false, "the game"), ("UnityProject/Packages", false, "package manifest (+ embedded packages)")
         };
 
         public static List<DiskUse> Du(string root)

@@ -12,7 +12,7 @@ namespace Game.Architecture.Tests
         private string _tmp;
         private ChangeImpact _impact;
 
-        private const string F = "Assets/_Game/Features/Shop/";
+        private const string F = "UnityProject/Assets/_Game/Features/Shop/";
         private const string ScriptGuid = "11111111111111111111111111111111";
         private const string PrefabGuid = "22222222222222222222222222222222";
 
@@ -81,14 +81,14 @@ namespace Game.Architecture.Tests
         [TestCase(F + "Logic/Simulation/Economy.cs")]
         [TestCase(F + "Logic/Domain/Price.cs")]
         [TestCase(F + "Contracts/IShopService.cs")]
-        [TestCase("Assets/_Game/Core/Runtime/Result.cs")]
+        [TestCase("UnityProject/Assets/_Game/Core/Runtime/Result.cs")]
         [TestCase(F + "Tests/PriceTests.cs")]
-        [TestCase("Assets/_Game/Architecture/Rules/SourceRules.cs")]
+        [TestCase("UnityProject/Assets/_Game/Architecture/Rules/SourceRules.cs")]
         public void PureCode_OnlyDotnet(string path) =>
             Assert.That(C(path).Roles, Is.EqualTo(new[] { ChangeRole.Pure }), C(path).ToString());
 
-        [TestCase("Assets/_Game/Bootstrap/GameCompositionRoot.cs")]
-        [TestCase("Assets/_Game/Scenes/Main.unity")]
+        [TestCase("UnityProject/Assets/_Game/Bootstrap/GameCompositionRoot.cs")]
+        [TestCase("UnityProject/Assets/_Game/Scenes/Main.unity")]
         [TestCase(F + "Tests/Unity/ShopFlowTests.cs")]
         public void Composition_RunsIntegration(string path) =>
             Assert.That(C(path).Roles, Does.Contain(ChangeRole.Integration), C(path).ToString());
@@ -107,7 +107,7 @@ namespace Game.Architecture.Tests
         [Test]
         public void SharedViewTooling_RunsEveryView()
         {
-            var i = C("Assets/_Game/Core/Editor/ViewStage.cs");
+            var i = C("UnityProject/Assets/_Game/Core/Editor/ViewStage.cs");
             Assert.That(i.Roles, Is.EqualTo(new[] { ChangeRole.AllViews }));
             Assert.That(i.Views, Has.Count.EqualTo(2));
         }
@@ -116,7 +116,7 @@ namespace Game.Architecture.Tests
         public void Docs_RunNothing_UnknownPaths_FailClosed()
         {
             Assert.That(C(F + "README.md").Roles, Is.EqualTo(new[] { ChangeRole.Docs }));
-            Assert.That(C("Assets/Misc/data.bytes").Roles, Is.EqualTo(new[] { ChangeRole.Unknown }));
+            Assert.That(C("UnityProject/Assets/Misc/data.bytes").Roles, Is.EqualTo(new[] { ChangeRole.Unknown }));
             Assert.That(C(F + "Unity/Views/ShopPopup/ShopPopup.cs.meta").Views, Is.EqualTo(new[] { "Shop/ShopPopup" }), ".meta follows its asset");
         }
     }

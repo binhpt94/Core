@@ -2,8 +2,8 @@
 
 **Feature modules + Clean Architecture Lite + manual DI + asmdef boundaries**, made safe for AI agents by
 **enforcement instead of instructions**: every important rule is checked by a tool that runs automatically
-(compiler, hooks, tests, Unity gates, CI). Rule details: [`docs/RULES.md`](RULES.md).
-**Current system map (generated, never stale): [`docs/architecture/overview.md`](architecture/overview.md).**
+(compiler, hooks, tests, Unity gates, CI). Rule details: [`Docs/RULES.md`](RULES.md).
+**Current system map (generated, never stale): [`Docs/Architecture/overview.md`](architecture/overview.md).**
 
 | Growing-game problem | Mechanism | §  |
 |---|---|---|
@@ -91,7 +91,7 @@ Initialisation is explicit: `GameCompositionRoot.Awake` (execution order −1000
 - **Isolation check without Unity (ARCH080):** every YAML reference is `guid: …`; `.meta` files map GUIDs to paths. The scanner
   flags any reference from outside feature X into X's non-Public assets in milliseconds (scenes/Bootstrap count as outside).
   This requires **Force Text** serialization (ARCH084, `ProjectSettings/EditorSettings.asset`).
-- **Delete/replace a feature:** `./tools/test-gate.sh refs Assets/_Game/Features/X` lists incoming asset *and* assembly references;
+- **Delete/replace a feature:** `./Tools/test-gate.sh refs Assets/_Game/Features/X` lists incoming asset *and* assembly references;
   delete only when it prints nothing, then run the gate.
 - No `Resources/` (string loads, ships everything; ARCH083); no string lookups (`Find`, `Shader.Find`; ARCH042).
   If streaming is needed later: Addressables with typed `AssetReferenceT<T>` inside the asset entry.
@@ -157,13 +157,13 @@ Honest limit: an agent with shell access can still write files directly; that is
 | Gate | What | When |
 |---|---|---|
 | G0 | static rules on changed files (fail fast, ms) | always |
-| G1 | `dotnet test LogicTests`: every rule + every pure test | pure code, pure tests, rules or gate changed |
+| G1 | `dotnet test Tools/LogicTests`: every rule + every pure test | pure code, pure tests, rules or gate changed |
 | UI | layout gate of the **affected views only** (`-testCategory View:F.V`, §14) | a view's code/recipe/prefab/cases/baseline, its feature's view models/texts/fixtures |
 | G2/G3 | Unity EditMode/PlayMode, **affected** assemblies only (`-assemblyNames`, from the asmdef graph) | integration files: installers, Bootstrap, scenes, settings, asmdefs |
 | G4 | `--full` | pre-merge / nightly / release; any file with an unknown role (fail-closed) |
 
 Each file is classified by its **role** (`ChangeImpact` in the rule engine, tested in `ChangeImpactTests`), not by guessing
-from the diff: `tools/test-gate.sh plan` prints the role of every changed file and why.
+from the diff: `Tools/test-gate.sh plan` prints the role of every changed file and why.
 
 Failures only, a few lines each; Unity retry budget (exit 4 after 2 consecutive failures).
 
@@ -174,16 +174,16 @@ One generator (`ArchitectureGraph` + `ArchitectureDocs` in `Assets/_Game/Archite
 
 | View | Derived from | Where |
 |---|---|---|
-| L1 System (collapses to one node above 30 features) | folders + policy + asmdef refs | `docs/architecture/overview.md` |
+| L1 System (collapses to one node above 30 features) | folders + policy + asmdef refs | `Docs/Architecture/overview.md` |
 | L2 Feature dependencies (only while ≤ 60 edges; else "most depended-on" table) | asmdefs + classes implementing other features' Contracts, also through base classes | overview |
 | Compact feature table | all of the above | overview |
-| Per feature: 1-hop diagram, public face, vendors, assets, tests, **state machines**, **DI (L3)** | same + `Transition<TState>` tables + constructors | `docs/architecture/features/<F>.md` |
+| Per feature: 1-hop diagram, public face, vendors, assets, tests, **state machines**, **DI (L3)** | same + `Transition<TState>` tables + constructors | `Docs/Architecture/Features/<F>.md` |
 | Impact / diff | reverse closure / committed docs vs now | `graph impact <F>`, `graph diff [base]` (on demand) |
-| Hand-written docs | humans | `docs/`, READMEs, anchor-checked (ARCH091) |
+| Hand-written docs | humans | `Docs/`, READMEs, anchor-checked (ARCH091) |
 
 **Who can change the generated files:** nobody by hand. Their content is only valid if it equals the generator output (ARCH090),
 so a manual edit is caught by pre-commit/CI and overwritten by the next `graph --write`. Agents are also denied Edit/Write on
-`docs/architecture/**`; CODEOWNERS covers the folder. Put human notes in hand-written docs.
+`Docs/Architecture/**`; CODEOWNERS covers the folder. Put human notes in hand-written docs.
 
 **Can the map silently disagree with code?** Three guards: (1) stale → ARCH090 with the changed lines; (2) unreadable input →
 ARCH090 parse error (fail-closed, e.g. a state-table row written as a helper call); (3) a reflection test compares every runtime
@@ -200,7 +200,7 @@ overview ≈ 4,700 tokens (was 16,000 before splitting), a feature page ≈ 300 
 ## 12. Third-party plugins
 
 Vendor code lives outside `Assets/_Game`, so the strict rules never scan it and it needs **no blanket exceptions**.
-What is enforced is the contact surface, declared in `ArchitecturePolicy.txt` (protected; the only hand-written allowlist, because
+What is enforced is the contact surface, declared in `Tools/ArchitecturePolicy.txt` (protected; the only hand-written allowlist, because
 none of this can be derived):
 
 | Tier | Example | May be referenced by |
@@ -301,7 +301,7 @@ layout run). Width overflow of non-wrapping text and TextMeshPro are not measure
 dev menu (scenarios in a dev build) is the next step: it belongs in a `DevTools` assembly that the composition root does not
 reference.
 
-## 15. Agent control & the flight recorder (`tools/TestGate/Agent`)
+## 15. Agent control & the flight recorder (`Tools/TestGate/Agent`)
 
 **Principle:** the agent decides *what* to do; programs decide *whether it is allowed* and record *what really happened*.
 No AI checks AI; no node of the graph comes from what an agent says.
@@ -310,7 +310,7 @@ No AI checks AI; no node of the graph comes from what an agent says.
 |---|---|---|
 | Edits outside the task | **Task = permission unit**, scope derived from the architecture (feature folders), not a hand-written file list. One feature: the agent starts it itself. Wider (more features, Core, Bootstrap, paths, test expectations): `task request` → a human `task approve` (needs a terminal; refused when `CLAUDECODE=1` or stdin is piped; also denied in settings) | `AgentTask.cs`, PreToolUse |
 | Edits via Bash | git snapshot before/after every Bash call → FILE_MODIFIED (source `git-observer`), same scope + per-file rules as Edit; reverts are always allowed | `WorkSnapshot.cs`, PostToolUse |
-| Edits via MCP (Unity, Blender) | PreToolUse matches `mcp__.*`: the tool is classified (`McpPolicy`: name heuristic + owner lines in `tools/mcp-policy.txt`). Read: free. Write: needs a task, a named target path must be in scope, then a git snapshot before/after like Bash (FILE_MODIFIED via the tool). Exec (arbitrary code: it can write outside the repo): blocked unless the owner allows it. A Unity-serialized file that appears later in a session that used MCP (the editor saved it after the call) is judged as the agent's | `McpPolicy.cs`, `AgentHooks.PreMcp` |
+| Edits via MCP (Unity, Blender) | PreToolUse matches `mcp__.*`: the tool is classified (`McpPolicy`: name heuristic + owner lines in `Tools/mcp-policy.txt`). Read: free. Write: needs a task, a named target path must be in scope, then a git snapshot before/after like Bash (FILE_MODIFIED via the tool). Exec (arbitrary code: it can write outside the repo): blocked unless the owner allows it. A Unity-serialized file that appears later in a session that used MCP (the editor saved it after the call) is judged as the agent's | `McpPolicy.cs`, `AgentHooks.PreMcp` |
 | Changes no one saw | reconcile disk vs log at SessionStart/Stop → UNOBSERVED_CHANGE (shown, not hidden; often a human in the IDE) | `WorkSnapshot.Unexplained` |
 | Fake fixes | diff guard on test files: fewer asserts/tests, new Ignore/Explicit/Assume/Inconclusive/Pass/`#if`, deleted tests → Stop blocked unless approved (`--tests`) | `TestGuard.cs`, Stop |
 | Forgetting process | Stop hook runs scope + test guard + gate; SessionStart prints task, last gate, chain status (memory = project state) | hooks |
@@ -333,9 +333,9 @@ SessionStart of another session); task locks whose worktree vanished or whose ta
 Trust levels on every node: planned → observed → verified (a passing gate after it) / pending (Unity not run) / failed;
 plus denied (blocked before), violation, unobserved, claim.
 
-**Dashboard = data + a static view.** `dash` writes only data: `TestResults/dashboard/data.json` (+ `data.js`, the same as
+**Dashboard = data + a static view.** `dash` writes only data: `Dashboard/Data/data.json` (+ `data.js`, the same as
 `window.MODEL = …`, because a page opened from disk may load a script but not fetch a JSON) and `sessions/s-<id>.js` (one
-session's steps, loaded when clicked; only the listed sessions are kept). The view is `tools/dashboard/` (`index.html`,
+session's steps, loaded when clicked; only the listed sessions are kept). The view is `Dashboard/` (`index.html`,
 `style.css`, `app.js`): hand-written, never generated. `serve` serves both and refreshes the data; `dash --bundle` inlines
 everything into one HTML to send. The page: 1 what the human must do · 2 the plan as a **node graph** (Plan DAG: features,
 hard/contract/soft edges; or a table) · 3 execution as a **node graph** (one column per agent, one node per event, coloured by
@@ -359,9 +359,9 @@ still stopped by the PreToolUse command check and the settings deny list, not by
 ## 16. Roadmap: plan as data, status as evidence
 
 Problems: the agent forgets the plan in long work; the human has no feature list to control; plan changes mid-work leave
-agents building the old version; "rush" silently skips dependencies. Full guide: `docs/PLANNING.md`.
+agents building the old version; "rush" silently skips dependencies. Full guide: `Docs/PLANNING.md`.
 
-- **Plan = `plan/features.md`, owned by the human** (deny + CODEOWNERS), strict Markdown parsed by the rule engine (ARCH110).
+- **Plan = `Docs/Plan/features.md`, owned by the human** (deny + CODEOWNERS), strict Markdown parsed by the rule engine (ARCH110).
   Two levels the human manages: **Feature** (a capability a player can accept) → **Requirement** (one testable behaviour).
   No task list: tasks are derived from gaps when work starts (`roadmap next`), so nothing is forgotten and nothing goes stale.
 - **Status is computed, never set:** tests carry `[Covers("R-ID")]` (ARCH111); a requirement is VERIFIED only if its tests
@@ -429,4 +429,4 @@ engine. Here every question is answered from sources that are always right:
 ## 19. Next tasks for an agent
 - Pause button (`Time.timeScale = 0` stops `UnityGameClock`, so no ticks run) + a test with `FakeClock`.
 - Rewarded ad "+5 s": MathQuiz depends on `Game.Ads.Contracts`, awaits `IAdsService.ShowRewardedAsync(token)`, re-checks the question.
-- Currency feature (`./tools/test-gate.sh new-feature Currency --contracts`) with its own asset entry in `Assets/Public`.
+- Currency feature (`./Tools/test-gate.sh new-feature Currency --contracts`) with its own asset entry in `Assets/Public`.

@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh session",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/Tools/claude-hook.sh session",
             "timeout": 30
           }
         ]
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh pre",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/Tools/claude-hook.sh pre",
             "timeout": 30
           }
         ]
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh post",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/Tools/claude-hook.sh post",
             "timeout": 60
           }
         ]
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh subagent-stop",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/Tools/claude-hook.sh subagent-stop",
             "timeout": 30
           }
         ]
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-hook.sh stop",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/Tools/claude-hook.sh stop",
             "timeout": 600
           }
         ]
@@ -65,9 +65,9 @@
     "allow": [
       "Bash(dotnet test:*)",
       "Bash(dotnet build:*)",
-      "Bash(./tools/test-gate.sh:*)",
-      "Bash(./tools/run-tests.sh:*)",
-      "Bash(./tools/run-unity-tests.sh:*)",
+      "Bash(./Tools/test-gate.sh:*)",
+      "Bash(./Tools/run-tests.sh:*)",
+      "Bash(./Tools/run-unity-tests.sh:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)"
@@ -90,14 +90,14 @@
       "Write(**/Tests/Layout/**)",
       "Edit(.agent/**)",
       "Write(.agent/**)",
-      "Bash(./tools/test-gate.sh task approve:*)",
-      "Bash(tools/test-gate.sh task approve:*)",
-      "Bash(./tools/test-gate.sh roadmap accept:*)",
-      "Bash(tools/test-gate.sh roadmap accept:*)",
-      "Bash(./tools/test-gate.sh art accept:*)",
-      "Bash(tools/test-gate.sh art accept:*)",
-      "Bash(./tools/test-gate.sh files clean --regenerable --library:*)",
-      "Read(TestResults/dashboard/**)",
+      "Bash(./Tools/test-gate.sh task approve:*)",
+      "Bash(Tools/test-gate.sh task approve:*)",
+      "Bash(./Tools/test-gate.sh roadmap accept:*)",
+      "Bash(Tools/test-gate.sh roadmap accept:*)",
+      "Bash(./Tools/test-gate.sh art accept:*)",
+      "Bash(Tools/test-gate.sh art accept:*)",
+      "Bash(./Tools/test-gate.sh files clean --regenerable --library:*)",
+      "Read(Dashboard/Data/**)",
       "Read(.agent/**)"
     ]
   }

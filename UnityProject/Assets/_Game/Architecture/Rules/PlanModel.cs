@@ -87,7 +87,7 @@ namespace Game.Architecture.Rules
     }
 
     /// <summary>
-    /// plan/features.md: the product plan, OWNED BY THE HUMAN (agents propose in plan/inbox/). Markdown a person edits by hand,
+    /// Docs/Plan/features.md: the product plan, OWNED BY THE HUMAN (agents propose in Docs/Plan/Inbox/). Markdown a person edits by hand,
     /// parsed strictly: anything it can't read is an error with a line number (ARCH110), never a guess.
     ///
     ///   # Plan: Quiz Defense
@@ -102,9 +102,9 @@ namespace Game.Architecture.Rules
     /// </summary>
     public static class PlanParser
     {
-        public const string RelativePath = "plan/features.md";
-        public const string InboxFolder = "plan/inbox/";
-        public const string AcceptedPath = "plan/accepted.txt";
+        public const string RelativePath = "Docs/Plan/features.md";
+        public const string InboxFolder = "Docs/Plan/Inbox/";
+        public const string AcceptedPath = "Docs/Plan/accepted.txt";
 
         private static readonly Regex FeatureLine = new Regex(@"^##\s+(?<id>F-[A-Z0-9][A-Z0-9-]*)\s+(?<rest>.+)$");
         private static readonly Regex RequirementLine = new Regex(@"^-\s+(?<id>R-[A-Z0-9][A-Z0-9-]*)\s+(?<rest>.+)$");

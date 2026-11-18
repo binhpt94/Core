@@ -1,7 +1,7 @@
 # Feature: Ads
 
 Example of a **third-party SDK boundary**. The vendor (`Assets/ThirdParty/DemoAdsSdk`, a fake SDK written
-like real ones: singleton, static state, background-thread callbacks) is registered in `ArchitecturePolicy.txt`
+like real ones: singleton, static state, background-thread callbacks) is registered in `Tools/ArchitecturePolicy.txt`
 as tier `sdk` with `adapter=Game.Ads.Unity`.
 
 ## Responsibility
@@ -15,7 +15,7 @@ as tier `sdk` with `adapter=Game.Ads.Unity`.
 | `AdsInstaller.Install(appKey)` | Game.Ads.Unity | Bootstrap only |
 
 `DemoAdsAdapter` is internal. **Only `Game.Ads.Unity` may reference `DemoAdsSdk`** (ARCH094). The vendor folder is
-hash-pinned (ARCH093): never edit it; upgrades are re-approved by a code owner (`./tools/test-gate.sh vendor-hash <folder>`).
+hash-pinned (ARCH093): never edit it; upgrades are re-approved by a code owner (`./Tools/test-gate.sh vendor-hash <folder>`).
 
 ## Not wired yet
 No feature consumes ads yet. Next task for an agent: "rewarded ad +5 seconds" in MathQuiz. Add `Game.Ads.Contracts`

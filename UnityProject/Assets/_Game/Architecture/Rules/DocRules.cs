@@ -16,7 +16,11 @@ namespace Game.Architecture.Rules
         private static readonly Regex InlineCode = new Regex(@"(?<!`)`([^`\n]+)`(?!`)");
         private static readonly Regex Identifier = new Regex(@"^[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*(?:\(\))?$");
         private static readonly Regex Word = new Regex(@"[A-Za-z_][A-Za-z0-9_]*");
-        private static readonly string[] PathRoots = { "Assets/_Game/", "Assets/ThirdParty/", "tools/", "docs/", "LogicTests/", "ProjectSettings/", "Packages/", ".claude/", ".github/" };
+        private static readonly string[] PathRoots = { "UnityProject/", "Tools/", "Docs/", "Dashboard/", "Template/", ".claude/", ".github/" };
+        /// <summary>Unity-relative paths in docs ("Assets/_Game/...") are checked under UnityProject/.</summary>
+        private static readonly string[] UnityRoots = { "Assets/_Game/", "Assets/ThirdParty/", "ProjectSettings/", "Packages/" };
+        /// <summary>Not checked: Unity menu paths (Tools/Game/...), files that appear on demand (plan ledgers, inbox, gate output).</summary>
+        private static readonly string[] NotAFile = { "Tools/Game/", Layout.Plan, Layout.Data };
         private static readonly Regex NamespaceDecl = new Regex(@"^\s*namespace\s+([\w.]+)", RegexOptions.Multiline);
         private static readonly Regex TypeDecl = new Regex(@"\b(?:class|struct|interface|enum)\s+(\w+)");
         private static readonly string[] Placeholders = { "X", "Y", "F", "A", "B", "Feature", "Name", "Vendor" };
@@ -31,7 +35,7 @@ namespace Game.Architecture.Rules
         /// <summary>Docs that are hand-written and therefore anchor-checked.</summary>
         public static bool IsCheckedDoc(string rel) =>
             rel.EndsWith(".md", StringComparison.Ordinal) && !rel.StartsWith(ArchitectureDocs.Dir + "/", StringComparison.Ordinal) &&
-            (rel == "CLAUDE.md" || rel == "AGENTS.md" || rel == "README.md" || rel.StartsWith("docs/", StringComparison.Ordinal)
+            (rel == "CLAUDE.md" || rel == "AGENTS.md" || rel == "README.md" || rel.StartsWith(Layout.Docs, StringComparison.Ordinal) && !rel.StartsWith(Layout.Plan, StringComparison.Ordinal)
              || (rel.StartsWith(PathInfo.GameRoot, StringComparison.Ordinal) && rel.EndsWith("/README.md", StringComparison.Ordinal)));
 
         public IEnumerable<string> CheckedDocs()
@@ -39,7 +43,7 @@ namespace Game.Architecture.Rules
             foreach (var f in Directory.EnumerateFiles(_root, "*.md", SearchOption.AllDirectories))
             {
                 string rel = PathInfo.Normalize(f.Substring(_root.Length));
-                if (!rel.StartsWith("Library/", StringComparison.Ordinal) && !rel.Contains("/bin/") && !rel.Contains("/obj/") && IsCheckedDoc(rel))
+                if (!rel.StartsWith(Layout.Library, StringComparison.Ordinal) && !rel.Contains("/bin/") && !rel.Contains("/obj/") && IsCheckedDoc(rel))
                     yield return rel;
             }
         }
@@ -55,7 +59,7 @@ namespace Game.Architecture.Rules
                 yield return e;
 
             var expected = ArchitectureDocs.Render(graph);
-            const string fix = "run ./tools/test-gate.sh graph --write (or Unity: Tools > Game > Regenerate System Map) and commit";
+            const string fix = "run ./Tools/test-gate.sh graph --write (or Unity: Tools > Game > Regenerate System Map) and commit";
             foreach (var kv in expected)
             {
                 string full = Path.Combine(_root, kv.Key);
@@ -108,9 +112,12 @@ namespace Game.Architecture.Rules
 
         private string CheckToken(string token)
         {
-            if (PathRoots.Any(r => token.StartsWith(r, StringComparison.Ordinal)))
+            bool unity = UnityRoots.Any(r => token.StartsWith(r, StringComparison.Ordinal));
+            if (NotAFile.Any(r => token.StartsWith(r, StringComparison.Ordinal)))
+                return null;
+            if (unity || PathRoots.Any(r => token.StartsWith(r, StringComparison.Ordinal)))
             {
-                string path = Regex.Replace(token, @":\d+$", "").TrimEnd('/');
+                string path = (unity ? Layout.Unity : "") + Regex.Replace(token, @":\d+$", "").TrimEnd('/');
                 var segments = path.Split('/');
                 if (path.IndexOfAny(new[] { '<', '>', '*', '{', ' ', '|' }) >= 0 || segments.Any(s => Placeholders.Contains(s) || s.StartsWith("<", StringComparison.Ordinal)))
                     return null;
@@ -153,7 +160,7 @@ namespace Game.Architecture.Rules
             _words = new HashSet<string>(StringComparer.Ordinal);
             _namespaces = new HashSet<string>(AsmdefRules.Load(_root).Select(a => a.Name), StringComparer.Ordinal);
             _types = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var dir in new[] { "Assets", "tools" }.Select(d => Path.Combine(_root, d)).Where(Directory.Exists))
+            foreach (var dir in new[] { "UnityProject/Assets", "Tools" }.Select(d => Path.Combine(_root, d)).Where(Directory.Exists))
                 foreach (var f in Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories))
                 {
                     if (f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar))

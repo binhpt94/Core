@@ -82,13 +82,13 @@ namespace TestGate.AgentControl
 
     public static class ScopePolicy
     {
-        public const string Game = "Assets/_Game/";
+        public const string Game = "UnityProject/Assets/_Game/";
 
         /// <summary>Owner-only paths: never writable by an agent, whatever the task says (mirrors .claude/settings.json + CODEOWNERS).</summary>
         public static readonly string[] Protected =
         {
-            ".agent/", ".claude/", ".github/", "tools/", "plan/features.md", "plan/accepted.txt", "plan/art-accepted.txt", "ProjectSettings/", "LogicTests/LogicTests.csproj", "ArchitecturePolicy.txt", "CLAUDE.md",
-            Game + "Architecture/", Game + "Tests/Architecture/", Game + "Core/Editor/", "Assets/ThirdParty/", "Assets/Plugins/", "docs/RULES.md"
+            ".agent/", ".claude/", ".github/", "Tools/", "Docs/Plan/features.md", "Docs/Plan/accepted.txt", "Docs/Plan/art-accepted.txt", "UnityProject/ProjectSettings/", "Tools/LogicTests/LogicTests.csproj", "Tools/ArchitecturePolicy.txt", "CLAUDE.md",
+            Game + "Architecture/", Game + "Tests/Architecture/", Game + "Core/Editor/", "UnityProject/Assets/ThirdParty/", "UnityProject/Assets/Plugins/", "Docs/RULES.md"
         };
 
         /// <summary>The gate's own event log + task: never writable by an agent, not even in core maintenance.</summary>
@@ -97,7 +97,7 @@ namespace TestGate.AgentControl
         private static readonly string[] ProtectedSegments = { "/Tests/Replays/", "/Tests/Layout/" };
 
         /// <summary>Written only by generators whose output a rule verifies (ARCH090): safe for any active task.</summary>
-        public static bool IsGenerated(string path) => path.StartsWith("docs/architecture/", StringComparison.Ordinal);
+        public static bool IsGenerated(string path) => path.StartsWith("Docs/Architecture/", StringComparison.Ordinal);
 
         public static bool IsProtected(string path) =>
             Protected.Any(p => path == p.TrimEnd('/') || path.StartsWith(p, StringComparison.Ordinal))
@@ -116,20 +116,20 @@ namespace TestGate.AgentControl
             if (IsProtected(path))
                 return ScopeDecision.Deny(path + " is owner-only (protected); ask the human");
             if (task == null || task.Status == AgentTask.Closed)
-                return ScopeDecision.Deny("no active task. Start one first: ./tools/test-gate.sh task start \"<what>\" --feature <Feature>");
+                return ScopeDecision.Deny("no active task. Start one first: ./Tools/test-gate.sh task start \"<what>\" --feature <Feature>");
             if (task.Status == AgentTask.PendingApproval)
                 return ScopeDecision.Deny("task " + task.Id + " waits for human approval (scope: " + task.ScopeText + ")");
             if (IsGenerated(path))
                 return ScopeDecision.Allow("generated output (verified by ARCH090)");
-            if (path.StartsWith("plan/inbox/", StringComparison.Ordinal))
-                return ScopeDecision.Allow("proposal for the human (plan/inbox)");
+            if (path.StartsWith("Docs/Plan/Inbox/", StringComparison.Ordinal))
+                return ScopeDecision.Allow("proposal for the human (Docs/Plan/Inbox)");
             foreach (var f in task.Features)
                 if (path.StartsWith(Game + "Features/" + f + "/", StringComparison.Ordinal))
                     return ScopeDecision.Allow("inside feature " + f);
             foreach (var p in task.Paths)
                 if (path == p || path.StartsWith(p.TrimEnd('/') + "/", StringComparison.Ordinal))
                     return ScopeDecision.Allow("approved path " + p);
-            return ScopeDecision.Deny(path + " is outside task " + task.Id + " (scope: " + task.ScopeText + "). Wider scope: ./tools/test-gate.sh task request --feature <F> | --path <P> \"<why>\" (a human approves)");
+            return ScopeDecision.Deny(path + " is outside task " + task.Id + " (scope: " + task.ScopeText + "). Wider scope: ./Tools/test-gate.sh task request --feature <F> | --path <P> \"<why>\" (a human approves)");
         }
 
         /// <summary>A new task: one feature → active at once; anything wider → pending_approval.</summary>

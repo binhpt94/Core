@@ -1,8 +1,8 @@
 # Plan: Quiz Defense
 
-<!-- OWNED BY THE HUMAN. Agents read it, never edit it: they propose changes in plan/inbox/ (`test-gate.sh plan propose`).
+<!-- OWNED BY THE HUMAN. Agents read it, never edit it: they propose changes in Docs/Plan/Inbox/ (`test-gate.sh plan propose`).
      Statuses are not written here: they are computed from tests ([Covers("R-..")]) and evidence (`test-gate.sh plan status`).
-     Syntax: docs/PLANNING.md. Feature = a capability a player can see and accept; Requirement = one testable behaviour. -->
+     Syntax: Docs/PLANNING.md. Feature = a capability a player can see and accept; Requirement = one testable behaviour. -->
 
 ## F-QUIZ-CORE  Câu hỏi cộng, chọn 1 trong 3  [P0] [modules: MathQuiz]
 - R-QUIZ-OPTIONS  3 đáp án khác nhau, đúng một đáp án đúng, đáp án nhiễu gần và không âm

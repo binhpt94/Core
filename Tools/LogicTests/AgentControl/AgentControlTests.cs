@@ -127,28 +127,28 @@ namespace LogicTests.AgentControl
         {
             Assert.That(Task("MathQuiz").Status, Is.EqualTo(AgentTask.Active));
             Assert.That(Task("MathQuiz", "Progress").Status, Is.EqualTo(AgentTask.PendingApproval));
-            Assert.That(ScopePolicy.Start("T2", "x", new[] { "MathQuiz" }, new[] { "Assets/_Game/Bootstrap" }, false, "now").Status, Is.EqualTo(AgentTask.PendingApproval));
+            Assert.That(ScopePolicy.Start("T2", "x", new[] { "MathQuiz" }, new[] { "UnityProject/Assets/_Game/Bootstrap" }, false, "now").Status, Is.EqualTo(AgentTask.PendingApproval));
             Assert.That(ScopePolicy.Start("T3", "x", new[] { "MathQuiz" }, new string[0], true, "now").Status, Is.EqualTo(AgentTask.PendingApproval));
         }
 
-        [TestCase("Assets/_Game/Features/MathQuiz/Unity/Views/QuizView/QuizViewLayout.cs", true)]
-        [TestCase("Assets/_Game/Features/MathQuiz/Logic/UseCases/QuizTexts.cs", true)]
-        [TestCase("docs/architecture/overview.md", true)]                       // generated, verified by ARCH090
-        [TestCase("Assets/_Game/Features/Progress/Logic/BestScoreService.cs", false)]
-        [TestCase("Assets/_Game/Bootstrap/GameCompositionRoot.cs", false)]
-        [TestCase("Assets/_Game/Features/MathQuiz/Tests/Replays/perfect.replay.txt", false)] // protected even in scope
-        [TestCase("Assets/_Game/Features/MathQuiz/Tests/Layout/QuizView.layout.txt", false)]
+        [TestCase("UnityProject/Assets/_Game/Features/MathQuiz/Unity/Views/QuizView/QuizViewLayout.cs", true)]
+        [TestCase("UnityProject/Assets/_Game/Features/MathQuiz/Logic/UseCases/QuizTexts.cs", true)]
+        [TestCase("Docs/Architecture/overview.md", true)]                       // generated, verified by ARCH090
+        [TestCase("UnityProject/Assets/_Game/Features/Progress/Logic/BestScoreService.cs", false)]
+        [TestCase("UnityProject/Assets/_Game/Bootstrap/GameCompositionRoot.cs", false)]
+        [TestCase("UnityProject/Assets/_Game/Features/MathQuiz/Tests/Replays/perfect.replay.txt", false)] // protected even in scope
+        [TestCase("UnityProject/Assets/_Game/Features/MathQuiz/Tests/Layout/QuizView.layout.txt", false)]
         [TestCase(".agent/task.json", false)]
-        [TestCase("tools/TestGate/Program.cs", false)]
-        [TestCase("Assets/_Game/Features/MathQuizExtra/X.cs", false)]           // prefix of another feature name
+        [TestCase("Tools/TestGate/Program.cs", false)]
+        [TestCase("UnityProject/Assets/_Game/Features/MathQuizExtra/X.cs", false)]           // prefix of another feature name
         public void Check(string path, bool allowed) =>
             Assert.That(ScopePolicy.Check(Task("MathQuiz"), path).Allowed, Is.EqualTo(allowed), ScopePolicy.Check(Task("MathQuiz"), path).Reason);
 
         [Test]
         public void NoTask_PendingTask_DenyEverythingInTheRepo_ButNotOutside()
         {
-            Assert.That(ScopePolicy.Check(null, "Assets/_Game/Features/MathQuiz/X.cs").Reason, Does.Contain("task start"));
-            Assert.That(ScopePolicy.Check(Task("A", "B"), "Assets/_Game/Features/A/X.cs").Reason, Does.Contain("approval"));
+            Assert.That(ScopePolicy.Check(null, "UnityProject/Assets/_Game/Features/MathQuiz/X.cs").Reason, Does.Contain("task start"));
+            Assert.That(ScopePolicy.Check(Task("A", "B"), "UnityProject/Assets/_Game/Features/A/X.cs").Reason, Does.Contain("approval"));
             Assert.That(ScopePolicy.Check(null, null).Allowed, Is.True, "outside the repository (scratch files)");
         }
 
@@ -158,9 +158,9 @@ namespace LogicTests.AgentControl
             var t = Task("MathQuiz");
             ScopePolicy.Request(t, new[] { "Progress" }, new string[0], true, "best score bug");
             Assert.That(t.Status, Is.EqualTo(AgentTask.Active));
-            Assert.That(ScopePolicy.Check(t, "Assets/_Game/Features/Progress/Logic/X.cs").Allowed, Is.False);
+            Assert.That(ScopePolicy.Check(t, "UnityProject/Assets/_Game/Features/Progress/Logic/X.cs").Allowed, Is.False);
             ScopePolicy.Approve(t, "later");
-            Assert.That(ScopePolicy.Check(t, "Assets/_Game/Features/Progress/Logic/X.cs").Allowed, Is.True);
+            Assert.That(ScopePolicy.Check(t, "UnityProject/Assets/_Game/Features/Progress/Logic/X.cs").Allowed, Is.True);
             Assert.That(t.AllowTestChanges, Is.True);
             Assert.That(t.HasPendingRequest, Is.False);
         }
@@ -171,33 +171,33 @@ namespace LogicTests.AgentControl
             var t = Task("MathQuiz");
             ScopePolicy.Request(t, new string[0], new string[0], false, "restructure the core", coreMaintenance: true);
             Assert.That(t.HasPendingRequest, Is.True);
-            Assert.That(ScopePolicy.Check(t, "tools/TestGate/Program.cs").Allowed, Is.False, "requested is not approved");
+            Assert.That(ScopePolicy.Check(t, "Tools/TestGate/Program.cs").Allowed, Is.False, "requested is not approved");
             ScopePolicy.Approve(t, "later");
             Assert.That(t.ScopeText, Does.Contain("core maintenance"));
-            foreach (var p in new[] { "tools/TestGate/Program.cs", ".claude/settings.json", "Assets/_Game/Architecture/Rules/FileRules.cs",
-                                      "Assets/_Game/Core/Runtime/PublicApi.txt", "Assets/_Game/Bootstrap/Editor/X.cs.meta", "Assets/_Game/Features/Progress/Logic/X.cs" })
+            foreach (var p in new[] { "Tools/TestGate/Program.cs", ".claude/settings.json", "UnityProject/Assets/_Game/Architecture/Rules/FileRules.cs",
+                                      "UnityProject/Assets/_Game/Core/Runtime/PublicApi.txt", "UnityProject/Assets/_Game/Bootstrap/Editor/X.cs.meta", "UnityProject/Assets/_Game/Features/Progress/Logic/X.cs" })
                 Assert.That(ScopePolicy.Check(t, p).Allowed, Is.True, p);
             Assert.That(ScopePolicy.Check(t, ScopePolicy.GateLog + "task.json").Allowed, Is.False, "the gate's own log stays owner-only");
             Assert.That(t.AllowTestChanges, Is.False, "core maintenance does not allow weakening tests");
             t.Status = AgentTask.Closed;
-            Assert.That(ScopePolicy.Check(t, "tools/TestGate/Program.cs").Allowed, Is.False, "a closed task opens nothing");
+            Assert.That(ScopePolicy.Check(t, "Tools/TestGate/Program.cs").Allowed, Is.False, "a closed task opens nothing");
         }
 
         [TestCase("cat .agent/events.jsonl > /dev/null")]
         [TestCase("echo '{}' > .agent/task.json")]
-        [TestCase("./tools/test-gate.sh task approve")]
-        [TestCase("yes T1 | tools/test-gate.sh task approve")]
+        [TestCase("./Tools/test-gate.sh task approve")]
+        [TestCase("yes T1 | Tools/test-gate.sh task approve")]
         public void ForbiddenCommands(string cmd) => Assert.That(AgentHooks.ForbiddenCommand(cmd), Is.Not.Null);
 
-        [TestCase("./tools/test-gate.sh task start \"x\" --feature MathQuiz")]
-        [TestCase("./tools/test-gate.sh events tail 20")]
-        [TestCase("dotnet test LogicTests")]
+        [TestCase("./Tools/test-gate.sh task start \"x\" --feature MathQuiz")]
+        [TestCase("./Tools/test-gate.sh events tail 20")]
+        [TestCase("dotnet test Tools/LogicTests")]
         public void AllowedCommands(string cmd) => Assert.That(AgentHooks.ForbiddenCommand(cmd), Is.Null);
     }
 
     public sealed class TestGuardTests
     {
-        private const string P = "Assets/_Game/Features/A/Tests/ATests.cs";
+        private const string P = "UnityProject/Assets/_Game/Features/A/Tests/ATests.cs";
         private const string Before = "class T {\n [Test] public void A() { Assert.That(1, Is.EqualTo(1)); Assert.That(2, Is.EqualTo(2)); }\n [Test] public void B() { Assert.That(true); }\n}";
 
         [Test]
@@ -216,7 +216,7 @@ namespace LogicTests.AgentControl
         {
             Assert.That(TestGuard.Check(P, Before, Before.Replace("}\n}", "}\n [Test] public void C() { Assert.That(3, Is.EqualTo(3)); }\n}")), Is.Empty);
             Assert.That(TestGuard.Check(P, null, "class X {}"), Is.Empty);
-            Assert.That(TestGuard.Check("Assets/_Game/Features/A/Logic/X.cs", Before, ""), Is.Empty);
+            Assert.That(TestGuard.Check("UnityProject/Assets/_Game/Features/A/Logic/X.cs", Before, ""), Is.Empty);
             Assert.That(TestGuard.Check(P, Before + "\n// Assert.That(9);", Before), Is.Empty, "assertion only in a comment");
         }
     }
@@ -243,11 +243,11 @@ namespace LogicTests.AgentControl
                 E(EventTypes.ToolUsed, kv: new[] { "tool", "Read", "target", "a.cs" }),
                 E(EventTypes.ToolUsed, kv: new[] { "tool", "Grep", "target", "Quiz" }),
                 E(EventTypes.ToolUsed, kv: new[] { "tool", "Read", "target", "b.cs" }),
-                E(EventTypes.FileModified, kv: new[] { "path", "Assets/_Game/Features/A/X.cs", "via", "Edit", "inScope", "true", "after", "aa" }),
-                E(EventTypes.PolicyDenied, kv: new[] { "target", "Assets/_Game/Bootstrap/B.cs", "reason", "outside task" }),
+                E(EventTypes.FileModified, kv: new[] { "path", "UnityProject/Assets/_Game/Features/A/X.cs", "via", "Edit", "inScope", "true", "after", "aa" }),
+                E(EventTypes.PolicyDenied, kv: new[] { "target", "UnityProject/Assets/_Game/Bootstrap/B.cs", "reason", "outside task" }),
                 E(EventTypes.AgentSpawned, kv: new[] { "agent", "Explore" }),
                 E(EventTypes.ToolUsed, agent: "Explore", kv: new[] { "tool", "Grep", "target", "x" }),
-                E(EventTypes.FileModified, "git-observer", kv: new[] { "path", "Assets/_Game/Features/B/Y.cs", "via", "Bash", "inScope", "false", "after", "bb" }),
+                E(EventTypes.FileModified, "git-observer", kv: new[] { "path", "UnityProject/Assets/_Game/Features/B/Y.cs", "via", "Bash", "inScope", "false", "after", "bb" }),
                 E(EventTypes.TestResult, "testgate", "cli", kv: new[] { "suite", "G1 dotnet", "result", "passed" }),
                 E(EventTypes.GateFinished, "testgate", "cli", kv: new[] { "result", "passed" }),
                 E(EventTypes.UnobservedChange, "git-observer", kv: new[] { "path", "README.md", "after", "cc" }),
@@ -348,9 +348,9 @@ namespace LogicTests.AgentControl
         public void SetUp()
         {
             _root = Path.Combine(Path.GetTempPath(), "hookflow-" + Guid.NewGuid().ToString("N"));
-            Write("Assets/_Game/Features/A/Logic/X.cs", "class X {}\n");
-            Write("Assets/_Game/Features/B/Logic/Y.cs", "class Y {}\n");
-            Write("Assets/_Game/Features/A/Tests/ATests.cs", "class T { [Test] public void A() { Assert.That(1, Is.EqualTo(1)); } }\n");
+            Write("UnityProject/Assets/_Game/Features/A/Logic/X.cs", "class X {}\n");
+            Write("UnityProject/Assets/_Game/Features/B/Logic/Y.cs", "class Y {}\n");
+            Write("UnityProject/Assets/_Game/Features/A/Tests/ATests.cs", "class T { [Test] public void A() { Assert.That(1, Is.EqualTo(1)); } }\n");
             Git("init -q");
             Git("-c user.email=a@b -c user.name=t add -A");
             Git("-c user.email=a@b -c user.name=t commit -qm init");
@@ -374,7 +374,7 @@ namespace LogicTests.AgentControl
         [Test]
         public void WithoutATask_EditsAreBlockedBeforeTheyHappen()
         {
-            int code = AgentHooks.Pre(_root, H("Edit", "file_path", Path.Combine(_root, "Assets/_Game/Features/A/Logic/X.cs")));
+            int code = AgentHooks.Pre(_root, H("Edit", "file_path", Path.Combine(_root, "UnityProject/Assets/_Game/Features/A/Logic/X.cs")));
             Assert.That(code, Is.EqualTo(2));
             Assert.That(Events().Single().Type, Is.EqualTo(EventTypes.PolicyDenied));
         }
@@ -383,14 +383,14 @@ namespace LogicTests.AgentControl
         public void ScopeGuard_EditInScopePasses_OutOfScopeIsBlocked()
         {
             TaskStore.Save(_root, ScopePolicy.Start("T1", "fix A", new[] { "A" }, new string[0], false, "now"));
-            Assert.That(AgentHooks.Pre(_root, H("Edit", "file_path", "Assets/_Game/Features/A/Logic/X.cs")), Is.EqualTo(0));
-            Assert.That(AgentHooks.Pre(_root, H("Write", "file_path", "Assets/_Game/Features/B/Logic/Y.cs")), Is.EqualTo(2));
+            Assert.That(AgentHooks.Pre(_root, H("Edit", "file_path", "UnityProject/Assets/_Game/Features/A/Logic/X.cs")), Is.EqualTo(0));
+            Assert.That(AgentHooks.Pre(_root, H("Write", "file_path", "UnityProject/Assets/_Game/Features/B/Logic/Y.cs")), Is.EqualTo(2));
 
-            Write("Assets/_Game/Features/A/Logic/X.cs", "class X { int a; }\n");
-            Assert.That(AgentHooks.Post(_root, H("Edit", "file_path", "Assets/_Game/Features/A/Logic/X.cs"), NoRules), Is.EqualTo(0));
+            Write("UnityProject/Assets/_Game/Features/A/Logic/X.cs", "class X { int a; }\n");
+            Assert.That(AgentHooks.Post(_root, H("Edit", "file_path", "UnityProject/Assets/_Game/Features/A/Logic/X.cs"), NoRules), Is.EqualTo(0));
             var mod = Events().Single(e => e.Type == EventTypes.FileModified);
             Assert.That(mod.Get("inScope"), Is.EqualTo("true"));
-            Assert.That(mod.Get("after"), Is.EqualTo(WorkSnapshot.HashFile(Path.Combine(_root, "Assets/_Game/Features/A/Logic/X.cs"))));
+            Assert.That(mod.Get("after"), Is.EqualTo(WorkSnapshot.HashFile(Path.Combine(_root, "UnityProject/Assets/_Game/Features/A/Logic/X.cs"))));
         }
 
         [Test]
@@ -399,9 +399,9 @@ namespace LogicTests.AgentControl
             TaskStore.Save(_root, ScopePolicy.Start("T1", "fix A", new[] { "A" }, new string[0], false, "now"));
             var bash = H("Bash", "command", "echo > Y.cs");
             AgentHooks.Pre(_root, bash);
-            Write("Assets/_Game/Features/B/Logic/Y.cs", "class Sneaky {}\n");
+            Write("UnityProject/Assets/_Game/Features/B/Logic/Y.cs", "class Sneaky {}\n");
             AgentHooks.Post(_root, bash, NoRules);
-            Assert.That(AgentHooks.StopChecks(_root, H(null), Original), Has.Some.StartsWith("SCOPE Assets/_Game/Features/B/Logic/Y.cs"));
+            Assert.That(AgentHooks.StopChecks(_root, H(null), Original), Has.Some.StartsWith("SCOPE UnityProject/Assets/_Game/Features/B/Logic/Y.cs"));
         }
 
         [Test]
@@ -410,7 +410,7 @@ namespace LogicTests.AgentControl
             TaskStore.Save(_root, ScopePolicy.Start("T1", "fix A", new[] { "A" }, new string[0], false, "now"));
             var bash = H("Bash", "command", "sed -i 's/Y/Z/' Assets/_Game/Features/B/Logic/Y.cs");
             Assert.That(AgentHooks.Pre(_root, bash), Is.EqualTo(0));
-            Write("Assets/_Game/Features/B/Logic/Y.cs", "class Z {}\n"); // what sed did
+            Write("UnityProject/Assets/_Game/Features/B/Logic/Y.cs", "class Z {}\n"); // what sed did
             int code = AgentHooks.Post(_root, bash, NoRules);
 
             Assert.That(code, Is.EqualTo(2), "fed back to the agent");
@@ -427,8 +427,8 @@ namespace LogicTests.AgentControl
         public void AtStop_UnobservedChanges_AreRecorded_WeakenedTestsAreFoundWhoeverChangedThem()
         {
             TaskStore.Save(_root, ScopePolicy.Start("T1", "fix A", new[] { "A" }, new string[0], false, "now"));
-            Write("Assets/_Game/Features/B/Logic/Y.cs", "class Sneaky {}\n");                                  // no tool call saw this
-            Write("Assets/_Game/Features/A/Tests/ATests.cs", "class T { [Test, Ignore(\"later\")] public void A() { } }\n"); // fake fix
+            Write("UnityProject/Assets/_Game/Features/B/Logic/Y.cs", "class Sneaky {}\n");                                  // no tool call saw this
+            Write("UnityProject/Assets/_Game/Features/A/Tests/ATests.cs", "class T { [Test, Ignore(\"later\")] public void A() { } }\n"); // fake fix
 
             var findings = AgentHooks.StopChecks(_root, H(null), Original);
 
@@ -441,8 +441,8 @@ namespace LogicTests.AgentControl
 
         // ------------------------------------------------------------------ MCP (Unity, Blender): observed like Bash, never "the human's"
 
-        private const string Prefab = "Assets/_Game/Features/A/Assets/Private/Boss.prefab";
-        private const string OtherPrefab = "Assets/_Game/Features/B/Assets/Private/Boss.prefab";
+        private const string Prefab = "UnityProject/Assets/_Game/Features/A/Assets/Private/Boss.prefab";
+        private const string OtherPrefab = "UnityProject/Assets/_Game/Features/B/Assets/Private/Boss.prefab";
 
         [Test]
         public void McpWrite_NeedsATask_AndATargetInScope()
@@ -491,7 +491,7 @@ namespace LogicTests.AgentControl
             AgentHooks.Pre(_root, mcp);
             AgentHooks.Post(_root, mcp, NoRules);                       // the editor kept it in memory: nothing on disk yet
             Write(OtherPrefab, "--- !u!1 &1\nGameObject:\n  m_Name: Boss\n");  // ...and saved it later
-            Write("Assets/_Game/Features/B/Logic/Y.cs", "class ByAHuman {}\n");      // code in the IDE: still the human's
+            Write("UnityProject/Assets/_Game/Features/B/Logic/Y.cs", "class ByAHuman {}\n");      // code in the IDE: still the human's
 
             var findings = AgentHooks.StopChecks(_root, H(null), Original);
             Assert.That(findings, Has.Some.StartsWith("SCOPE " + OtherPrefab));
@@ -518,8 +518,8 @@ namespace LogicTests.AgentControl
         public void UndoingAnOutOfScopeChange_IsNotAViolation()
         {
             string root = Path.Combine(Path.GetTempPath(), "restore-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(root, "Assets/_Game/Features/B"));
-            File.WriteAllText(Path.Combine(root, "Assets/_Game/Features/B/Y.cs"), "class Y {}\n");
+            Directory.CreateDirectory(Path.Combine(root, "UnityProject/Assets/_Game/Features/B"));
+            File.WriteAllText(Path.Combine(root, "UnityProject/Assets/_Game/Features/B/Y.cs"), "class Y {}\n");
             void Git(string a)
             {
                 var p = Process.Start(new ProcessStartInfo("git", a) { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false });
@@ -531,9 +531,9 @@ namespace LogicTests.AgentControl
             {
                 TaskStore.Save(root, ScopePolicy.Start("T1", "x", new[] { "A" }, new string[0], false, "now"));
                 var bash = HookInput.Parse("{\"session_id\":\"s\",\"tool_name\":\"Bash\",\"tool_use_id\":\"u\",\"tool_input\":{\"command\":\"git checkout -- Y.cs\"}}");
-                File.WriteAllText(Path.Combine(root, "Assets/_Game/Features/B/Y.cs"), "class Sneaky {}\n");
+                File.WriteAllText(Path.Combine(root, "UnityProject/Assets/_Game/Features/B/Y.cs"), "class Sneaky {}\n");
                 AgentHooks.Pre(root, bash);
-                Git("checkout -- Assets/_Game/Features/B/Y.cs");
+                Git("checkout -- UnityProject/Assets/_Game/Features/B/Y.cs");
                 Assert.That(AgentHooks.Post(root, bash, _ => new List<string>()), Is.EqualTo(0));
                 var mod = EventLog.For(root).ReadAll().Single(e => e.Type == EventTypes.FileModified);
                 Assert.That(mod.Get("inScope"), Is.EqualTo("true"));

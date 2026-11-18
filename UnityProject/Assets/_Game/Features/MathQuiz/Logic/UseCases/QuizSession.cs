@@ -52,7 +52,7 @@ namespace Game.MathQuiz.UseCases
 
     /// <summary>
     /// One round of the quiz as an explicit state machine. <see cref="Transitions"/> is the single source of
-    /// truth: every move is checked against it, and the state diagram in docs/architecture/overview.md is
+    /// truth: every move is checked against it, and the state diagram in Docs/Architecture/overview.md is
     /// generated from it. Invalid calls (double tap, wrong state) return a failed Result instead of throwing.
     /// </summary>
     internal sealed class QuizSession

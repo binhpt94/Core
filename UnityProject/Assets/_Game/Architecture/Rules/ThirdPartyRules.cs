@@ -49,7 +49,7 @@ namespace Game.Architecture.Rules
             }
 
             // ---- ARCH092: vendor DLLs must be explicitly referenced (otherwise every assembly sees them)
-            string assets = Path.Combine(root, "Assets");
+            string assets = Path.Combine(root, "UnityProject", "Assets");
             if (Directory.Exists(assets))
             {
                 foreach (var meta in Directory.EnumerateFiles(assets, "*.dll.meta", SearchOption.AllDirectories))
@@ -82,13 +82,13 @@ namespace Game.Architecture.Rules
                 }
                 else if (!string.IsNullOrEmpty(v.Package))
                 {
-                    string manifest = Path.Combine(root, "Packages", "manifest.json");
+                    string manifest = Path.Combine(root, "UnityProject", "Packages", "manifest.json");
                     string text = File.Exists(manifest) ? File.ReadAllText(manifest) : "";
                     var m = Regex.Match(text, "\"" + Regex.Escape(v.Package) + "\"\\s*:\\s*\"([^\"]+)\"");
                     if (!m.Success)
-                        yield return new RuleViolation("ARCH093", "Packages/manifest.json", 0, "registered package '" + v.Package + "' is not in the manifest");
+                        yield return new RuleViolation("ARCH093", "UnityProject/Packages/manifest.json", 0, "registered package '" + v.Package + "' is not in the manifest");
                     else if (!string.IsNullOrEmpty(v.Version) && !m.Groups[1].Value.Contains(v.Version))
-                        yield return new RuleViolation("ARCH093", "Packages/manifest.json", 0, "package '" + v.Package + "' is '" + m.Groups[1].Value + "', policy pins " + v.Version);
+                        yield return new RuleViolation("ARCH093", "UnityProject/Packages/manifest.json", 0, "package '" + v.Package + "' is '" + m.Groups[1].Value + "', policy pins " + v.Version);
                 }
             }
 
@@ -135,12 +135,12 @@ namespace Game.Architecture.Rules
                                        && !string.IsNullOrWhiteSpace(e.Reason) && !string.IsNullOrWhiteSpace(e.Owner)
                                        && e.Assembly == assemblyOf(v.Path));
 
-        public const string CacheFile = "TestResults/vendor-hash-cache.txt";
+        public const string CacheFile = "Dashboard/Data/vendor-hash-cache.txt";
 
         /// <summary>
         /// Hash with a local cache keyed by every file's (path, size, mtime): an unchanged multi-GB SDK costs a few
         /// file stats instead of a full read. Any size/mtime change → full rehash. The cache is local only
-        /// (TestResults/, git-ignored); CI (env CI=true) and GAME_ARCH_NO_CACHE=1 always hash fully, so a forged
+        /// (Dashboard/Data/, git-ignored); CI (env CI=true) and GAME_ARCH_NO_CACHE=1 always hash fully, so a forged
         /// mtime on a developer machine cannot get past the protected CI check.
         /// </summary>
         public static string HashFolderCached(string root, string dir)

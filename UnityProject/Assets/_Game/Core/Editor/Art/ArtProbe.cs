@@ -140,7 +140,7 @@ namespace Game.Core.EditorTools
         /// <summary>Writes the measured line for the dashboard / review (not a blocking baseline: approval is `art accept`).</summary>
         public static void Record(ArtCase art, ArtMeasurement m, IReadOnlyList<string> violations)
         {
-            string dir = Path.Combine(Path.GetDirectoryName(Application.dataPath), "TestResults", "art");
+            string dir = Path.Combine(Application.dataPath, "..", "..", "Dashboard", "Data", "art");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, art.Contract.Id + "." + art.Level.ToString().ToLowerInvariant() + ".txt"),
                 ArtChecks.Describe(art.Contract.Id, art.Level.ToString().ToLowerInvariant(), m) + "\n" + string.Join("\n", violations) + "\n");

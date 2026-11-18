@@ -60,8 +60,8 @@ namespace TestGate.AgentControl
             var agentChanged = changed.Where(p => AuthorOf(p, authors) == "agent").ToList();
             var humanChanged = changed.Where(p => AuthorOf(p, authors) == "human").ToList();
             bool agentTouchedCode = agentChanged.Any(IsCode);
-            // plan/inbox/ = proposals the agent is supposed to write; no rule reads them
-            bool agentTouchedAssetsOrPlan = agentChanged.Where(p => !p.StartsWith("plan/inbox/", StringComparison.Ordinal)).Any(p => AssetRules.IsYaml(p) || p.StartsWith("plan/", StringComparison.Ordinal) || p.EndsWith(".meta", StringComparison.Ordinal) || !p.StartsWith("Assets/_Game/", StringComparison.Ordinal) && p.StartsWith("Assets/", StringComparison.Ordinal));
+            // Docs/Plan/Inbox/ = proposals the agent is supposed to write; no rule reads them
+            bool agentTouchedAssetsOrPlan = agentChanged.Where(p => !p.StartsWith("Docs/Plan/Inbox/", StringComparison.Ordinal)).Any(p => AssetRules.IsYaml(p) || p.StartsWith("Docs/Plan/", StringComparison.Ordinal) || p.EndsWith(".meta", StringComparison.Ordinal) || !p.StartsWith("UnityProject/Assets/_Game/", StringComparison.Ordinal) && p.StartsWith("UnityProject/Assets/", StringComparison.Ordinal));
             var fixes = new List<Fix>();
 
             foreach (var v in violations)
@@ -117,18 +117,18 @@ namespace TestGate.AgentControl
             {
                 case "ARCH110":
                 case "ARCH111":
-                    return "sửa " + v.Path + (v.Line > 0 ? " dòng " + v.Line : "") + " theo docs/PLANNING.md; lỡ tay: git checkout -- " + v.Path;
+                    return "sửa " + v.Path + (v.Line > 0 ? " dòng " + v.Line : "") + " theo Docs/PLANNING.md; lỡ tay: git checkout -- " + v.Path;
                 case "ARCH130":
                 case "ARCH131":
                     return "dời TRONG UNITY vào Assets/_Game/Features/<F>/Assets/Private/ (đồ tạm: .scratch/), hoặc xóa; lỡ tay: git checkout/clean";
                 case "ARCH132":
                     return "chạy đúng lệnh trong thông báo (khôi phục .meta), hoặc gỡ tham chiếu trong Unity";
                 case "ARCH090":
-                    return "./tools/test-gate.sh graph --write (docs được sinh tự động)";
+                    return "./Tools/test-gate.sh graph --write (docs được sinh tự động)";
                 case "ARCH084":
                     return "mở project trong Unity để sinh .meta rồi commit cả .meta";
                 default:
-                    return "xem docs/RULES.md#" + v.RuleId.ToLowerInvariant() + "; lỡ tay: git checkout -- " + v.Path;
+                    return "xem Docs/RULES.md#" + v.RuleId.ToLowerInvariant() + "; lỡ tay: git checkout -- " + v.Path;
             }
         }
 
@@ -137,7 +137,7 @@ namespace TestGate.AgentControl
             string undo = humanCode.Count > 0 ? "lỡ tay: git checkout -- " + string.Join(" ", humanCode.Take(4)) : "lỡ tay: hoàn tác thay đổi của bạn";
             bool golden = tests.Any(t => t.IndexOf("Golden", StringComparison.OrdinalIgnoreCase) >= 0 || t.IndexOf("Replay", StringComparison.OrdinalIgnoreCase) >= 0);
             return undo + "; cố ý " + (golden
-                ? "đổi gameplay: tăng SimVersion (QuizBattle.cs), GOLDEN_WRITE=1 dotnet test LogicTests, xem diff Tests/Replays/; nếu ý đồ đổi theo, sửa requirement trong plan/features.md"
+                ? "đổi gameplay: tăng SimVersion (QuizBattle.cs), GOLDEN_WRITE=1 dotnet test Tools/LogicTests, xem diff Tests/Replays/; nếu ý đồ đổi theo, sửa requirement trong Docs/Plan/features.md"
                 : "đổi hành vi: cập nhật test tương ứng rồi commit");
         }
 

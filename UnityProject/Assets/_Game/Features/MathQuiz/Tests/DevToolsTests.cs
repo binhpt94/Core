@@ -64,7 +64,7 @@ namespace Game.MathQuiz.Tests
         [Test]
         public void GoldenReplays_OpenAsScenarios()
         {
-            string dir = Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "Assets", "_Game", "Features", "MathQuiz", "Tests", "Replays");
+            string dir = Path.Combine(Architecture.Rules.SourceText.FindRepoRoot(TestContext.CurrentContext.TestDirectory), "UnityProject", "Assets", "_Game", "Features", "MathQuiz", "Tests", "Replays");
             if (!Directory.Exists(dir))
                 Assert.Ignore("golden replays not found from " + TestContext.CurrentContext.TestDirectory);
             foreach (var file in Directory.GetFiles(dir, "*.replay.txt"))

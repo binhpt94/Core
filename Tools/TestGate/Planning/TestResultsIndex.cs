@@ -15,7 +15,7 @@ namespace TestGate.Planning
     }
 
     /// <summary>
-    /// Latest test outcomes from the files the GATE wrote (dotnet .trx, Unity NUnit .xml). Agents can't write TestResults/
+    /// Latest test outcomes from the files the GATE wrote (dotnet .trx, Unity NUnit .xml). Agents can't write Dashboard/Data/
     /// through the recorder's eyes without it being observed; the gate also logs each file's hash (TEST_RESULT events).
     /// </summary>
     public sealed class TestResultsIndex
@@ -27,7 +27,7 @@ namespace TestGate.Planning
         public static TestResultsIndex Load(string root)
         {
             var idx = new TestResultsIndex();
-            string dir = Path.Combine(root, "TestResults");
+            string dir = Path.Combine(root, "Dashboard", "Data");
             if (!Directory.Exists(dir))
                 return idx;
             foreach (var trx in Directory.GetFiles(dir, "*.trx", SearchOption.AllDirectories))

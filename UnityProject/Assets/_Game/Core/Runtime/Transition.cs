@@ -13,7 +13,7 @@ namespace Game.Core
     ///
     /// The table is the single source of truth twice over: the state machine refuses moves that are not
     /// in it (<see cref="TransitionTable.Ensure{TState}"/>), and `test-gate.sh graph` turns it into the
-    /// state diagram in docs/architecture/overview.md. Code and diagram cannot drift apart.
+    /// state diagram in Docs/Architecture/overview.md. Code and diagram cannot drift apart.
     /// </summary>
     public readonly struct Transition<TState> where TState : struct, Enum
     {

@@ -32,7 +32,7 @@ namespace Game.Architecture.Rules
 
         public static List<AsmdefInfo> Load(string repoRoot)
         {
-            string game = Path.Combine(repoRoot, "Assets", "_Game");
+            string game = Path.Combine(repoRoot, "UnityProject", "Assets", "_Game");
             return Directory.GetFiles(game, "*.asmdef", SearchOption.AllDirectories)
                 .Select(f => Parse(repoRoot, f))
                 .Where(a => a.Layer != PathLayer.Architecture)
@@ -45,6 +45,14 @@ namespace Game.Architecture.Rules
         public static IEnumerable<RuleViolation> Check(string repoRoot, ArchitecturePolicy policy)
         {
             var all = Load(repoRoot);
+            // ARCH013: the rule engine and its tests are Editor-only, so they can never be compiled into a build.
+            foreach (var f in Directory.GetFiles(Path.Combine(repoRoot, "UnityProject", "Assets", "_Game"), "*.asmdef", SearchOption.AllDirectories))
+            {
+                var a = Parse(repoRoot, f);
+                bool ruleEngine = a.Layer == PathLayer.Architecture || a.Location.Path.StartsWith(PathInfo.GameRoot + "Tests/Architecture/", StringComparison.Ordinal);
+                if (ruleEngine && !a.EditorOnly)
+                    yield return V("ARCH013", a, "set \"includePlatforms\": [\"Editor\"]: the rule engine and its tests never ship in a build");
+            }
             var byName = new Dictionary<string, AsmdefInfo>();
             foreach (var a in all)
                 byName[a.Name] = a;
@@ -127,7 +135,7 @@ namespace Game.Architecture.Rules
                 yield return new RuleViolation("ARCH009", "", 0, cycle);
 
             // ARCH010: README + Tests per feature
-            string features = Path.Combine(repoRoot, "Assets", "_Game", "Features");
+            string features = Path.Combine(repoRoot, "UnityProject", "Assets", "_Game", "Features");
             if (Directory.Exists(features))
             {
                 foreach (var dir in Directory.GetDirectories(features))

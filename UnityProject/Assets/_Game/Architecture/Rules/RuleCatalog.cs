@@ -39,7 +39,7 @@ namespace Game.Architecture.Rules
     }
 
     /// <summary>
-    /// Every rule ID with a one-line title. Details and fixes: docs/RULES.md#archxxx (kept in sync by a test).
+    /// Every rule ID with a one-line title. Details and fixes: Docs/RULES.md#archxxx (kept in sync by a test).
     /// Static rules run in milliseconds without Unity (hooks, pre-commit, TestGate, Play Mode gate).
     /// Reflection rules need compiled code (dotnet test / Unity EditMode). Unity rules need the Editor.
     /// </summary>
@@ -60,6 +60,7 @@ namespace Game.Architecture.Rules
             new RuleInfo("ARCH010", "Every feature has README.md and a Tests assembly", true),
             new RuleInfo("ARCH011", "autoReferenced=false; overrideReferences only in tests", true),
             new RuleInfo("ARCH012", "Bootstrap must not reference feature Logic assemblies", true),
+            new RuleInfo("ARCH013", "Architecture/ and Tests/Architecture/ assemblies are Editor-only (never in a build)", true),
 
             // Access control
             new RuleInfo("ARCH020", "Logic types must be internal", false),
@@ -112,7 +113,7 @@ namespace Game.Architecture.Rules
             new RuleInfo("ARCH102", "Dev tools are constrained to Editor/GAME_DEVTOOLS and never referenced by runtime code", true),
 
             // Product plan
-            new RuleInfo("ARCH110", "plan/features.md is invalid or inconsistent", true),
+            new RuleInfo("ARCH110", "Docs/Plan/features.md is invalid or inconsistent", true),
             new RuleInfo("ARCH111", "[Covers] names a requirement that is not in the plan", true),
 
             // Art slots
@@ -140,6 +141,6 @@ namespace Game.Architecture.Rules
         /// </summary>
         public static bool IsDocumentationRule(string ruleId) => ruleId == "ARCH090" || ruleId == "ARCH091";
 
-        public static string DocsLink(string ruleId) => "docs/RULES.md#" + ruleId.ToLowerInvariant();
+        public static string DocsLink(string ruleId) => "Docs/RULES.md#" + ruleId.ToLowerInvariant();
     }
 }

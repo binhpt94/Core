@@ -42,7 +42,7 @@ namespace Game.Bootstrap.EditorTools
 
             if (docs.Count > 0)
                 Debug.LogWarning("[Validation] System map / docs out of date (" + docs.Count + "). Not blocking Play Mode. " +
-                                 "Fix: Tools > Game > Regenerate System Map, then commit docs/architecture.\n" + string.Join("\n", docs.Take(10)));
+                                 "Fix: Tools > Game > Regenerate System Map, then commit Docs/Architecture.\n" + string.Join("\n", docs.Take(10)));
         }
 
         [MenuItem("Tools/Game/Regenerate System Map")]
@@ -54,7 +54,7 @@ namespace Game.Bootstrap.EditorTools
                 Debug.LogError("[Validation] " + e);
             Debug.Log(changed.Count == 0
                 ? "[Validation] System map already up to date."
-                : "[Validation] Regenerated " + string.Join(", ", changed) + ". Commit docs/architecture.");
+                : "[Validation] Regenerated " + string.Join(", ", changed) + ". Commit Docs/Architecture.");
         }
 
         [MenuItem(ToggleMenu)]
@@ -90,7 +90,7 @@ namespace Game.Bootstrap.EditorTools
                 return;
 
             // projectRules: false → per-file rules only (fast on every import, and never nags about the system map).
-            var errors = ArchitectureScanner.ScanFiles(ProjectValidator.ProjectRoot, paths, projectRules: false)
+            var errors = ArchitectureScanner.ScanFiles(ProjectValidator.ProjectRoot, paths.Select(Layout.FromUnity).ToList(), projectRules: false)
                 .Where(v => !RuleCatalog.IsDocumentationRule(v.RuleId))
                 .Select(v => v.ToString()).ToList();
             foreach (var path in paths.Where(p => p.EndsWith(".prefab", System.StringComparison.Ordinal)))
@@ -125,7 +125,7 @@ namespace Game.Bootstrap.EditorTools
                 return;
 
             ProjectValidator.Log(errors, "Build blocked");
-            throw new BuildFailedException("Architecture validation failed (" + errors.Count + " violation(s)). See Console / docs/RULES.md. First: " + errors[0]);
+            throw new BuildFailedException("Architecture validation failed (" + errors.Count + " violation(s)). See Console / Docs/RULES.md. First: " + errors[0]);
         }
     }
 }

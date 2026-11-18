@@ -18,12 +18,16 @@ namespace Game.Architecture.Rules
     {
         public const string Scratch = ".scratch/";
 
-        private static readonly HashSet<string> RootEntries = new HashSet<string>(StringComparer.Ordinal)
+        // Hard rule (Root layout): Root = the folder with AGENTS.md. It holds these folders, these files and dot-entries
+        // (.git, .github, .claude, .codex, .vscode, ...), nothing else. Every folder outside UnityProject/ is PascalCase.
+        private static readonly string[] RootDirs = { "UnityProject", "Tools", "Dashboard", "Docs", "Template" };
+        private static readonly HashSet<string> RootFiles = new HashSet<string>(StringComparer.Ordinal)
         {
-            "Assets", "Packages", "ProjectSettings", "LogicTests", "tools", "docs", "plan", ".claude", ".github",
-            "README.md", "CLAUDE.md", "AGENTS.md", "ArchitecturePolicy.txt", ".gitignore", ".gitattributes", ".editorconfig"
+            "AGENTS.md", "CLAUDE.md", "README.md", ".gitignore", ".gitattributes", ".editorconfig"
         };
-        private static readonly string[] AssetsTop = { "Assets/_Game/", "Assets/ThirdParty/", "Assets/Plugins/", "Assets/StreamingAssets/" };
+        // UnityProject/ = what Unity needs to run by itself (Library/, Temp/, Logs/, UserSettings/, *.csproj are generated, ignored).
+        private static readonly HashSet<string> UnityTop = new HashSet<string>(StringComparer.Ordinal) { "Assets", "Packages", "ProjectSettings" };
+        private static readonly string[] AssetsTop = { Layout.Assets + "_Game/", Layout.Assets + "ThirdParty/", Layout.Assets + "Plugins/", Layout.Assets + "StreamingAssets/" };
         private static readonly HashSet<string> GameTop = new HashSet<string> { "Architecture", "Bootstrap", "Core", "Features", "Scenes", "Tests" };
         private static readonly HashSet<string> CoreTop = new HashSet<string> { "Runtime", "DevTools", "Unity", "Editor", "Tests" };
         private static readonly HashSet<string> FeatureTop = new HashSet<string> { "Contracts", "Logic", "Unity", "Editor", "DevTools", "Tests", "Assets" };
@@ -51,7 +55,7 @@ namespace Game.Architecture.Rules
             if (JunkName.IsMatch(name.EndsWith(".meta", StringComparison.Ordinal) ? name.Substring(0, name.Length - 5) : name))
                 yield return new RuleViolation("ARCH131", p, 0, "looks like a leftover (temp/copy/untitled): delete it, or give it a real name; scratch work goes to " + Scratch);
             else if (target.EndsWith(".unity", StringComparison.Ordinal) && !target.StartsWith(PathInfo.GameRoot + "Scenes/", StringComparison.Ordinal)
-                     && !target.StartsWith("Assets/ThirdParty/", StringComparison.Ordinal))
+                     && !target.StartsWith(Layout.Assets + "ThirdParty/", StringComparison.Ordinal))
                 yield return new RuleViolation("ARCH131", p, 0, "scene outside Assets/_Game/Scenes: test without scenes (EditMode stages) or put throwaway scenes in " + Scratch);
         }
 
@@ -60,10 +64,21 @@ namespace Game.Architecture.Rules
         {
             int slash = p.IndexOf('/');
             string top = slash < 0 ? p : p.Substring(0, slash);
-            if (top != "Assets")
-                return RootEntries.Contains(top) || top.StartsWith(".", StringComparison.Ordinal) && top != ".scratch" ? null
-                    : "unknown top-level entry '" + top + "': temp files go to " + Scratch + ", docs to docs/, tools to tools/";
-            if (slash < 0 || p == "Assets/_Game" || AssetsTop.Any(a => p == a.TrimEnd('/')))
+            if (top.StartsWith(".", StringComparison.Ordinal))
+                return null; // .github/, .claude/, .gitignore, ... (.scratch/ never gets here)
+            if (slash < 0)
+                return RootFiles.Contains(p) || RootDirs.Contains(p) ? null : RootHint("'" + p + "'");
+            if (!RootDirs.Contains(top))
+                return RootHint("folder '" + top + "/'");
+            if (top != "UnityProject")
+                return NotPascal(p);
+            string unity = p.Substring(Layout.Unity.Length);
+            string utop = unity.Split('/')[0];
+            if (!UnityTop.Contains(utop))
+                return "UnityProject/ contains only Assets/, Packages/, ProjectSettings/ (what Unity needs; its generated folders stay ignored)";
+            if (utop != "Assets")
+                return null;
+            if (p == Layout.Assets.TrimEnd('/') || AssetsTop.Any(a => p == a.TrimEnd('/')))
                 return null;
             if (!AssetsTop.Any(a => p.StartsWith(a, StringComparison.Ordinal)))
                 return "Assets/ may only contain _Game/, ThirdParty/, Plugins/, StreamingAssets/ (game code and content live in Assets/_Game/Features/<F>/)";
@@ -84,6 +99,20 @@ namespace Game.Architecture.Rules
                 return "loose file in the feature root: only README.md lives there";
             if (parts[0] == "Features" && parts.Length >= 4 && parts[2] == "Assets" && parts[3] != "Public" && parts[3] != "Private")
                 return "feature assets go to Assets/Public/ or Assets/Private/";
+            return null;
+        }
+
+        private static string RootHint(string what) =>
+            "unknown " + what + " in Root: Root contains only " + string.Join("/, ", RootDirs) + "/ and " + string.Join(", ", RootFiles.OrderBy(x => x)) +
+            " (+ dot-folders). Unity → UnityProject/, tools → Tools/, docs → Docs/, scratch → " + Scratch;
+
+        /// <summary>Folders outside UnityProject/ are PascalCase (Tools/GitHooks, Docs/Plan/Inbox); file names are free.</summary>
+        private static string NotPascal(string p)
+        {
+            var dirs = p.Split('/');
+            for (int i = 0; i < dirs.Length - 1; i++)
+                if (dirs[i].Length > 0 && !char.IsUpper(dirs[i][0]))
+                    return "folder '" + dirs[i] + "' in " + string.Join("/", dirs.Take(i + 1)) + "/ must be PascalCase (Root layout rule)";
             return null;
         }
 
@@ -152,7 +181,7 @@ namespace Game.Architecture.Rules
                 yield break;
             var lost = new Dictionary<string, string>(StringComparer.Ordinal); // guid → old asset path
             var deleted = Git(root, "diff --name-only --diff-filter=D " + baseRef).output.Split('\n').Select(x => x.Trim())
-                .Where(x => x.EndsWith(".meta", StringComparison.Ordinal) && x.StartsWith("Assets/", StringComparison.Ordinal));
+                .Where(x => x.EndsWith(".meta", StringComparison.Ordinal) && x.StartsWith(Layout.Assets, StringComparison.Ordinal));
             foreach (var meta in deleted)
             {
                 var m = MetaGuid.Match(Git(root, "show \"" + baseRef + ":" + meta + "\"").output);
@@ -162,7 +191,7 @@ namespace Game.Architecture.Rules
             if (lost.Count == 0)
                 yield break;
 
-            string game = Path.Combine(root, "Assets");
+            string game = Path.Combine(root, "UnityProject", "Assets");
             foreach (var file in Directory.EnumerateFiles(game, "*", SearchOption.AllDirectories).Where(f => AssetRules.IsYaml(f)))
             {
                 string text = File.ReadAllText(file);
@@ -184,7 +213,7 @@ namespace Game.Architecture.Rules
             string ext = Path.GetExtension(oldPath);
             if (blob.Length == 40)
             {
-                foreach (var f in Directory.EnumerateFiles(Path.Combine(root, "Assets"), "*" + ext, SearchOption.AllDirectories))
+                foreach (var f in Directory.EnumerateFiles(Path.Combine(root, "UnityProject", "Assets"), "*" + ext, SearchOption.AllDirectories))
                 {
                     string rel = PathInfo.Normalize(f.Substring(root.Length));
                     if (rel == oldPath)

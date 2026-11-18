@@ -22,10 +22,55 @@ namespace Game.Architecture.Rules
         Other
     }
 
-    /// <summary>Path conventions → layer/feature. Paths are repo-relative with '/' separators.</summary>
+    /// <summary>
+    /// The repository layout (a hard rule, ARCH130). Root = the folder that contains AGENTS.md; every path the tools
+    /// exchange is relative to Root with '/' separators. Unity's own paths ("Assets/...") are relative to UnityProject/.
+    /// </summary>
+    public static class Layout
+    {
+        public const string RootMarker = "AGENTS.md";
+        public const string Unity = "UnityProject/";
+        public const string Assets = Unity + "Assets/";
+        public const string Packages = Unity + "Packages/";
+        public const string ProjectSettings = Unity + "ProjectSettings/";
+        public const string Library = Unity + "Library/";
+        public const string Tools = "Tools/";
+        public const string LogicTests = Tools + "Tools/LogicTests/";
+        public const string Docs = "Docs/";
+        public const string Plan = Docs + "Plan/";
+        public const string Dashboard = "Dashboard/";
+        public const string Data = Dashboard + "Data/";
+        public const string Template = "Template/";
+
+        /// <summary>Absolute path of a Root-relative path.</summary>
+        public static string Full(string root, string relative) =>
+            System.IO.Path.Combine(root, relative.TrimEnd('/').Replace('/', System.IO.Path.DirectorySeparatorChar));
+
+        /// <summary>Unity asset path ("Assets/X", "Packages/Y") → Root-relative ("UnityProject/Assets/X").</summary>
+        public static string FromUnity(string unityPath) => Unity + unityPath.Replace('\\', '/');
+
+        /// <summary>Root-relative → Unity asset path; null when the path is outside UnityProject/.</summary>
+        public static string ToUnity(string relative) =>
+            relative.StartsWith(Unity, StringComparison.Ordinal) ? relative.Substring(Unity.Length) : null;
+
+        /// <summary>Root from inside Unity: Application.dataPath is Root/UnityProject/Assets.</summary>
+        public static string RootFromDataPath(string dataPath) =>
+            System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(dataPath)));
+
+        /// <summary>The closest folder above <paramref name="start"/> with AGENTS.md and UnityProject/.</summary>
+        public static string FindRoot(string start)
+        {
+            for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
+                if (File.Exists(System.IO.Path.Combine(dir.FullName, RootMarker)) && Directory.Exists(System.IO.Path.Combine(dir.FullName, "UnityProject")))
+                    return dir.FullName;
+            throw new DirectoryNotFoundException("No Root (a folder with " + RootMarker + " and UnityProject/) above " + start);
+        }
+    }
+
+    /// <summary>Path conventions → layer/feature. Paths are Root-relative with '/' separators.</summary>
     public sealed class PathInfo
     {
-        public const string GameRoot = "Assets/_Game/";
+        public const string GameRoot = Layout.Assets + "_Game/";
 
         public string Path { get; }
         public PathLayer Layer { get; }
@@ -130,12 +175,6 @@ namespace Game.Architecture.Rules
             return n;
         }
 
-        public static string FindRepoRoot(string start)
-        {
-            for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
-                if (Directory.Exists(System.IO.Path.Combine(dir.FullName, "Assets", "_Game")))
-                    return dir.FullName;
-            throw new DirectoryNotFoundException("No Assets/_Game above " + start);
-        }
+        public static string FindRepoRoot(string start) => Layout.FindRoot(start);
     }
 }

@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Incremental test gate. Run it through tools/test-gate.sh (usage is documented there). -->
+  <!-- Incremental test gate. Run it through Tools/test-gate.sh (usage is documented there). -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -10,6 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- The same rule engine the tests and the Unity gates use (linked, not copied). -->
-    <Compile Include="../../Assets/_Game/Architecture/Rules/*.cs" Link="Rules/%(Filename)%(Extension)" />
+    <Compile Include="../../UnityProject/Assets/_Game/Architecture/Rules/*.cs" Link="Rules/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

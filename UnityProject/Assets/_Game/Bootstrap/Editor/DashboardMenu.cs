@@ -7,27 +7,27 @@ using Debug = UnityEngine.Debug;
 namespace Game.Bootstrap.EditorTools
 {
     /// <summary>
-    /// Tools > Game > Open Dashboard: the same as `./tools/test-gate.sh dash`, then opens tools/dashboard/index.html.
+    /// Tools > Game > Open Dashboard: the same as `./Tools/test-gate.sh dash`, then opens Dashboard/index.html.
     /// Calls the prebuilt TestGate runner through `dotnet` directly, so it needs no bash on Windows.
     /// </summary>
     public static class DashboardMenu
     {
-        private const string GateDll = "tools/TestGate/bin/Release/net8.0/TestGate.dll";
-        private const string DashboardPage = "tools/dashboard/index.html";
+        private const string GateDll = "Tools/TestGate/bin/Release/net8.0/TestGate.dll";
+        private const string DashboardPage = "Dashboard/index.html";
 
         [MenuItem("Tools/Game/Open Dashboard")]
         public static void OpenDashboard()
         {
-            string root = Path.GetDirectoryName(Application.dataPath);
+            string root = Game.Architecture.Rules.Layout.RootFromDataPath(Application.dataPath);
             try
             {
                 if (!File.Exists(Path.Combine(root, GateDll)))
                 {
-                    EditorUtility.DisplayProgressBar("Dashboard", "Building tools/TestGate (first run)...", 0.3f);
-                    if (!RunDotnet(root, "build tools/TestGate -c Release -v q --nologo"))
+                    EditorUtility.DisplayProgressBar("Dashboard", "Building Tools/TestGate (first run)...", 0.3f);
+                    if (!RunDotnet(root, "build Tools/TestGate -c Release -v q --nologo"))
                         return;
                 }
-                EditorUtility.DisplayProgressBar("Dashboard", "Writing TestResults/dashboard/ ...", 0.7f);
+                EditorUtility.DisplayProgressBar("Dashboard", "Writing Dashboard/Data/ ...", 0.7f);
                 if (!RunDotnet(root, "\"" + GateDll + "\" dash"))
                     return;
             }
@@ -65,7 +65,7 @@ namespace Game.Bootstrap.EditorTools
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                Debug.LogError("[Game] 'dotnet' not found on PATH: install the .NET 8 SDK, or run ./tools/test-gate.sh dash in Git Bash.");
+                Debug.LogError("[Game] 'dotnet' not found on PATH: install the .NET 8 SDK, or run ./Tools/test-gate.sh dash in Git Bash.");
                 return false;
             }
         }

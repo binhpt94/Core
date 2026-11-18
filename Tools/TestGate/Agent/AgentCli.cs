@@ -69,7 +69,7 @@ namespace TestGate.AgentControl
                         Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "task-cli").With("target", "task start").With("reason", "module conflict: " + why));
                         return 1;
                     }
-                    var unknown = features.Where(f => !Directory.Exists(Path.Combine(root, "Assets", "_Game", "Features", f))).ToList();
+                    var unknown = features.Where(f => !Directory.Exists(Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", f))).ToList();
                     task = ScopePolicy.Start("T" + DateTime.UtcNow.ToString("MMdd-HHmmss", CultureInfo.InvariantCulture), text, features, paths, tests, now);
                     task.Baseline = WorkSnapshot.Take(root).ToDictionary(k => k.Key, k => k.Value);
                     var plan = Game.Architecture.Rules.PlanParser.Load(root);
@@ -85,7 +85,7 @@ namespace TestGate.AgentControl
                         Console.WriteLine(n);
                     Console.WriteLine("Task " + task.Id + ": " + task.Status + " · scope " + task.ScopeText + (unknown.Count > 0 ? " (new feature: " + string.Join(", ", unknown) + ")" : ""));
                     if (task.Status == AgentTask.PendingApproval)
-                        Console.WriteLine("More than one feature, explicit paths or test changes: a human must run ./tools/test-gate.sh task approve");
+                        Console.WriteLine("More than one feature, explicit paths or test changes: a human must run ./Tools/test-gate.sh task approve");
                     return 0;
 
                 case "request":
@@ -100,7 +100,7 @@ namespace TestGate.AgentControl
                         .With("features", string.Join(",", task.RequestedFeatures)).With("paths", string.Join(",", task.RequestedPaths))
                         .With("tests", task.RequestedTestChanges ? "true" : "false")
                         .With("core", task.RequestedCoreMaintenance ? "true" : null).With("reason", text));
-                    Console.WriteLine("Requested. Current scope stays " + task.ScopeText + ". Ask the human to run: ./tools/test-gate.sh task approve");
+                    Console.WriteLine("Requested. Current scope stays " + task.ScopeText + ". Ask the human to run: ./Tools/test-gate.sh task approve");
                     return 0;
 
                 case "approve":
@@ -122,7 +122,7 @@ namespace TestGate.AgentControl
 
                 default:
                     if (task == null)
-                        Console.WriteLine("No task. Start one: ./tools/test-gate.sh task start \"<what>\" --feature <Feature>");
+                        Console.WriteLine("No task. Start one: ./Tools/test-gate.sh task start \"<what>\" --feature <Feature>");
                     else
                     {
                         foreach (var st in TaskPlanLink.Stale(Game.Architecture.Rules.PlanParser.Load(root), task))
@@ -155,7 +155,7 @@ namespace TestGate.AgentControl
             if (task.HasPendingRequest)
                 Console.WriteLine("  requested     : " + string.Join(", ", task.RequestedFeatures.Select(f => "Features/" + f).Concat(task.RequestedPaths)) +
                                   (task.RequestedTestChanges ? " + permission to change test expectations" : "") +
-                                  (task.RequestedCoreMaintenance ? " + CORE MAINTENANCE (owner-only files: tools/, rules, .claude/, .github/, docs, PublicApi...)" : "") + "  (" + task.RequestReason + ")");
+                                  (task.RequestedCoreMaintenance ? " + CORE MAINTENANCE (owner-only files: Tools/, rules, .claude/, .github/, docs, PublicApi...)" : "") + "  (" + task.RequestReason + ")");
             Console.Write("Type the task id to approve: ");
             if ((Console.ReadLine() ?? "").Trim() != task.Id)
             {
@@ -203,12 +203,12 @@ namespace TestGate.AgentControl
 
         // ------------------------------------------------------------------ dashboard
 
-        // Layout: the VIEW is static (tools/dashboard: index.html, style.css, app.js; edit it directly, nothing generates it).
-        // The DATA is written by `dash`: TestResults/dashboard/data.json (+ data.js = the same as `window.MODEL = ...`, so the
+        // Layout: the VIEW is static (Dashboard: index.html, style.css, app.js; edit it directly, nothing generates it).
+        // The DATA is written by `dash`: Dashboard/Data/data.json (+ data.js = the same as `window.MODEL = ...`, so the
         // page also opens with a double-click, where browsers refuse to fetch a .json) and sessions/<id>.js (one session's
         // detail, loaded when clicked). `dash --bundle` = one self-contained HTML to send to someone.
-        public const string ViewDir = "tools/dashboard";
-        public const string DataDir = "TestResults/dashboard";
+        public const string ViewDir = "Dashboard";
+        public const string DataDir = "Dashboard/Data";
         private static readonly System.Text.Json.JsonSerializerOptions Json = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
 
         public static (Snapshot snapshot, List<AgentEvent> events) Model(string root)
@@ -222,11 +222,11 @@ namespace TestGate.AgentControl
                 s.Roadmap = roadmap;
                 s.Attention.PlanErrors.AddRange(roadmap.Errors);
                 foreach (var g in roadmap.Gaps.Where(g => g.Actor == "human" && g.Kind == "NEEDS_REVIEW"))
-                    s.Attention.Approvals.Add(new Approval { Kind = "requirement", Id = g.Requirement, What = g.Requirement + ": tự kiểm tra rồi chấp nhận (" + g.Feature + ")", Command = "./tools/test-gate.sh roadmap accept " + g.Requirement });
+                    s.Attention.Approvals.Add(new Approval { Kind = "requirement", Id = g.Requirement, What = g.Requirement + ": tự kiểm tra rồi chấp nhận (" + g.Feature + ")", Command = "./Tools/test-gate.sh roadmap accept " + g.Requirement });
                 foreach (var sl in roadmap.Slots.Where(x => x.Level == "CANDIDATE" || x.Level == "STALE"))
-                    s.Attention.Approvals.Add(new Approval { Kind = "art", Id = sl.Id, What = sl.Id + ": " + (sl.Level == "STALE" ? "art đã đổi sau khi duyệt, cần xem lại" : "art ứng viên chờ duyệt") + " (" + sl.BoundFile + ")", Command = "./tools/test-gate.sh art accept " + sl.Id });
+                    s.Attention.Approvals.Add(new Approval { Kind = "art", Id = sl.Id, What = sl.Id + ": " + (sl.Level == "STALE" ? "art đã đổi sau khi duyệt, cần xem lại" : "art ứng viên chờ duyệt") + " (" + sl.BoundFile + ")", Command = "./Tools/test-gate.sh art accept " + sl.Id });
                 foreach (var p in roadmap.Proposals)
-                    s.Attention.Approvals.Add(new Approval { Kind = "proposal", Id = p, What = "Agent đề xuất đổi plan", Command = "xem plan/inbox/" + p + ", sửa plan/features.md nếu đồng ý, rồi xóa đề xuất" });
+                    s.Attention.Approvals.Add(new Approval { Kind = "proposal", Id = p, What = "Agent đề xuất đổi plan", Command = "xem Docs/Plan/Inbox/" + p + ", sửa Docs/Plan/features.md nếu đồng ý, rồi xóa đề xuất" });
             }
             catch (Exception e)
             {
@@ -259,7 +259,7 @@ namespace TestGate.AgentControl
         {
             var (s, events) = Model(root);
             string dataDir = Path.Combine(root, DataDir);
-            string sessDir = Path.Combine(dataDir, "sessions");
+            string sessDir = Path.Combine(dataDir, "Sessions");
             Directory.CreateDirectory(sessDir);
 
             string only = Value(args, "--session");
@@ -282,7 +282,7 @@ namespace TestGate.AgentControl
 
             if (args.Contains("--bundle"))
             {
-                string outPath = Value(args, "--out") ?? Path.Combine(root, "TestResults", "dashboard.html");
+                string outPath = Value(args, "--out") ?? Path.Combine(root, "Dashboard", "Data", "dashboard.html");
                 File.WriteAllText(outPath, Bundle(root, s, events));
                 Console.WriteLine("Bundle (one file, to send): " + outPath);
             }

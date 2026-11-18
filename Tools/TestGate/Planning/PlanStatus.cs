@@ -129,7 +129,7 @@ namespace TestGate.Planning
         public List<CoverEntry> Covers { get; set; } = new List<CoverEntry>();
         public TestResultsIndex Results { get; set; } = new TestResultsIndex();
         public Dictionary<string, LedgerEntry> Ledger { get; set; } = new Dictionary<string, LedgerEntry>(StringComparer.Ordinal);
-        /// <summary>Requirement id → hash accepted by a human (plan/accepted.txt).</summary>
+        /// <summary>Requirement id → hash accepted by a human (Docs/Plan/accepted.txt).</summary>
         public Dictionary<string, string> Accepted { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
         /// <summary>Module → newest change time of its code (UTC).</summary>
         public Func<string, DateTime> ModuleChangedUtc { get; set; } = _ => DateTime.MinValue;
@@ -146,8 +146,8 @@ namespace TestGate.Planning
         {
             var plan = PlanParser.Load(root);
             var covers = PlanRules.Covers(root);
-            var api = Directory.Exists(Path.Combine(root, "Assets"))
-                ? string.Join("\n", Directory.GetFiles(Path.Combine(root, "Assets"), "PublicApi.txt", SearchOption.AllDirectories).Select(File.ReadAllText))
+            var api = Directory.Exists(Path.Combine(root, "UnityProject", "Assets"))
+                ? string.Join("\n", Directory.GetFiles(Path.Combine(root, "UnityProject", "Assets"), "PublicApi.txt", SearchOption.AllDirectories).Select(File.ReadAllText))
                 : "";
             var moduleTimes = new Dictionary<string, DateTime>(StringComparer.Ordinal);
             string inbox = Path.Combine(root, PlanParser.InboxFolder);
@@ -164,7 +164,7 @@ namespace TestGate.Planning
                 {
                     if (moduleTimes.TryGetValue(m, out var t))
                         return t;
-                    string dir = Path.Combine(root, "Assets", "_Game", "Features", m);
+                    string dir = Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", m);
                     t = Directory.Exists(dir) ? Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories).Select(File.GetLastWriteTimeUtc).DefaultIfEmpty(DateTime.MinValue).Max() : DateTime.MinValue;
                     return moduleTimes[m] = t;
                 },

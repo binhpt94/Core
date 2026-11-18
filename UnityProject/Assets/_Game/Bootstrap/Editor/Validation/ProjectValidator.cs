@@ -17,7 +17,8 @@ namespace Game.Bootstrap.EditorTools
     {
         public const string GameFolder = "Assets/_Game";
 
-        public static string ProjectRoot => Path.GetDirectoryName(Application.dataPath);
+        /// <summary>Root of the repository (the folder with AGENTS.md); the rule engine works with Root-relative paths.</summary>
+        public static string ProjectRoot => Layout.RootFromDataPath(Application.dataPath);
 
         /// <summary>
         /// Violations that must stop Play Mode / builds. Documentation rules (stale system map, doc anchors) are
@@ -79,7 +80,7 @@ namespace Game.Bootstrap.EditorTools
         {
             foreach (var e in errors.Take(50))
                 Debug.LogError("[Validation] " + e);
-            Debug.LogError("[Validation] " + header + ": " + errors.Count + " violation(s). Details: docs/RULES.md");
+            Debug.LogError("[Validation] " + header + ": " + errors.Count + " violation(s). Details: Docs/RULES.md");
         }
     }
 }

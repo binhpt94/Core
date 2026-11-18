@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     Runs every pure-C# assembly (Core, Features/*/Contracts, Features/*/Logic) and their tests
-    WITHOUT Unity:  dotnet test LogicTests
-    Source files are linked from Assets/, never copied. Unity-only folders (Unity/, Editor/, Core/Editor/, Bootstrap/, Tests/Unity/) are excluded.
+    WITHOUT Unity:  dotnet test Tools/LogicTests
+    Source files are linked from UnityProject/Assets/, never copied. Unity-only folders (Unity/, Editor/, Core/Editor/, Bootstrap/, Tests/Unity/) are excluded.
     DevTools (fixtures, scenarios) are pure and compiled here, so every scenario is verified without Unity.
   -->
   <PropertyGroup>
@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <GameRoot>$(MSBuildThisFileDirectory)../Assets/_Game/</GameRoot>
+    <GameRoot>$(MSBuildThisFileDirectory)../../UnityProject/Assets/_Game/</GameRoot>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,10 +29,10 @@
     <Compile Include="$(GameRoot)Features/*/Tests/**/*.cs" Exclude="$(GameRoot)Features/*/Tests/Unity/**/*.cs" />
     <Compile Include="$(GameRoot)Tests/Architecture/**/*.cs" />
     <Compile Include="$(GameRoot)Architecture/Rules/**/*.cs" />
-    <!-- Agent Flight Recorder (tools/TestGate/Agent): event log, scope policy, guards, reducer + their tests. -->
-    <Compile Include="../tools/TestGate/Agent/*.cs" />
-    <Compile Include="../tools/TestGate/Planning/*.cs" />
-    <Compile Include="../tools/TestGate/Files/*.cs" />
+    <!-- Agent Flight Recorder (Tools/TestGate/Agent): event log, scope policy, guards, reducer + their tests. -->
+    <Compile Include="../TestGate/Agent/*.cs" />
+    <Compile Include="../TestGate/Planning/*.cs" />
+    <Compile Include="../TestGate/Files/*.cs" />
     <Compile Include="AgentControl/**/*.cs" />
   </ItemGroup>
 
@@ -41,7 +41,7 @@
     <!-- Unity Test Framework ships NUnit 3.5: only use APIs that exist there. -->
     <PackageReference Include="NUnit" Version="3.14.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
-    <!-- Same version as Packages/manifest.json (com.cysharp.unitask). -->
+    <!-- Same version as UnityProject/Packages/manifest.json (com.cysharp.unitask). -->
     <PackageReference Include="UniTask" Version="2.5.10" />
   </ItemGroup>
 </Project>

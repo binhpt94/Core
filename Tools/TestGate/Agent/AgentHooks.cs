@@ -163,7 +163,7 @@ namespace TestGate.AgentControl
             else if (kind == McpKind.Write || kind == McpKind.ExecAllowed)
             {
                 if (task == null || !task.IsActive)
-                    why = "no active task: start one before changing the project through " + h.ToolName + " (./tools/test-gate.sh task start ...)";
+                    why = "no active task: start one before changing the project through " + h.ToolName + " (./Tools/test-gate.sh task start ...)";
                 else
                     foreach (var t in McpPolicy.TargetPaths(h))
                     {
@@ -196,13 +196,13 @@ namespace TestGate.AgentControl
         public static string ForbiddenCommand(string cmd)
         {
             string c = cmd.Trim();
-            bool viaGate = c.StartsWith("./tools/test-gate.sh", StringComparison.Ordinal) || c.StartsWith("tools/test-gate.sh", StringComparison.Ordinal);
+            bool viaGate = c.StartsWith("./Tools/test-gate.sh", StringComparison.Ordinal) || c.StartsWith("Tools/test-gate.sh", StringComparison.Ordinal);
             if (c.Contains("art accept"))
-                return "approving art is a human decision (./tools/test-gate.sh art accept in a terminal)";
+                return "approving art is a human decision (./Tools/test-gate.sh art accept in a terminal)";
             if (c.Contains("roadmap accept"))
-                return "accepting a requirement is a human decision (./tools/test-gate.sh roadmap accept in a terminal)";
+                return "accepting a requirement is a human decision (./Tools/test-gate.sh roadmap accept in a terminal)";
             if (c.Contains("task approve"))
-                return "approving a task's scope is for a human in a terminal (./tools/test-gate.sh task approve)";
+                return "approving a task's scope is for a human in a terminal (./Tools/test-gate.sh task approve)";
             if (!viaGate && c.Contains(".agent"))
                 return ".agent/ (event log, task) is written only by the test gate";
             return null;
@@ -307,7 +307,7 @@ namespace TestGate.AgentControl
             var task = TaskStore.Load(root);
             var lastGate = events.LastOrDefault(e => e.Type == EventTypes.GateFinished);
             Console.WriteLine("[agent-control] task: " + (task == null || task.Status == AgentTask.Closed
-                ? "none. Before editing: ./tools/test-gate.sh task start \"<what>\" --feature <Feature>"
+                ? "none. Before editing: ./Tools/test-gate.sh task start \"<what>\" --feature <Feature>"
                 : task.Id + " \"" + task.Title + "\" " + task.Status + ", scope " + task.ScopeText));
             Console.WriteLine("[agent-control] last gate: " + (lastGate == null ? "never run" : lastGate.Get("result") + " (#" + lastGate.Seq + " " + lastGate.Ts + ")"));
             Console.WriteLine("[agent-control] event log: " + chain.Message);

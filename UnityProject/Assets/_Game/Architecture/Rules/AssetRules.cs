@@ -50,9 +50,9 @@ namespace Game.Architecture.Rules
                     return _guidToPath;
 
                 _guidToPath = new Dictionary<string, string>();
-                Index(Path.Combine(_root, "Assets"));
-                Index(Path.Combine(_root, "Packages"));
-                string cache = Path.Combine(_root, "Library", "PackageCache");
+                Index(Path.Combine(_root, "UnityProject", "Assets"));
+                Index(Path.Combine(_root, "UnityProject", "Packages"));
+                string cache = Path.Combine(_root, "UnityProject", "Library", "PackageCache");
                 _packageCacheIndexed = Directory.Exists(cache);
                 if (_packageCacheIndexed)
                     Index(cache);
@@ -145,8 +145,8 @@ namespace Game.Architecture.Rules
         /// <summary>ARCH084: Force Text serialization is a precondition for every other asset rule (and for merging).</summary>
         public IEnumerable<RuleViolation> CheckProjectSettings()
         {
-            string settings = Path.Combine(_root, "ProjectSettings", "EditorSettings.asset");
-            const string rel = "ProjectSettings/EditorSettings.asset";
+            string settings = Path.Combine(_root, "UnityProject", "ProjectSettings", "EditorSettings.asset");
+            const string rel = "UnityProject/ProjectSettings/EditorSettings.asset";
             if (!File.Exists(settings))
                 yield return new RuleViolation("ARCH084", rel, 0, "missing; set Project Settings > Editor > Asset Serialization = Force Text");
             else if (!Regex.IsMatch(File.ReadAllText(settings), @"m_SerializationMode: 2\b"))
@@ -161,7 +161,7 @@ namespace Game.Architecture.Rules
             if (inside.Count == 0)
                 yield break;
 
-            foreach (var file in Directory.EnumerateFiles(Path.Combine(_root, "Assets"), "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(Path.Combine(_root, "UnityProject", "Assets"), "*", SearchOption.AllDirectories))
             {
                 string rel = PathInfo.Normalize(file.Substring(_root.Length));
                 if (rel.StartsWith(folder, StringComparison.Ordinal) || !IsYaml(rel))

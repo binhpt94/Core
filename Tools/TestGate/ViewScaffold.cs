@@ -25,7 +25,7 @@ internal static class ViewScaffold
             return 64;
         }
 
-        string dir = Path.Combine(root, "Assets", "_Game", "Features", feature);
+        string dir = Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", feature);
         if (!Directory.Exists(Path.Combine(dir, "Logic")) || !Directory.Exists(Path.Combine(dir, "Unity")))
         {
             Console.Error.WriteLine("Feature " + feature + " needs Logic/ and Unity/ (run new-feature first).");

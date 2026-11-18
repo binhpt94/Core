@@ -8,7 +8,7 @@ namespace Game.Core.Tests
 {
     /// <summary>
     /// Frozen behaviour of the deterministic core. Expected values come from an INDEPENDENT reference
-    /// implementation (Python, see docs/ARCHITECTURE.md §14), not from this C# code. Because these tests run
+    /// implementation (Python, see Docs/ARCHITECTURE.md §14), not from this C# code. Because these tests run
     /// in `dotnet test` (CoreCLR) and in Unity EditMode (Mono), they also prove cross-runtime equality.
     /// </summary>
     public sealed class DeterminismTests

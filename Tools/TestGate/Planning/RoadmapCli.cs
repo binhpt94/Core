@@ -13,7 +13,7 @@ namespace TestGate.Planning
     ///   roadmap status [F-ID]     features with computed status (+ requirements of one feature)
     ///   roadmap gaps              everything missing, most severe first (agent work vs human decisions)
     ///   roadmap next              what to do now, in parallel lanes, with the exact `task start` command
-    ///   roadmap propose "text" [--feature F-ID]   agent → plan/inbox/ (the human decides)
+    ///   roadmap propose "text" [--feature F-ID]   agent → Docs/Plan/Inbox/ (the human decides)
     ///   roadmap accept R-ID       HUMAN ONLY: accept a [manual] requirement / a reworded one
     /// </summary>
     public static class RoadmapCli
@@ -25,7 +25,7 @@ namespace TestGate.Planning
             string sub = args.Length > 1 ? args[1] : "status";
             if (PlanParser.Load(root) == null)
             {
-                Console.WriteLine("No " + PlanParser.RelativePath + " yet. The human writes it (syntax: docs/PLANNING.md).");
+                Console.WriteLine("No " + PlanParser.RelativePath + " yet. The human writes it (syntax: Docs/PLANNING.md).");
                 return sub == "status" ? 0 : 1;
             }
             switch (sub)
@@ -150,7 +150,7 @@ namespace TestGate.Planning
             string name = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + (slug.Length > 40 ? slug.Substring(0, 40) : slug) + ".md";
             string path = Path.Combine(root, PlanParser.InboxFolder, name);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllText(path, "# Đề xuất cho " + feature + "\n\n" + text + "\n\n<!-- Người quyết: chép vào plan/features.md (hoặc bỏ), rồi xóa file này. -->\n", Encoding.UTF8);
+            File.WriteAllText(path, "# Đề xuất cho " + feature + "\n\n" + text + "\n\n<!-- Người quyết: chép vào Docs/Plan/features.md (hoặc bỏ), rồi xóa file này. -->\n", Encoding.UTF8);
             Recorder.Emit(Recorder.New(EventTypes.PlanProposed, "roadmap-cli").With("feature", feature).With("file", PlanParser.InboxFolder + name).With("text", AgentHooks.Trim(text, 300)));
             Console.WriteLine("Proposal written: " + PlanParser.InboxFolder + name + " (the plan is unchanged until the human decides)");
             return 0;

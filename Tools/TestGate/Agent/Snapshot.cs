@@ -107,7 +107,7 @@ namespace TestGate.AgentControl
                     s.Attention.Approvals.Add(new Approval
                     {
                         Kind = "task", Id = task.Id, What = "Agent xin phạm vi: " + (s.Task.Requested ?? task.ScopeText) + (task.RequestReason != null ? " (" + task.RequestReason + ")" : ""),
-                        Command = "./tools/test-gate.sh task approve"
+                        Command = "./Tools/test-gate.sh task approve"
                     });
             }
 

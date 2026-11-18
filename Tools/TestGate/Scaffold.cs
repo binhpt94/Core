@@ -19,7 +19,7 @@ internal static class Scaffold
             return 64;
         }
 
-        string dir = Path.Combine(root, "Assets", "_Game", "Features", name);
+        string dir = Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", name);
         if (Directory.Exists(dir))
         {
             Console.Error.WriteLine("Feature already exists: " + dir);
@@ -130,11 +130,11 @@ namespace Game.{name}.Tests
 - (rules that must always hold)
 
 ## Tests
-`dotnet test LogicTests --filter FullyQualifiedName~Game.{name}`
+`dotnet test Tools/LogicTests --filter FullyQualifiedName~Game.{name}`
 ");
 
         Console.WriteLine("created Assets/_Game/Features/" + name + (contracts ? " (with Contracts)" : ""));
-        Console.WriteLine("next: wire " + name + "Installer in Bootstrap if needed, then ./tools/test-gate.sh graph --write && ./tools/test-gate.sh run");
+        Console.WriteLine("next: wire " + name + "Installer in Bootstrap if needed, then ./Tools/test-gate.sh graph --write && ./Tools/test-gate.sh run");
         return 0;
     }
 

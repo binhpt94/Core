@@ -57,7 +57,7 @@ namespace Game.Architecture.Rules
             var g = new ArchitectureGraph { Policy = ArchitecturePolicy.Load(root), Root = root };
             var asmdefs = AsmdefRules.Load(root);
             var byName = asmdefs.GroupBy(a => a.Name).ToDictionary(x => x.Key, x => x.First());
-            string game = Path.Combine(root, "Assets", "_Game");
+            string game = Path.Combine(root, "UnityProject", "Assets", "_Game");
 
             foreach (var a in asmdefs.Where(a => a.Feature != null))
                 g.Feature(a.Feature).HasContracts |= a.Layer == PathLayer.Contracts;
@@ -131,7 +131,7 @@ namespace Game.Architecture.Rules
                 StateTableParser.Parse(info[f], code[f], g.StateMachines, g.ParseErrors);
 
             // ---- assets per feature
-            g.AssetsKnown = Directory.EnumerateFiles(Path.Combine(root, "Assets"), "*.meta", SearchOption.AllDirectories).Any();
+            g.AssetsKnown = Directory.EnumerateFiles(Path.Combine(root, "UnityProject", "Assets"), "*.meta", SearchOption.AllDirectories).Any();
             foreach (var feature in g.Features.Values)
             {
                 feature.PublicAssets = CountAssets(Path.Combine(game, "Features", feature.Name, "Assets", "Public"));
@@ -245,7 +245,7 @@ namespace Game.Architecture.Rules
         /// <summary>L3: constructor-injection graph of one feature ("Type &lt;- dependencies"). Exact, because DI is by constructor.</summary>
         public static string DescribeDependencyInjection(string root, string feature)
         {
-            string dir = Path.Combine(root, "Assets", "_Game", "Features", feature);
+            string dir = Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", feature);
             if (!Directory.Exists(dir))
                 return "unknown feature '" + feature + "'";
             var lines = new SortedSet<string>(StringComparer.Ordinal);

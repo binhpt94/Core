@@ -215,10 +215,10 @@ namespace LogicTests.AgentControl
         {
             _dir = Path.Combine(Path.GetTempPath(), "wt-" + Guid.NewGuid().ToString("N"));
             string main = Path.Combine(_dir, "main");
-            Directory.CreateDirectory(Path.Combine(main, "Assets/_Game/Features/A"));
-            Directory.CreateDirectory(Path.Combine(main, "Assets/_Game/Features/B"));
-            File.WriteAllText(Path.Combine(main, "Assets/_Game/Features/A/x.txt"), "a");
-            File.WriteAllText(Path.Combine(main, "Assets/_Game/Features/B/y.txt"), "b");
+            Directory.CreateDirectory(Path.Combine(main, "UnityProject/Assets/_Game/Features/A"));
+            Directory.CreateDirectory(Path.Combine(main, "UnityProject/Assets/_Game/Features/B"));
+            File.WriteAllText(Path.Combine(main, "UnityProject/Assets/_Game/Features/A/x.txt"), "a");
+            File.WriteAllText(Path.Combine(main, "UnityProject/Assets/_Game/Features/B/y.txt"), "b");
             Git(main, "init -q");
             Git(main, "add -A");
             Git(main, "-c user.email=a@b -c user.name=t commit -qm init");
@@ -269,10 +269,10 @@ namespace LogicTests.AgentControl
         public void AHumanEditingThePlan_IsUnobserved_NotTheAgentsScopeViolation_ButTheTaskBecomesStale()
         {
             string root = Path.Combine(Path.GetTempPath(), "human-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(root, "Assets/_Game/Features/A"));
-            Directory.CreateDirectory(Path.Combine(root, "plan"));
-            File.WriteAllText(Path.Combine(root, "Assets/_Game/Features/A/x.cs"), "class X {}\n");
-            File.WriteAllText(Path.Combine(root, "plan/features.md"), "## F-A  A [P0] [modules: A]\n- R-A  old wording\n");
+            Directory.CreateDirectory(Path.Combine(root, "UnityProject/Assets/_Game/Features/A"));
+            Directory.CreateDirectory(Path.Combine(root, "Docs", "Plan"));
+            File.WriteAllText(Path.Combine(root, "UnityProject/Assets/_Game/Features/A/x.cs"), "class X {}\n");
+            File.WriteAllText(Path.Combine(root, "Docs/Plan/features.md"), "## F-A  A [P0] [modules: A]\n- R-A  old wording\n");
             void Git(string a)
             {
                 var p = Process.Start(new ProcessStartInfo("git", a) { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false });
@@ -283,13 +283,13 @@ namespace LogicTests.AgentControl
             try
             {
                 Assert.That(AgentCli.Task(root, new[] { "task", "start", "work", "--req", "R-A" }), Is.EqualTo(0));
-                File.WriteAllText(Path.Combine(root, "plan/features.md"), "## F-A  A [P0] [modules: A]\n- R-A  new wording\n"); // the human, in the IDE
+                File.WriteAllText(Path.Combine(root, "Docs/Plan/features.md"), "## F-A  A [P0] [modules: A]\n- R-A  new wording\n"); // the human, in the IDE
                 var input = HookInput.Parse("{\"session_id\":\"s\"}");
                 var findings = AgentHooks.StopChecks(root, input, _ => null);
 
                 Assert.That(findings.Any(f => f.StartsWith("SCOPE")), Is.False, string.Join("\n", findings));
                 Assert.That(findings, Has.Some.Contains("STALE task").And.Contains("new wording"));
-                Assert.That(EventLog.For(root).ReadAll().Any(e => e.Type == EventTypes.UnobservedChange && e.Get("path") == "plan/features.md"), Is.True);
+                Assert.That(EventLog.For(root).ReadAll().Any(e => e.Type == EventTypes.UnobservedChange && e.Get("path") == "Docs/Plan/features.md"), Is.True);
             }
             finally
             {

@@ -21,7 +21,7 @@ NotStarted --Start--> AwaitingAnswer --SubmitAnswer | TimeOut--> Answered --Adva
 ```
 Invalid calls (double tap, tap after time-out, Next before answering) return a failed `Result`; they never throw.
 The real table is `QuizSession.Transitions` (`Transition<QuizState>` rows): every move is checked against it
-(`TransitionTable.Ensure`) and the state diagram in `docs/architecture/overview.md` is generated from it.
+(`TransitionTable.Ensure`) and the state diagram in `Docs/Architecture/overview.md` is generated from it.
 
 ## Simulation (`Logic/Simulation`)
 - `QuizBattle`: fixed tick (20 Hz) simulation: commands → time-out → auto-next → `Arena` → defeat → hash checkpoint.
@@ -123,6 +123,6 @@ A bug report replay opens as a scenario: `QuizScenario.FromReplay("bug-123", tex
 
 ## Tests
 ```bash
-dotnet test LogicTests --filter FullyQualifiedName~Game.MathQuiz
-dotnet test LogicTests --filter TestCategory=Lifecycle
+dotnet test Tools/LogicTests --filter FullyQualifiedName~Game.MathQuiz
+dotnet test Tools/LogicTests --filter TestCategory=Lifecycle
 ```

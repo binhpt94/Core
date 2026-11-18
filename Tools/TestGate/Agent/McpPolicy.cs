@@ -11,16 +11,16 @@ namespace TestGate.AgentControl
 
     /// <summary>
     /// What an MCP tool (Unity, Blender, ...) may do. Tool names differ per server, so the default is a name heuristic,
-    /// overridden by the owner in tools/mcp-policy.txt (agents cannot edit tools/). Unknown tools are WRITE: observed with
+    /// overridden by the owner in Tools/mcp-policy.txt (agents cannot edit Tools/). Unknown tools are WRITE: observed with
     /// git snapshots like Bash, judged by the task scope, never attributed to a human.
     ///   Read  : get/list/find/inspect/screenshot/run_tests... free, recorded as TOOL_USED
     ///   Write : needs an active task; files it changes are FILE_MODIFIED by the agent (scope, per-file rules, Stop)
     ///   Exec  : runs arbitrary code (execute_blender_code, execute_menu_item, run C#): its effects can't be scoped (it can
-    ///           write outside the repo), so it is BLOCKED unless the owner allows that tool in tools/mcp-policy.txt
+    ///           write outside the repo), so it is BLOCKED unless the owner allows that tool in Tools/mcp-policy.txt
     /// </summary>
     public static class McpPolicy
     {
-        public const string File_ = "tools/mcp-policy.txt";
+        public const string File_ = "Tools/mcp-policy.txt";
 
         private static readonly Regex ExecName = new Regex(@"(execute|exec_|_exec|eval|run_?code|run_?script|run_?python|python|script|menu|shell|command|console|invoke)", RegexOptions.IgnoreCase);
         private static readonly Regex ReadName = new Regex(@"^(get|list|read|find|search|inspect|query|describe|show|view|screenshot|capture|status|info|count|validate|check|ping|fetch|run_?tests?|lookup|preview)(_|$)", RegexOptions.IgnoreCase);

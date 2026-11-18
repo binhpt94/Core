@@ -10,7 +10,7 @@ namespace TestGate.Files
     ///   files                 summary: loose (untracked) files, orphans, junk, unused assets, disk use
     ///   files orphans         untracked files left by sessions that ended without a clean Stop (crash, kill)
     ///   files clean [--orphans|--junk|--session S] [--yes]      delete ONLY: untracked + written by an agent + unchanged since (dry run without --yes)
-    ///   files clean --regenerable [--library] [--yes]           TestResults/, .scratch/, Temp/, Logs/, LogicTests bin/obj (+ Library/)
+    ///   files clean --regenerable [--library] [--yes]           Dashboard/Data/, .scratch/, Temp/, Logs/, LogicTests bin/obj (+ Library/)
     ///   files unused          private assets nothing references (report only)
     ///   files du              what takes space
     /// </summary>
@@ -93,9 +93,9 @@ namespace TestGate.Files
 
         private static int CleanRegenerable(string root, bool library, bool yes)
         {
-            var targets = new List<string> { "TestResults", ".scratch", "Temp", "Logs", "LogicTests/bin", "LogicTests/obj" };
+            var targets = new List<string> { "Dashboard/Data", ".scratch", "UnityProject/Temp", "UnityProject/Logs", "Tools/LogicTests/bin", "Tools/LogicTests/obj" };
             if (library)
-                targets.Add("Library");
+                targets.Add("UnityProject/Library");
             foreach (var t in targets)
             {
                 string full = Path.Combine(root, t);

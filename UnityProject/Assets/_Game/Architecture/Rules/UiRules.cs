@@ -34,7 +34,7 @@ namespace Game.Architecture.Rules
         public static List<ViewInfo> FindViews(string repoRoot)
         {
             var result = new List<ViewInfo>();
-            string features = Path.Combine(repoRoot, "Assets", "_Game", "Features");
+            string features = Path.Combine(repoRoot, "UnityProject", "Assets", "_Game", "Features");
             if (!Directory.Exists(features))
                 return result;
             foreach (var file in Directory.EnumerateFiles(features, "*.cs", SearchOption.AllDirectories))

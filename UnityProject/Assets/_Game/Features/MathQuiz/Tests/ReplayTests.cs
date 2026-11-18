@@ -105,7 +105,7 @@ namespace Game.MathQuiz.Tests
         private static string ReplayDir()
         {
             string root = Architecture.Rules.SourceText.FindRepoRoot(TestContext.CurrentContext.TestDirectory);
-            return Path.Combine(root, "Assets", "_Game", "Features", "MathQuiz", "Tests", "Replays");
+            return Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", "MathQuiz", "Tests", "Replays");
         }
 
         /// <summary>Deterministic bots that generate the golden replays (only used when GOLDEN_WRITE=1).</summary>

@@ -17,7 +17,7 @@ namespace TestGate.Planning
         public List<string> BlockedBy { get; set; } = new List<string>();
 
         public string Command =>
-            "./tools/test-gate.sh task start \"" + Feature + ": " + Title + "\" " + string.Join(" ", Requirements.Select(r => "--req " + r));
+            "./Tools/test-gate.sh task start \"" + Feature + ": " + Title + "\" " + string.Join(" ", Requirements.Select(r => "--req " + r));
     }
 
     /// <summary>

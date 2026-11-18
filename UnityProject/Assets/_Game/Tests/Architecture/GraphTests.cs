@@ -21,7 +21,7 @@ namespace Game.Architecture.Tests
         {
             _tmp = Path.Combine(Path.GetTempPath(), "graph-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_tmp);
-            Write("ProjectSettings/EditorSettings.asset", "m_SerializationMode: 2\n");
+            Write("UnityProject/ProjectSettings/EditorSettings.asset", "m_SerializationMode: 2\n");
         }
 
         [TearDown]
@@ -48,7 +48,7 @@ namespace Game.Architecture.Tests
         private const string Enum = "namespace Game.A.UseCases { internal enum S { Idle, Run, Done } }\n";
 
         private ArchitectureGraph Table(string rows) =>
-            BuildWith("Assets/_Game/Features/A/Logic/UseCases/M.cs", Enum +
+            BuildWith("UnityProject/Assets/_Game/Features/A/Logic/UseCases/M.cs", Enum +
                 "namespace Game.A.UseCases { internal sealed class M {\n" +
                 "  public const string Go = \"Go\";\n" +
                 "  internal static IReadOnlyList<Transition<S>> Transitions { get; } = new Transition<S>[]\n  {\n" + rows + "\n  };\n} }\n");
@@ -84,7 +84,7 @@ namespace Game.Architecture.Tests
         [Test]
         public void Transition_OutsideARecognisedTable_IsAnError()
         {
-            var g = BuildWith("Assets/_Game/Features/A/Logic/UseCases/M.cs", Enum +
+            var g = BuildWith("UnityProject/Assets/_Game/Features/A/Logic/UseCases/M.cs", Enum +
                 "namespace Game.A.UseCases { internal sealed class M { void F() { var t = new Transition<S>(S.Idle, \"Go\", S.Run); } } }\n");
 
             Assert.That(g.ParseErrors.Single().Message, Does.Contain("outside a recognised table"));
@@ -137,7 +137,7 @@ namespace Game.Architecture.Tests
         public void PrecompiledVendorDll_AppearsInTheGraph()
         {
             Write(ArchitecturePolicy.FileName, "vendor id=ads tier=sdk assemblies=AdsSdk adapter=Game.A.Unity source=Assets/ThirdParty/Ads sha256=x\n");
-            Asmdef("Assets/_Game/Features/A/Unity/Game.A.Unity.asmdef", "Game.A.Unity", "", false, precompiled: "\"AdsSdk.dll\"");
+            Asmdef("UnityProject/Assets/_Game/Features/A/Unity/Game.A.Unity.asmdef", "Game.A.Unity", "", false, precompiled: "\"AdsSdk.dll\"");
 
             var g = ArchitectureGraph.Build(_tmp);
 
@@ -148,11 +148,11 @@ namespace Game.Architecture.Tests
         [Test]
         public void ImplementsThroughBaseClass_IsAnEdge()
         {
-            Write("Assets/_Game/Features/B/Contracts/IScore.cs", "namespace Game.B.Contracts { public interface IScore { } }");
-            Write("Assets/_Game/Features/A/Logic/Base.cs", "namespace Game.A { internal abstract class ScoreBase : Game.B.Contracts.IScore { } }");
-            Write("Assets/_Game/Features/A/Logic/Impl.cs", "namespace Game.A { internal sealed class Score : ScoreBase { } }");
-            Asmdef("Assets/_Game/Features/A/Logic/Game.A.asmdef", "Game.A", "\"Game.B.Contracts\"", true);
-            Asmdef("Assets/_Game/Features/B/Contracts/Game.B.Contracts.asmdef", "Game.B.Contracts", "", true);
+            Write("UnityProject/Assets/_Game/Features/B/Contracts/IScore.cs", "namespace Game.B.Contracts { public interface IScore { } }");
+            Write("UnityProject/Assets/_Game/Features/A/Logic/Base.cs", "namespace Game.A { internal abstract class ScoreBase : Game.B.Contracts.IScore { } }");
+            Write("UnityProject/Assets/_Game/Features/A/Logic/Impl.cs", "namespace Game.A { internal sealed class Score : ScoreBase { } }");
+            Asmdef("UnityProject/Assets/_Game/Features/A/Logic/Game.A.asmdef", "Game.A", "\"Game.B.Contracts\"", true);
+            Asmdef("UnityProject/Assets/_Game/Features/B/Contracts/Game.B.Contracts.asmdef", "Game.B.Contracts", "", true);
 
             var g = ArchitectureGraph.Build(_tmp);
 
@@ -165,7 +165,7 @@ namespace Game.Architecture.Tests
         public void Overview_SummarisesWhenTooManyEdges_AndEveryFeatureGetsAPage()
         {
             for (int i = 0; i < 4; i++)
-                Asmdef("Assets/_Game/Features/F" + i + "/Logic/Game.F" + i + ".asmdef", "Game.F" + i, i > 0 ? "\"Game.F0\"" : "", true);
+                Asmdef("UnityProject/Assets/_Game/Features/F" + i + "/Logic/Game.F" + i + ".asmdef", "Game.F" + i, i > 0 ? "\"Game.F0\"" : "", true);
             var g = ArchitectureGraph.Build(_tmp);
 
             var docs = ArchitectureDocs.Render(g, maxOverviewEdges: 1);
@@ -179,7 +179,7 @@ namespace Game.Architecture.Tests
         [Test]
         public void OrphanFeaturePage_IsStale()
         {
-            Asmdef("Assets/_Game/Features/A/Logic/Game.A.asmdef", "Game.A", "", true);
+            Asmdef("UnityProject/Assets/_Game/Features/A/Logic/Game.A.asmdef", "Game.A", "", true);
             ArchitectureDocs.WriteAll(_tmp);
             Write(ArchitectureDocs.FeaturePagePath("Deleted"), "old");
 
@@ -202,8 +202,8 @@ namespace Game.Architecture.Tests
             Environment.SetEnvironmentVariable("GAME_ARCH_NO_CACHE", null);
             try
             {
-                string dir = Path.Combine(_tmp, "Assets", "ThirdParty", "V");
-                Write("Assets/ThirdParty/V/lib.so", "AAAA");
+                string dir = Path.Combine(_tmp, "UnityProject", "Assets", "ThirdParty", "V");
+                Write("UnityProject/Assets/ThirdParty/V/lib.so", "AAAA");
                 string first = ThirdPartyRules.HashFolderCached(_tmp, dir);
                 Assert.That(File.Exists(Path.Combine(_tmp, ThirdPartyRules.CacheFile)), Is.True);
 

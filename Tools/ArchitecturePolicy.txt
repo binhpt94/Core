@@ -1,5 +1,5 @@
-# ArchitecturePolicy.txt: the only hand-maintained architecture allowlist (CODEOWNERS-protected, denied to agents).
-# It holds what cannot be derived from source. Details: docs/RULES.md#arch093 … #arch095.
+# Tools/ArchitecturePolicy.txt: the only hand-maintained architecture allowlist (CODEOWNERS-protected, denied to agents).
+# It holds what cannot be derived from source. Details: Docs/RULES.md#arch093 … #arch095.
 #
 # vendor   id=<id> tier=foundation|presentation|sdk assemblies=<A,B> (package=<upm-name> version=<v> | source=<folder> sha256=<hash>) [adapter=<Game.F.Unity>]
 #   foundation   = usable everywhere, also pure code   (UniTask)

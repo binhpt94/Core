@@ -18,7 +18,7 @@ namespace Game.Architecture.Rules
             var docs = new DocRules(repoRoot);
             var result = ProjectRules(repoRoot, today);
 
-            foreach (var file in Directory.EnumerateFiles(Path.Combine(repoRoot, "Assets", "_Game"), "*", SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(Path.Combine(repoRoot, "UnityProject", "Assets", "_Game"), "*", SearchOption.AllDirectories))
                 if (!file.EndsWith(".md", StringComparison.Ordinal))
                     result.AddRange(CheckOne(repoRoot, PathInfo.Normalize(file.Substring(repoRoot.Length)), assets, docs));
             foreach (var doc in docs.CheckedDocs()) // includes feature READMEs

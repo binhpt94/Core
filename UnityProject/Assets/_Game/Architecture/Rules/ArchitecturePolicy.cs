@@ -23,7 +23,7 @@ namespace Game.Architecture.Rules
         public VendorTier Tier;
         public string[] Assemblies = new string[0];
         public string Adapter;   // required for Sdk
-        public string Source;    // repo-relative folder of vendored files (hash-locked)
+        public string Source;    // Root-relative folder (the file says Assets/ThirdParty/X) of vendored files (hash-locked)
         public string Package;   // UPM package name (version-locked via Packages/manifest.json)
         public string Version;
         public string Sha256;
@@ -41,14 +41,14 @@ namespace Game.Architecture.Rules
     }
 
     /// <summary>
-    /// ArchitecturePolicy.txt (repo root, CODEOWNERS-protected, denied to agents): the ONLY hand-maintained
+    /// Tools/ArchitecturePolicy.txt (repo root, CODEOWNERS-protected, denied to agents): the ONLY hand-maintained
     /// allowlist, because it holds what cannot be derived from source: which third-party code is approved,
     /// where it may be used, its pinned version/hash, and time-boxed first-party exceptions.
     /// Line format: `kind key=value key="quoted value"`; `#` starts a comment.
     /// </summary>
     public sealed class ArchitecturePolicy
     {
-        public const string FileName = "ArchitecturePolicy.txt";
+        public const string FileName = "Tools/ArchitecturePolicy.txt";
 
         private static readonly Regex Pair = new Regex(@"(\w+)=(""([^""]*)""|\S+)");
 
@@ -93,6 +93,8 @@ namespace Game.Architecture.Rules
             kv.TryGetValue("id", out v.Id);
             kv.TryGetValue("adapter", out v.Adapter);
             kv.TryGetValue("source", out v.Source);
+            if (!string.IsNullOrEmpty(v.Source) && !v.Source.StartsWith(Layout.Unity, StringComparison.Ordinal))
+                v.Source = Layout.FromUnity(v.Source); // written Unity-relative (Assets/ThirdParty/X), used Root-relative
             kv.TryGetValue("package", out v.Package);
             kv.TryGetValue("version", out v.Version);
             kv.TryGetValue("sha256", out v.Sha256);

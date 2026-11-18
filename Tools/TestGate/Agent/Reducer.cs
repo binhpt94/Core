@@ -30,7 +30,7 @@ namespace TestGate.AgentControl
         public List<GateView> Gates { get; set; } = new List<GateView>();
         public List<ClaimView> Claims { get; set; } = new List<ClaimView>();
         public Dictionary<string, int> Counts { get; set; } = new Dictionary<string, int>();
-        /// <summary>Product roadmap (computed by TestGate.Planning; null without plan/features.md).</summary>
+        /// <summary>Product roadmap (computed by TestGate.Planning; null without Docs/Plan/features.md).</summary>
         public object Roadmap { get; set; }
         /// <summary>Housekeeping: loose/orphan/junk files, unused assets, disk use, layout/GUID violations (TestGate.Files).</summary>
         public object Housekeeping { get; set; }

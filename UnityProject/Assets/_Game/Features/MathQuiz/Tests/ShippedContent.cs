@@ -17,7 +17,7 @@ namespace Game.MathQuiz.Tests
             string root = FindRoot();
             if (root == null)
                 yield break;
-            string dir = Path.Combine(root, "Assets", "_Game", "Features", "MathQuiz", "Assets");
+            string dir = Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", "MathQuiz", "Assets");
             if (!Directory.Exists(dir))
                 yield break;
             foreach (var file in Directory.GetFiles(dir, "*.asset", SearchOption.AllDirectories))
@@ -51,7 +51,7 @@ namespace Game.MathQuiz.Tests
         {
             foreach (var start in new[] { Directory.GetCurrentDirectory(), NUnit.Framework.TestContext.CurrentContext.TestDirectory })
                 for (var d = new DirectoryInfo(start); d != null; d = d.Parent)
-                    if (Directory.Exists(Path.Combine(d.FullName, "Assets", "_Game")))
+                    if (Directory.Exists(Path.Combine(d.FullName, "UnityProject", "Assets", "_Game")))
                         return d.FullName;
             return null;
         }

@@ -25,16 +25,16 @@ namespace LogicTests.AgentControl
         public void SetUp()
         {
             _root = Path.Combine(Path.GetTempPath(), "art-" + Guid.NewGuid().ToString("N"));
-            Write("Assets/_Game/Features/A/Logic/Domain/AArtSlots.cs", "class AArtSlots { object S = new ArtSlotContract(\"A.Hero\", k); object T = new ArtSlotContract(\"A.Side\", k); }");
-            Write("Assets/_Game/Features/A/Assets/Private/Hero.prefab", "--- !u!1 &1\nGameObject:\n  sprite: {fileID: 21300000, guid: " + SpriteGuid + ", type: 3}\n");
-            Write("Assets/_Game/Features/A/Assets/Private/Hero.prefab.meta", "guid: " + PrefabGuid + "\n");
-            Write("Assets/_Game/Features/A/Assets/Private/hero.png", "PNG-1");
-            Write("Assets/_Game/Features/A/Assets/Private/hero.png.meta", "guid: " + SpriteGuid + "\n");
+            Write("UnityProject/Assets/_Game/Features/A/Logic/Domain/AArtSlots.cs", "class AArtSlots { object S = new ArtSlotContract(\"A.Hero\", k); object T = new ArtSlotContract(\"A.Side\", k); }");
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Private/Hero.prefab", "--- !u!1 &1\nGameObject:\n  sprite: {fileID: 21300000, guid: " + SpriteGuid + ", type: 3}\n");
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Private/Hero.prefab.meta", "guid: " + PrefabGuid + "\n");
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Private/hero.png", "PNG-1");
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Private/hero.png.meta", "guid: " + SpriteGuid + "\n");
             Bind("candidate");
         }
 
         private void Bind(string field) =>
-            Write("Assets/_Game/Features/A/Assets/Public/HeroArt.asset", "MonoBehaviour:\n  slotId: A.Hero\n  " + field + ": {fileID: 100100000, guid: " + PrefabGuid + ", type: 3}\n");
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Public/HeroArt.asset", "MonoBehaviour:\n  slotId: A.Hero\n  " + field + ": {fileID: 100100000, guid: " + PrefabGuid + ", type: 3}\n");
 
         [TearDown]
         public void TearDown() => Directory.Delete(_root, true);
@@ -46,7 +46,7 @@ namespace LogicTests.AgentControl
         {
             Assert.That(ArtStatus.Compute(_root)["A.Side"].Level, Is.EqualTo(ArtLevels.Graybox));
             Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Candidate));
-            Assert.That(Hero().BoundFile, Is.EqualTo("Assets/_Game/Features/A/Assets/Private/Hero.prefab"));
+            Assert.That(Hero().BoundFile, Is.EqualTo("UnityProject/Assets/_Game/Features/A/Assets/Private/Hero.prefab"));
         }
 
         [Test]
@@ -54,7 +54,7 @@ namespace LogicTests.AgentControl
         {
             ArtStatus.Accept(_root, Hero());
             Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Approved));
-            Write("Assets/_Game/Features/A/Assets/Private/hero.png", "PNG-2"); // the artist repaints the sprite the prefab uses
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Private/hero.png", "PNG-2"); // the artist repaints the sprite the prefab uses
             Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Stale));
         }
 
@@ -64,9 +64,9 @@ namespace LogicTests.AgentControl
             Bind("final");
             ArtStatus.Accept(_root, Hero());
             Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Approved), "no art gate result yet");
-            Write("TestResults/art/A.Hero.final.txt", "A.Hero [final] 48x80 pivot 50%,50%\n");
+            Write("Dashboard/Data/art/A.Hero.final.txt", "A.Hero [final] 48x80 pivot 50%,50%\n");
             Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Final));
-            Write("TestResults/art/A.Hero.final.txt", "A.Hero [final] 120x80 pivot 50%,50%\nA-SIZE width 120 > max 72\n");
+            Write("Dashboard/Data/art/A.Hero.final.txt", "A.Hero [final] 120x80 pivot 50%,50%\nA-SIZE width 120 > max 72\n");
             Assert.That(Hero().Gate, Is.EqualTo("failed"));
             Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Approved));
         }
@@ -75,13 +75,13 @@ namespace LogicTests.AgentControl
         public void ChangeImpact_ArtFilesMapToTheirSlot()
         {
             var impact = new ChangeImpact(_root);
-            foreach (var p in new[] { "Assets/_Game/Features/A/Assets/Public/HeroArt.asset", "Assets/_Game/Features/A/Assets/Private/Hero.prefab", "Assets/_Game/Features/A/Assets/Private/hero.png" })
+            foreach (var p in new[] { "UnityProject/Assets/_Game/Features/A/Assets/Public/HeroArt.asset", "UnityProject/Assets/_Game/Features/A/Assets/Private/Hero.prefab", "UnityProject/Assets/_Game/Features/A/Assets/Private/hero.png" })
             {
                 var i = impact.Classify(p);
                 Assert.That(i.Roles, Is.EqualTo(new[] { ChangeRole.Art }), i.ToString());
                 Assert.That(i.Slots, Is.EqualTo(new[] { "A.Hero" }), i.ToString());
             }
-            var catalog = impact.Classify("Assets/_Game/Features/A/Logic/Domain/AArtSlots.cs");
+            var catalog = impact.Classify("UnityProject/Assets/_Game/Features/A/Logic/Domain/AArtSlots.cs");
             Assert.That(catalog.Roles, Is.EquivalentTo(new[] { ChangeRole.Pure, ChangeRole.Art }));
             Assert.That(catalog.Slots, Is.EquivalentTo(new[] { "A.Hero", "A.Side" }));
         }

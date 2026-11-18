@@ -46,11 +46,11 @@ namespace TestGate.Planning
 
     /// <summary>
     /// Art level of every slot, COMPUTED from the binding assets (Force Text YAML), the files they bind, the human approvals
-    /// (plan/art-accepted.txt: slot, content hash, date) and the art gate's measurements (TestResults/art). No AI estimates art.
+    /// (Docs/Plan/art-accepted.txt: slot, content hash, date) and the art gate's measurements (Dashboard/Data/art). No AI estimates art.
     /// </summary>
     public static class ArtStatus
     {
-        public const string AcceptedPath = "plan/art-accepted.txt";
+        public const string AcceptedPath = "Docs/Plan/art-accepted.txt";
         private static readonly Regex MetaGuid = new Regex(@"^guid:\s*([0-9a-f]{32})", RegexOptions.Multiline);
         private static readonly Regex AnyGuid = new Regex(@"guid:\s*([0-9a-f]{32})");
 
@@ -119,7 +119,7 @@ namespace TestGate.Planning
 
         private static void ReadGate(string root, SlotState s)
         {
-            string path = Path.Combine(root, "TestResults", "art", s.Id + "." + s.BoundAs + ".txt");
+            string path = Path.Combine(root, "Dashboard", "Data", "art", s.Id + "." + s.BoundAs + ".txt");
             if (!File.Exists(path))
                 return;
             if (File.GetLastWriteTimeUtc(path) < File.GetLastWriteTimeUtc(Path.Combine(root, s.BoundFile)))
@@ -161,7 +161,7 @@ namespace TestGate.Planning
         public static Dictionary<string, string> GuidMap(string root)
         {
             var map = new Dictionary<string, string>(StringComparer.Ordinal);
-            string assets = Path.Combine(root, "Assets");
+            string assets = Path.Combine(root, "UnityProject", "Assets");
             if (Directory.Exists(assets))
                 foreach (var meta in Directory.EnumerateFiles(assets, "*.meta", SearchOption.AllDirectories))
                 {

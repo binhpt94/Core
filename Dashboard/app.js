@@ -1,5 +1,5 @@
 "use strict";
-// View only: reads window.MODEL (TestResults/dashboard/data.js) and draws it. M = the snapshot, D = one session's detail.
+// View only: reads window.MODEL (Dashboard/Data/data.js) and draws it. M = the snapshot, D = one session's detail.
 // Every M.x / M.x.y and D.x read here must exist in the data (checked by a test, so a renamed field can't break the page silently).
 
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -45,7 +45,7 @@ function render(M) {
 // ---------------------------------------------------------------- 1. what the human has to do
 function renderAttention(M) {
   const a = M.attention, items = [];
-  for (const e of a.planErrors) items.push(`<li>${tag("Plan lỗi", "bad")}${esc(e)}${cmd("sửa plan/features.md (xem docs/PLANNING.md)")}</li>`);
+  for (const e of a.planErrors) items.push(`<li>${tag("Plan lỗi", "bad")}${esc(e)}${cmd("sửa Docs/Plan/features.md (xem Docs/PLANNING.md)")}</li>`);
   for (const f of a.humanFixes) items.push(`<li>${tag("Sửa", "bad")}${esc(f.problem)}${cmd(f.hint)}</li>`);
   for (const p of a.approvals) items.push(`<li>${tag({ task: "Duyệt phạm vi", requirement: "Duyệt requirement", art: "Duyệt art", proposal: "Đề xuất plan" }[p.kind] || p.kind, "info")}${esc(p.what)}${cmd(p.command)}</li>`);
   $("attentionBody").innerHTML = items.length
@@ -56,7 +56,7 @@ function renderAttention(M) {
 // ---------------------------------------------------------------- 2. where the project is
 function renderProgress(M) {
   const r = M.roadmap;
-  if (!r || !r.hasPlan) { $("progressBody").innerHTML = `<p class="muted">Chưa có plan/features.md.</p>`; return; }
+  if (!r || !r.hasPlan) { $("progressBody").innerHTML = `<p class="muted">Chưa có Docs/Plan/features.md.</p>`; return; }
   const done = r.features.filter(f => f.status === "DONE").length;
   const rows = r.features.map(f => {
     const [st, cls] = label(FEATURE, f.status);
@@ -80,7 +80,7 @@ function renderProgress(M) {
     `<div class="switch" role="tablist"><button data-view="graph" class="${view === "graph" ? "on" : ""}">Đồ thị</button><button data-view="table" class="${view === "table" ? "on" : ""}">Bảng</button></div>` +
     (view === "graph" ? dagHtml(r) : table(["Feature", "Ưu tiên", "Trạng thái", "Đã kiểm chứng", "Story", "Art", "Ghi chú"], rows)) +
     `<h3>Làm được ngay (song song, không đụng module của nhau)</h3>` + (next.length ? `<ul class="items">${next.join("")}</ul>` : `<p class="muted">Không có.</p>`) +
-    (later ? `<p class="muted">+ ${later} việc phải đợi (phụ thuộc hoặc trùng module): <code>./tools/test-gate.sh roadmap next</code></p>` : "") +
+    (later ? `<p class="muted">+ ${later} việc phải đợi (phụ thuộc hoặc trùng module): <code>./Tools/test-gate.sh roadmap next</code></p>` : "") +
     (art.length ? `<h3>Việc của art</h3><ul class="items">${art.join("")}</ul>` : "");
   document.querySelectorAll("#progressBody .switch button").forEach(b => b.addEventListener("click", () => { setPref("progressView", b.dataset.view); renderProgress(M); }));
   document.querySelectorAll("#dag .node").forEach(n => {
@@ -251,7 +251,7 @@ function renderDetails(M) {
     const disk = h.disk.map(d => `<tr><td><code>${esc(d.path)}</code></td><td>${kb(d.bytes)}</td><td>${d.regenerable ? "sinh lại được" : ""} ${esc(d.note || "")}</td></tr>`);
     parts.push(`<details data-key="files"><summary>File <span class="muted">(${h.loose.length} chưa commit · ${h.unusedCount} asset không ai dùng · ${h.violations.length} lỗi vị trí)</span></summary>` +
       (h.violations.length ? `<ul class="items">${h.violations.map(v => `<li>${esc(v)}</li>`).join("")}</ul>` : "") +
-      (loose.length ? `<h3>Chưa commit</h3>` + table(["File", "Ai tạo", "Vấn đề", ""], loose) + cmd("./tools/test-gate.sh files clean --orphans") : "") +
+      (loose.length ? `<h3>Chưa commit</h3>` + table(["File", "Ai tạo", "Vấn đề", ""], loose) + cmd("./Tools/test-gate.sh files clean --orphans") : "") +
       (h.unused.length ? `<h3>Asset không ai dùng</h3>` + table(["File", "Vì sao"], h.unused.map(u => `<tr><td><code>${esc(u.path)}</code></td><td>${esc(u.why)}</td></tr>`)) : "") +
       (disk.length ? `<h3>Dung lượng</h3>` + table(["Thư mục", "Dung lượng", ""], disk) : "") + `</details>`);
   }
@@ -269,14 +269,14 @@ function loadSession(id, done) {
   const have = () => window.SESSION_DETAIL && window.SESSION_DETAIL[id];
   if (have()) return done(have());
   const s = document.createElement("script");
-  s.src = "../../TestResults/dashboard/sessions/s-" + id.replace(/[^A-Za-z0-9]/g, "").slice(0, 40) + ".js";
+  s.src = "Data/Sessions/s-" + id.replace(/[^A-Za-z0-9]/g, "").slice(0, 40) + ".js";
   s.onload = () => done(have() || null);
   s.onerror = () => done(null);
   document.head.appendChild(s);
 }
 
 function renderSession(D) {
-  if (!D) return `<span class="muted">Không có chi tiết cho phiên này. Tạo: <code>./tools/test-gate.sh dash --session &lt;id&gt;</code></span>`;
+  if (!D) return `<span class="muted">Không có chi tiết cho phiên này. Tạo: <code>./Tools/test-gate.sh dash --session &lt;id&gt;</code></span>`;
   const lanes = Object.fromEntries(D.lanes.map(l => [l.id, l.label]));
   const steps = D.steps.map(s => { const [t, cls] = label(TRUST, s.trust); return `<tr><td>${esc((s.ts || "").slice(11, 19))}</td><td>${esc(lanes[s.lane] || s.lane)}</td><td>${t ? tag(t, cls) : ""}${esc(s.title)}<div class="pre">${esc(s.detail)}</div></td></tr>`; });
   const claims = D.claims.map(c => `<li><b>Agent nói:</b> ${esc(c.text)}<br>${tag(c.verdict, /mâu thuẫn/.test(c.verdict) ? "bad" : /^có/.test(c.verdict) ? "ok" : "warn")}<div class="pre">${esc(c.evidence.join("\n"))}</div></li>`);
@@ -289,6 +289,6 @@ function renderSession(D) {
 
 render(window.MODEL);
 
-// Live (./tools/test-gate.sh serve): refresh the data every 5 s. Opened from disk or as a bundle: static.
+// Live (./Tools/test-gate.sh serve): refresh the data every 5 s. Opened from disk or as a bundle: static.
 if (location.protocol.startsWith("http") && !window.BUNDLED)
-  setInterval(() => fetch("../../TestResults/dashboard/data.json", { cache: "no-store" }).then(r => r.json()).then(render).catch(() => {}), 5000);
+  setInterval(() => fetch("Data/data.json", { cache: "no-store" }).then(r => r.json()).then(render).catch(() => {}), 5000);

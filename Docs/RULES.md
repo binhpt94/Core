@@ -9,7 +9,7 @@ Where each kind of rule runs:
 | Kind | Rules | Runs in | Cost |
 |---|---|---|---|
 | **Static** (text/asmdef/YAML) | most | Claude hook after each edit, pre-commit, `test-gate.sh check/run`, `dotnet test`, Unity Play Mode + build gates | ms |
-| **Reflection** (compiled code) | 020, 022, 023, 060–062 | `dotnet test LogicTests`, Unity EditMode | seconds |
+| **Reflection** (compiled code) | 020, 022, 023, 060–062 | `dotnet test Tools/LogicTests`, Unity EditMode | seconds |
 | **Unity** (SerializedObject) | 072 (+073 deep) | Unity import / Play Mode / build gates, EditMode tests | needs Editor |
 
 Exceptions are never added to a rule. Restructure the code instead, or ask a code owner.
@@ -23,7 +23,7 @@ Exceptions are never added to a rule. Restructure the code instead, or ask a cod
 Why: makes `using UnityEngine` a compile error, and keeps the code runnable in `dotnet test`. Fix: set it in the `.asmdef`.
 
 ## ARCH002
-**Pure assemblies may reference only `Game.*` and vendors of tier `foundation`** in `ArchitecturePolicy.txt` (today: UniTask).
+**Pure assemblies may reference only `Game.*` and vendors of tier `foundation`** in `Tools/ArchitecturePolicy.txt` (today: UniTask).
 Other libraries would break `dotnet test` and couple logic to vendors. Fix: put the dependency behind an interface in Core/Contracts
 and implement it in the Unity layer.
 
@@ -61,6 +61,11 @@ Auto-referenced assemblies leak into `Assembly-CSharp`; precompiled DLL referenc
 **Bootstrap must not reference feature Logic assemblies.** It wires features through their public Installer/Module in the Unity layer
 (`MathQuizInstaller` → `MathQuizModule`). Logic is internal anyway (ARCH020).
 
+## ARCH013
+**The rule engine and its tests are Editor-only.** Every `.asmdef` under `Assets/_Game/Architecture/` and
+`Assets/_Game/Tests/Architecture/` sets `"includePlatforms": ["Editor"]`, so Unity never compiles them into a player build.
+`Tools/TestGate` and `Tools/LogicTests` link the same sources outside Unity. Fix: restore `includePlatforms`.
+
 ## Access control
 
 ## ARCH020
@@ -79,7 +84,7 @@ Allowed: `[Serializable]` DTOs named `*Data`.
 
 ## ARCH023
 **Public API must match `PublicApi.txt`** (Core: `Core/Runtime/PublicApi.txt`; each Contracts folder: `Contracts/PublicApi.txt`).
-The test writes the compiled API to `TestResults/api/*.received.txt` and prints the diff. Breaking a contract is a deliberate decision:
+The test writes the compiled API to `Dashboard/Data/api/*.received.txt` and prints the diff. Breaking a contract is a deliberate decision:
 the baseline files are CODEOWNERS-protected and denied to the agent. Report the diff, don't update it yourself.
 
 ## Code shape
@@ -190,7 +195,7 @@ The Unity validator also reports null components. Fix: remove the component or r
 ## ARCH080
 **Cross-feature asset references must target `Features/X/Assets/Public/`.** Detected by scanning `guid:` in YAML against `.meta` files,
 in milliseconds without Unity. Scenes and Bootstrap count as "outside" too. Fix: reference X's public asset entry (e.g. `MathQuizAssets`),
-which points to X's private assets. To delete a feature: `./tools/test-gate.sh refs Assets/_Game/Features/X` must print nothing first.
+which points to X's private assets. To delete a feature: `./Tools/test-gate.sh refs Assets/_Game/Features/X` must print nothing first.
 
 ## ARCH081
 **Scenes may override only layout on prefab instances** (`m_Name m_IsActive m_RootOrder m_LocalPosition/Rotation/Scale m_AnchoredPosition
@@ -237,14 +242,14 @@ Fix: move cheat/fixture code into the feature's `DevTools/`; reach it from `Edit
 ## Product plan
 
 ## ARCH110
-**`plan/features.md` must parse and be consistent.** Unique `F-`/`R-` ids, known dependencies, no dependency cycles, every
+**`Docs/Plan/features.md` must parse and be consistent.** Unique `F-`/`R-` ids, known dependencies, no dependency cycles, every
 active feature has `[modules: X]` naming real `Assets/_Game/Features/X` folders. The parser never guesses: a line it can't read
-is an error with its line number. The plan belongs to the human (agents write proposals to `plan/inbox/`). Syntax: `docs/PLANNING.md`.
+is an error with its line number. The plan belongs to the human (agents write proposals to `Docs/Plan/Inbox/`). Syntax: `Docs/PLANNING.md`.
 
 ## ARCH111
 **`[Covers("R-ID")]` must name a requirement in the plan.** Requirement status is computed from the tests that cover it, so a
 typo would silently leave a requirement "untested". If the requirement was removed or renamed, update the test's `[Covers]`
-(or propose the requirement in `plan/inbox/`).
+(or propose the requirement in `Docs/Plan/Inbox/`).
 
 ## Art slots
 
@@ -282,8 +287,8 @@ Prevention: move/rename assets inside Unity (or `git mv` the file AND its `.meta
 
 ## ARCH090
 **Generated system-map docs must equal what the generator produces from source right now, and the generator must have
-understood everything it read.** Files: `docs/architecture/overview.md` + one page per feature in `docs/architecture/features/`
-(orphan pages of deleted features fail too). Generated by `./tools/test-gate.sh graph --write` or Unity *Tools > Game > Regenerate
+understood everything it read.** Files: `Docs/Architecture/overview.md` + one page per feature in `Docs/Architecture/Features/`
+(orphan pages of deleted features fail too). Generated by `./Tools/test-gate.sh graph --write` or Unity *Tools > Game > Regenerate
 System Map*, never edited by hand (denied to agents). The message lists changed lines (e.g. `+MathQuiz -->|uses| Ads_Contracts`),
 so a stale map doubles as an "architecture changed" notice in review.
 Fail-closed: a state-table row the generator cannot read (a helper call, a non-const trigger, a `Transition` created outside a
@@ -295,7 +300,7 @@ literals or `const string`s of the same file. A reflection test also compares ev
 
 ## ARCH091
 **Hand-written docs may only mention our code names and paths that exist.** Inline-code anchors are checked:
-paths under `Assets/_Game/`, `tools/`, `docs/`, ... must exist (placeholders like `<F>`, `X`, `*` are skipped);
+paths under `Assets/_Game/`, `Tools/`, `Docs/`, ... must exist (placeholders like `<F>`, `X`, `*` are skipped);
 `Game.*` names must be a declared namespace/assembly (+ used members); `Type.Member` must exist when `Type` is ours.
 External APIs (`Activator.CreateInstance`) and fenced code blocks are not checked. Fix: update the doc after a rename/delete,
 or write future names without backticks. Documentation rule: never blocks Unity (see ARCH090).
@@ -307,10 +312,10 @@ uncheck *Auto Reference*; the adapter references it explicitly (`overrideReferen
 
 ## ARCH093
 **Third-party code is registered, pinned and unmodified.** Every `.cs/.dll/.asmdef/.asmref` outside `Assets/_Game` must belong to a
-`vendor source=` folder in `ArchitecturePolicy.txt` whose `sha256` matches (no "quick fixes" in vendor code, no game code hidden in
-`Assets/Plugins`). Locally the hash is cached per file (path, size, mtime) in `TestResults/vendor-hash-cache.txt`, so an
+`vendor source=` folder in `Tools/ArchitecturePolicy.txt` whose `sha256` matches (no "quick fixes" in vendor code, no game code hidden in
+`Assets/Plugins`). Locally the hash is cached per file (path, size, mtime) in `Dashboard/Data/vendor-hash-cache.txt`, so an
 unchanged multi-GB SDK costs only file stats; CI (`CI=true`) and `GAME_ARCH_NO_CACHE=1` always hash the full content. UPM vendors are pinned by `package=` + `version=` against `Packages/manifest.json`.
-Fix: never edit vendor files; to upgrade, a code owner updates the folder and records `./tools/test-gate.sh vendor-hash <folder>`.
+Fix: never edit vendor files; to upgrade, a code owner updates the folder and records `./Tools/test-gate.sh vendor-hash <folder>`.
 Source plugins without an asmdef land in `Assembly-CSharp-firstpass`, which asmdefs cannot reference: give the vendor folder an asmdef/asmref.
 
 ## ARCH094

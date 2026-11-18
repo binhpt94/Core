@@ -31,7 +31,7 @@ namespace Game.Architecture.Tests
         public void ARCH020_LogicTypesAreInternal()
         {
             var logicNamespaces = new HashSet<string>(
-                Directory.GetFiles(Path.Combine(_root, "Assets", "_Game", "Features"), "*.cs", SearchOption.AllDirectories)
+                Directory.GetFiles(Path.Combine(_root, "UnityProject", "Assets", "_Game", "Features"), "*.cs", SearchOption.AllDirectories)
                     .Where(f => PathInfo.Of(Rel(f)).Layer == PathLayer.Logic)
                     .SelectMany(f => SourceRules.DeclaredNamespaces(File.ReadAllText(f))));
 
@@ -71,13 +71,13 @@ namespace Game.Architecture.Tests
         {
             var groups = new Dictionary<string, string> // namespace prefix → baseline path
             {
-                { "Game.Core", "Assets/_Game/Core/Runtime/PublicApi.txt" },
+                { "Game.Core", "UnityProject/Assets/_Game/Core/Runtime/PublicApi.txt" },
             };
-            foreach (var dir in Directory.GetDirectories(Path.Combine(_root, "Assets", "_Game", "Features")))
+            foreach (var dir in Directory.GetDirectories(Path.Combine(_root, "UnityProject", "Assets", "_Game", "Features")))
                 if (Directory.Exists(Path.Combine(dir, "Contracts")))
                 {
                     string feature = Path.GetFileName(dir);
-                    groups["Game." + feature + ".Contracts"] = "Assets/_Game/Features/" + feature + "/Contracts/PublicApi.txt";
+                    groups["Game." + feature + ".Contracts"] = "UnityProject/Assets/_Game/Features/" + feature + "/Contracts/PublicApi.txt";
                 }
 
             var problems = new List<string>();
@@ -89,13 +89,13 @@ namespace Game.Architecture.Tests
                 if (actual == expected)
                     continue;
 
-                string received = Path.Combine(_root, "TestResults", "api", g.Key + ".received.txt");
+                string received = Path.Combine(_root, "Dashboard", "Data", "api", g.Key + ".received.txt");
                 Directory.CreateDirectory(Path.GetDirectoryName(received));
                 File.WriteAllText(received, actual);
 
                 var exp = new HashSet<string>(expected.Split('\n'));
                 var act = new HashSet<string>(actual.Split('\n'));
-                problems.Add("ARCH023 " + g.Value + " differs from the compiled API of " + g.Key + " (new version: TestResults/api/" + g.Key + ".received.txt)");
+                problems.Add("ARCH023 " + g.Value + " differs from the compiled API of " + g.Key + " (new version: Dashboard/Data/api/" + g.Key + ".received.txt)");
                 problems.AddRange(exp.Except(act).Where(l => l.Length > 0).Take(10).Select(l => "  - " + l));
                 problems.AddRange(act.Except(exp).Where(l => l.Length > 0).Take(10).Select(l => "  + " + l));
             }

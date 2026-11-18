@@ -3,7 +3,7 @@
 // Each changed file is classified by its ROLE (ChangeImpact, in the rule engine): the rules make roles exact
 // (views hold no logic, static layout only in the view's recipe/prefab, one folder per view), so:
 //   G0  Static rules             always, in-process, milliseconds.
-//   G1  dotnet test LogicTests   when pure code/tests/rules changed (all pure tests: seconds; a subset saves nothing).
+//   G1  dotnet test Tools/LogicTests   when pure code/tests/rules changed (all pure tests: seconds; a subset saves nothing).
 //   UI  Layout gate per VIEW     Unity EditMode, -testCategory "View:F.V": L2 constraints + L3 text snapshot of
 //                                only the affected views. No scene, no game boot. ("I moved it 2px" = this only.)
 //   G2  Unity EditMode tests    ┐ only for integration files (installers, Bootstrap, scenes, settings, asmdefs),
@@ -20,11 +20,11 @@
 //   check [--all|--staged] [paths...]  static architecture rules on changed/staged/given files or everything (ms, no build)
 //   refs <folder>                 incoming asset + assembly references (run before deleting a feature)
 //   graph [--write|feature F|impact F|di F|diff [base]]   architecture map & queries (compact text)
-//   vendor-hash <folder>          sha256 to register a vendor folder in ArchitecturePolicy.txt (owners)
+//   vendor-hash <folder>          sha256 to register a vendor folder in Tools/ArchitecturePolicy.txt (owners)
 //   new-feature Name [--contracts] scaffold a feature that already satisfies every rule
 //   new-view Feature View          scaffold a view/popup testable in isolation (view, layout recipe, fixtures, cases)
 //   task start|request|approve|show|close   permission unit = one feature (wider scope: a human approves)
-//   roadmap status|gaps|next|propose|accept   product plan (plan/features.md): computed status, gaps, parallel lanes
+//   roadmap status|gaps|next|propose|accept   product plan (Docs/Plan/features.md): computed status, gaps, parallel lanes
 //   files [orphans|clean|unused|du]  loose/orphan/junk files (derived from git + event log), unused assets (GUID graph), disk use
 //   art status|accept             art slots: computed level (graybox/candidate/approved/final), human approval by content hash
 //   events verify|tail · reconcile · dash · serve   tamper-evident event log → deterministic dashboard (Agent/)
@@ -259,7 +259,7 @@ internal static class Program
         }
 
         Console.WriteLine("G0     static rules: ALWAYS (in-process, ms)");
-        Console.WriteLine("G1     dotnet test LogicTests: " + (plan.DotnetTests ? "yes" : "not needed (no pure code, tests or rules changed)"));
+        Console.WriteLine("G1     dotnet test Tools/LogicTests: " + (plan.DotnetTests ? "yes" : "not needed (no pure code, tests or rules changed)"));
         Console.WriteLine("UI     layout gate (Unity EditMode, per view): " + (plan.Views.Count == 0
             ? "not needed"
             : Join(plan.Views) + "  [-testCategory \"" + ViewCategories(plan) + "\"]"));
@@ -373,11 +373,11 @@ internal static class Program
 
     private static bool RunDotnetTests()
     {
-        string results = Path.Combine(_root, "TestResults", "dotnet");
+        string results = Path.Combine(_root, "Dashboard", "Data", "Dotnet");
         if (Directory.Exists(results))
             Directory.Delete(results, true);
 
-        var (code, output) = Exec("dotnet", "test LogicTests --nologo -v q --logger \"trx;LogFileName=gate.trx\" --results-directory \"" + results + "\"");
+        var (code, output) = Exec("dotnet", "test Tools/LogicTests --nologo -v q --logger \"trx;LogFileName=gate.trx\" --results-directory \"" + results + "\"");
 
         var trx = Directory.Exists(results) ? Directory.GetFiles(results, "*.trx", SearchOption.AllDirectories).FirstOrDefault() : null;
         if (trx == null)
@@ -437,7 +437,7 @@ internal static class Program
 
     private static bool RunUnityTests(string unity, string platform, List<string> assemblies, string categories = null, string label = null)
     {
-        string dir = Path.Combine(_root, "TestResults");
+        string dir = Path.Combine(_root, "Dashboard", "Data");
         Directory.CreateDirectory(dir);
         string name = platform + (label != null ? "-" + label : "");
         string results = Path.Combine(dir, name + ".xml");
@@ -447,7 +447,7 @@ internal static class Program
 
         Console.WriteLine("Running Unity " + name + ": " + string.Join(";", assemblies) + (categories != null ? " [" + categories + "]" : ""));
         var (code, _) = Exec(unity,
-            "-batchmode -nographics -projectPath \"" + _root + "\" -runTests -testPlatform " + platform +
+            "-batchmode -nographics -projectPath \"" + Path.Combine(_root, "UnityProject") + "\" -runTests -testPlatform " + platform +
             " -assemblyNames \"" + string.Join(";", assemblies) + "\"" +
             (categories != null ? " -testCategory \"" + categories + "\"" : "") +
             " -testResults \"" + results + "\" -logFile \"" + log + "\"");
@@ -616,8 +616,8 @@ internal static class Program
         }, humanFixes);
 
         string fingerprint = Fingerprint();
-        string okFile = Path.Combine(_root, "TestResults", "stop-gate-ok.txt");
-        string blocksFile = Path.Combine(_root, "TestResults", "stop-gate-blocks.txt");
+        string okFile = Path.Combine(_root, "Dashboard", "Data", "stop-gate-ok.txt");
+        string blocksFile = Path.Combine(_root, "Dashboard", "Data", "stop-gate-blocks.txt");
         if (agentFindings.Count == 0 && humanFixes.Count == 0 && File.Exists(okFile) && File.ReadAllText(okFile) == fingerprint)
         {
             Recorder.Emit(Recorder.New(EventTypes.StopAllowed, "testgate").With("reason", "nothing changed since the last green gate"));
@@ -707,7 +707,7 @@ internal static class Program
     private static string Fingerprint()
     {
         var changed = ChangedFiles(null, out _);
-        IEnumerable<string> files = changed ?? new[] { "Assets", "LogicTests", "Packages", "ProjectSettings", "tools" }
+        IEnumerable<string> files = changed ?? new[] { "UnityProject/Assets", "UnityProject/Packages", "UnityProject/ProjectSettings", "Tools" }
             .Select(d => Path.Combine(_root, d)).Where(Directory.Exists)
             .SelectMany(d => Directory.EnumerateFiles(d, "*", SearchOption.AllDirectories))
             .Where(f => !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar) && !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar))
@@ -732,7 +732,7 @@ internal static class Program
     private static List<Asmdef> LoadAsmdefs()
     {
         var list = new List<Asmdef>();
-        foreach (var path in Directory.GetFiles(Path.Combine(_root, "Assets"), "*.asmdef", SearchOption.AllDirectories))
+        foreach (var path in Directory.GetFiles(Path.Combine(_root, "UnityProject", "Assets"), "*.asmdef", SearchOption.AllDirectories))
         {
             using var json = JsonDocument.Parse(File.ReadAllText(path));
             var root = json.RootElement;
@@ -761,9 +761,9 @@ internal static class Program
     {
         string[] unityExtensions = { ".unity", ".prefab", ".asset", ".mat", ".anim", ".controller", ".shader", ".asmref" };
         return unityExtensions.Any(e => file.EndsWith(e, StringComparison.Ordinal))
-            || file.StartsWith("Packages/", StringComparison.Ordinal)
-            || file.StartsWith("ProjectSettings/", StringComparison.Ordinal)
-            || (file.StartsWith("Assets/", StringComparison.Ordinal) && file.EndsWith(".cs", StringComparison.Ordinal)); // .cs without asmdef → Assembly-CSharp
+            || file.StartsWith("UnityProject/Packages/", StringComparison.Ordinal)
+            || file.StartsWith("UnityProject/ProjectSettings/", StringComparison.Ordinal)
+            || (file.StartsWith("UnityProject/Assets/", StringComparison.Ordinal) && file.EndsWith(".cs", StringComparison.Ordinal)); // .cs without asmdef → Assembly-CSharp
     }
 
     /// <summary>Returns null (= run everything) when git is unavailable.</summary>
@@ -822,15 +822,9 @@ internal static class Program
         }
     }
 
-    private static string FindRepoRoot()
-    {
-        for (var dir = new DirectoryInfo(Directory.GetCurrentDirectory()); dir != null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, "Assets")) && Directory.Exists(Path.Combine(dir.FullName, "LogicTests")))
-                return dir.FullName;
-        throw new DirectoryNotFoundException("Run TestGate from inside the project (no Assets/ + LogicTests/ found).");
-    }
+    private static string FindRepoRoot() => Game.Architecture.Rules.Layout.FindRoot(Directory.GetCurrentDirectory());
 
-    private static string StatePath => Path.Combine(_root, "TestResults", "testgate-unity-failures.txt");
+    private static string StatePath => Path.Combine(_root, "Dashboard", "Data", "testgate-unity-failures.txt");
 
     private static int ReadUnityFailures() =>
         File.Exists(StatePath) && int.TryParse(File.ReadAllText(StatePath).Trim(), out var n) ? n : 0;

@@ -1,4 +1,4 @@
-# MCP tools (Unity, Blender, ...): what an agent may call. OWNER-EDITED (agents cannot write tools/).
+# MCP tools (Unity, Blender, ...): what an agent may call. OWNER-EDITED (agents cannot write Tools/).
 # Without a line, the tool NAME decides: get/list/find/inspect/screenshot/run_tests... = read (free),
 # execute/eval/script/menu/python/shell... = exec (BLOCKED), anything else = write (needs a task; every file it
 # changes is observed with git snapshots and judged like an Edit: scope, rules, Stop).
@@ -8,7 +8,7 @@
 #   deny  <tool|prefix*>   never
 # The last matching line wins. Tool names: "mcp__<server>__<tool>" (see /mcp in Claude Code).
 
-# Blender: arbitrary Python can write anywhere (outside the repo too). Keep it off; export through tools/ scripts instead.
+# Blender: arbitrary Python can write anywhere (outside the repo too). Keep it off; export through Tools/ scripts instead.
 deny  mcp__blender__execute_blender_code
 # Unity: menu items and C# execution can do anything in the editor.
 deny  mcp__unity__execute_menu_item

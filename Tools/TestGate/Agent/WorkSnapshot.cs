@@ -48,7 +48,7 @@ namespace TestGate.AgentControl
 
         /// <summary>Paths the observer never reports (its own state, build output).</summary>
         public static bool Ignored(string path) =>
-            path.StartsWith(".agent/", StringComparison.Ordinal) || path.StartsWith("TestResults/", StringComparison.Ordinal) || path.StartsWith(".scratch/", StringComparison.Ordinal)
+            path.StartsWith(".agent/", StringComparison.Ordinal) || path.StartsWith("Dashboard/Data/", StringComparison.Ordinal) || path.StartsWith(".scratch/", StringComparison.Ordinal)
             || path.Contains("/bin/") || path.Contains("/obj/");
 
         public static SortedDictionary<string, string> Take(string root)

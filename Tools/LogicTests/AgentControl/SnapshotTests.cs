@@ -14,7 +14,7 @@ namespace LogicTests.AgentControl
 {
     /// <summary>
     /// The dashboard data is the CURRENT state: its size must not grow with the history, and building it must stay fast.
-    /// The view (tools/dashboard/app.js) may only read fields the data really has.
+    /// The view (Dashboard/app.js) may only read fields the data really has.
     /// </summary>
     public sealed class SnapshotTests
     {
@@ -31,12 +31,12 @@ namespace LogicTests.AgentControl
                 else if (k == 97) { e.Type = EventTypes.GateFinished; e.Data["result"] = i % 700 == 97 ? "failed" : "passed"; }
                 else if (k == 98) { e.Type = EventTypes.Claim; e.Data["text"] = "Đã xong việc số " + i + ", mọi test đều xanh."; }
                 else if (k == 99) e.Type = EventTypes.StopAllowed;
-                else if (k % 13 == 0) { e.Type = EventTypes.PolicyDenied; e.Data["tool"] = "Write"; e.Data["target"] = "Assets/_Game/Features/B/Logic/F" + i + ".cs"; e.Data["reason"] = "outside task"; }
-                else if (k % 3 == 0) { e.Type = EventTypes.CommandRun; e.Data["command"] = "dotnet build LogicTests && ./tools/test-gate.sh check --files Assets/_Game/Features/A/Logic/X" + i + ".cs"; }
+                else if (k % 13 == 0) { e.Type = EventTypes.PolicyDenied; e.Data["tool"] = "Write"; e.Data["target"] = "UnityProject/Assets/_Game/Features/B/Logic/F" + i + ".cs"; e.Data["reason"] = "outside task"; }
+                else if (k % 3 == 0) { e.Type = EventTypes.CommandRun; e.Data["command"] = "dotnet build LogicTests && ./Tools/test-gate.sh check --files Assets/_Game/Features/A/Logic/X" + i + ".cs"; }
                 else
                 {
                     e.Type = EventTypes.FileModified;
-                    e.Data["path"] = "Assets/_Game/Features/F" + (i % 40) + "/Logic/File" + (i % 2000) + ".cs";
+                    e.Data["path"] = "UnityProject/Assets/_Game/Features/F" + (i % 40) + "/Logic/File" + (i % 2000) + ".cs";
                     e.Data["via"] = "Edit";
                     e.Data["inScope"] = k % 29 == 0 ? "false" : "true";
                     e.Data["scope"] = "Features/F" + (i % 40);
@@ -47,7 +47,7 @@ namespace LogicTests.AgentControl
         }
 
         /// <summary>Benchmark helper (run by hand): writes a valid hash-chained log of BENCH_EVENTS events to BENCH_ROOT/.agent/.
-        ///   BENCH_ROOT=/path/copy BENCH_EVENTS=50000 dotnet test LogicTests --filter WriteBenchmarkLog; then time `test-gate.sh dash` there.</summary>
+        ///   BENCH_ROOT=/path/copy BENCH_EVENTS=50000 dotnet test Tools/LogicTests --filter WriteBenchmarkLog; then time `test-gate.sh dash` there.</summary>
         [Test, Explicit("benchmark helper")]
         public void WriteBenchmarkLog()
         {
@@ -113,11 +113,11 @@ namespace LogicTests.AgentControl
         {
             for (var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); dir != null; dir = dir.Parent)
             {
-                string p = Path.Combine(dir.FullName, "tools", "dashboard", "app.js");
+                string p = Path.Combine(dir.FullName, "Dashboard", "app.js");
                 if (File.Exists(p))
                     return File.ReadAllText(p);
             }
-            Assert.Fail("tools/dashboard/app.js not found");
+            Assert.Fail("Dashboard/app.js not found");
             return null;
         }
 

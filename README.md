@@ -10,9 +10,9 @@ và việc kiểm tra **rẻ** (phần lớn tính bằng mili giây, không c�
 ## Chạy thử
 
 ```bash
-dotnet test LogicTests            # 409 test: rule kiến trúc + logic + giả lập + replay, vài giây, không cần Unity
-./tools/test-gate.sh run          # gate đầy đủ (định nghĩa "xong việc")
-./tools/install-git-hooks.sh      # một lần cho mỗi clone: bật pre-commit
+dotnet test Tools/LogicTests            # 409 test: rule kiến trúc + logic + giả lập + replay, vài giây, không cần Unity
+./Tools/test-gate.sh run          # gate đầy đủ (định nghĩa "xong việc")
+./Tools/install-git-hooks.sh      # một lần cho mỗi clone: bật pre-commit
 ```
 
 **Trong Unity** (2022.3 LTS hoặc Unity 6):
@@ -48,7 +48,7 @@ dotnet test LogicTests            # 409 test: rule kiến trúc + logic + giả 
 | **Build gate** | build player | `BuildFailedException` |
 | **CI + CODEOWNERS** | PR | file rule/gate/baseline chỉ owner được sửa. Đây là lớp chặn cuối cùng, vì AI có shell vẫn có thể ghi file trực tiếp |
 
-Mọi rule được giải thích trong [`docs/RULES.md`](docs/RULES.md) (ARCH001–ARCH095). AI chỉ đọc mục được báo.
+Mọi rule được giải thích trong [`Docs/RULES.md`](Docs/RULES.md) (ARCH001–ARCH095). AI chỉ đọc mục được báo.
 
 ## Tất định, tick, tách view: lõi để làm dự án lớn
 
@@ -66,8 +66,8 @@ rồi chạy `dotnet test` để tái hiện mà không cần Unity.
 
 ## Theo dõi toàn hệ thống: sơ đồ sinh tự động
 
-**[`docs/architecture/overview.md`](docs/architecture/overview.md)** cùng mỗi feature một trang trong `docs/architecture/features/`.
-GitHub hiển thị được Mermaid trực tiếp. Sinh lại bằng `./tools/test-gate.sh graph --write` hoặc trong Unity: **Tools ▸ Game ▸ Regenerate System Map**.
+**[`Docs/Architecture/overview.md`](Docs/Architecture/overview.md)** cùng mỗi feature một trang trong `Docs/Architecture/Features/`.
+GitHub hiển thị được Mermaid trực tiếp. Sinh lại bằng `./Tools/test-gate.sh graph --write` hoặc trong Unity: **Tools ▸ Game ▸ Regenerate System Map**.
 - **L1** hệ thống: feature, Core, Bootstrap, vendor theo tầng;
 - **L2** phụ thuộc giữa feature: nét liền `uses`/`wires`, nét đứt `implements`;
 - **bảng feature**: public face, uses, used-by, vendor, asset, số test;
@@ -76,10 +76,10 @@ GitHub hiển thị được Mermaid trực tiếp. Sinh lại bằng `./tools/t
 
 | Vấn đề | Cách xử lý |
 |---|---|
-| Sơ đồ **lỗi thời** | Không ai vẽ tay. Gate sinh lại (vài ms) và so sánh; lệch thì báo đỏ **ARCH090**, kèm các cạnh mới/mất và lệnh sửa `./tools/test-gate.sh graph --write`. Tài liệu viết tay bị **ARCH091** kiểm tra: tên `Type.Member`, `Game.*` và đường dẫn phải còn tồn tại |
+| Sơ đồ **lỗi thời** | Không ai vẽ tay. Gate sinh lại (vài ms) và so sánh; lệch thì báo đỏ **ARCH090**, kèm các cạnh mới/mất và lệnh sửa `./Tools/test-gate.sh graph --write`. Tài liệu viết tay bị **ARCH091** kiểm tra: tên `Type.Member`, `Game.*` và đường dẫn phải còn tồn tại |
 | **Tốn token** | Đọc toàn bộ `.cs` ≈ 52.600 token; overview ≈ 600; một câu query ≈ 100. Lệnh: `graph feature <F>`, `graph impact <F>`, `graph di <F>`, `graph diff` |
-| **Chuẩn hóa feature** | `./tools/test-gate.sh new-feature Name [--contracts]` sinh feature đã đạt mọi rule (đã thử: gate xanh ngay). Không dùng `feature.yaml`: mọi thứ suy ra từ thư mục, asmdef, CODEOWNERS |
-| **Plugin bên thứ 3** | `ArchitecturePolicy.txt` (được bảo vệ, là allowlist viết tay duy nhất): tier `foundation`/`presentation`/`sdk`, SDK chỉ dùng trong adapter. Vendor được ghim version/hash. Ngoại lệ phải có phạm vi, owner và hạn dùng (ARCH092–095) |
+| **Chuẩn hóa feature** | `./Tools/test-gate.sh new-feature Name [--contracts]` sinh feature đã đạt mọi rule (đã thử: gate xanh ngay). Không dùng `feature.yaml`: mọi thứ suy ra từ thư mục, asmdef, CODEOWNERS |
+| **Plugin bên thứ 3** | `Tools/ArchitecturePolicy.txt` (được bảo vệ, là allowlist viết tay duy nhất): tier `foundation`/`presentation`/`sdk`, SDK chỉ dùng trong adapter. Vendor được ghim version/hash. Ngoại lệ phải có phạm vi, owner và hạn dùng (ARCH092–095) |
 
 Ví dụ trong dự án: `Features/Ads` dùng **SDK giả** `Assets/ThirdParty/DemoAdsSdk` (singleton, static, callback ngoài main thread).
 Chỉ `Game.Ads.Unity` (adapter) được gọi SDK; các feature khác dùng `IAdsService`.
@@ -113,7 +113,7 @@ Phân loại chính xác vì **kiến trúc làm cho nó chính xác**, không p
 - Mỗi scenario đồng thời là một cheat, một fixture (`scn-last-life`) và một replay (`ToReplay()`, `FromReplay()` mở được file bug report).
 - Chỉ tạo ra được trạng thái mà người chơi thật có thể gặp.
 - Xem tay bằng **Tools ▸ Game ▸ UI ▸ View Preview**: cùng fixture, cùng phép kiểm tra với gate.
-- View mới: `./tools/test-gate.sh new-view <Feature> <View>`.
+- View mới: `./Tools/test-gate.sh new-view <Feature> <View>`.
 
 ## Quản lý file: không registry, không có gì phải đối soát
 
@@ -127,10 +127,10 @@ Phân loại chính xác vì **kiến trúc làm cho nó chính xác**, không p
 | File từ AI khác, Claude cloud | Mọi thứ vào qua git nên dùng cùng bộ luật (pre-commit, CI). File không rõ nguồn gốc không bao giờ bị tự xóa. |
 
 ```bash
-./tools/test-gate.sh files                       # tóm tắt: file ngoài git, mồ côi, rác, xóa an toàn được
-./tools/test-gate.sh files clean --orphans --yes # dọn sau crash (chỉ xóa file chứng minh được là an toàn)
-./tools/test-gate.sh files unused                # asset không ai dùng
-./tools/test-gate.sh files du                    # dung lượng
+./Tools/test-gate.sh files                       # tóm tắt: file ngoài git, mồ côi, rác, xóa an toàn được
+./Tools/test-gate.sh files clean --orphans --yes # dọn sau crash (chỉ xóa file chứng minh được là an toàn)
+./Tools/test-gate.sh files unused                # asset không ai dùng
+./Tools/test-gate.sh files du                    # dung lượng
 ```
 
 ## Story · Gameplay · Art: ba nhánh chạy song song không chặn nhau
@@ -146,19 +146,19 @@ Phân loại chính xác vì **kiến trúc làm cho nó chính xác**, không p
 
 | Vấn đề | Cách giải |
 |---|---|
-| AI quên plan khi làm lâu | Plan nằm trong `plan/features.md`. SessionStart nạp phần **tính ra**: tóm tắt, cảnh báo STALE, 3 việc tiếp theo. `roadmap next` cho câu lệnh `task start` cụ thể. |
+| AI quên plan khi làm lâu | Plan nằm trong `Docs/Plan/features.md`. SessionStart nạp phần **tính ra**: tóm tắt, cảnh báo STALE, 3 việc tiếp theo. `roadmap next` cho câu lệnh `task start` cụ thể. |
 | Không có danh sách tính năng để kiểm soát | Bạn quản lý 2 cấp: **Feature → Requirement**. Trạng thái tính từ test có `[Covers("R-…")]`, không ai tự gán. Tab **Tính năng** hiện "5/7 requirement đã kiểm chứng", không phần trăm đoán mò. |
-| Bạn đổi plan, AI làm loạn | Plan thuộc bạn (AI bị deny, chỉ được đề xuất vào `plan/inbox/`). Task ghi hash của requirement lúc bắt đầu. Requirement đổi thì task **STALE**, Stop bị chặn kèm câu chữ mới. Requirement đã kiểm chứng mà bị đổi chữ cũng STALE cho tới khi test được cập nhật. |
+| Bạn đổi plan, AI làm loạn | Plan thuộc bạn (AI bị deny, chỉ được đề xuất vào `Docs/Plan/Inbox/`). Task ghi hash của requirement lúc bắt đầu. Requirement đổi thì task **STALE**, Stop bị chặn kèm câu chữ mới. Requirement đã kiểm chứng mà bị đổi chữ cũng STALE cho tới khi test được cập nhật. |
 | Rush làm sai | `hard` không bao giờ bị bỏ qua. `contract` được làm trước khi feature có `[rush]` **và** interface đã chốt; khi đó máy tự sinh **nợ tích hợp**. Feature chỉ DONE khi trả hết nợ. |
 | Làm song song | Mỗi agent một worktree. Sổ đăng ký chung (git common dir) từ chối task trùng module. `roadmap next` chia làn song song. |
 | Làm bù thiếu sót | `roadmap gaps`: FAILING / STALE / UNVERIFIED / NOT_RUN / NO_TEST / DEBT cho agent; NEEDS_REVIEW / PROPOSAL / UNPLANNED_CODE cho người. |
 
 ```bash
-./tools/test-gate.sh roadmap status            # bảng feature (hoặc: roadmap status F-TIMER)
-./tools/test-gate.sh roadmap next              # việc làm được ngay, theo làn song song
-./tools/test-gate.sh roadmap accept R-ARENA-FEEL   # CHỈ NGƯỜI: duyệt requirement [manual]
+./Tools/test-gate.sh roadmap status            # bảng feature (hoặc: roadmap status F-TIMER)
+./Tools/test-gate.sh roadmap next              # việc làm được ngay, theo làn song song
+./Tools/test-gate.sh roadmap accept R-ARENA-FEEL   # CHỈ NGƯỜI: duyệt requirement [manual]
 ```
-Chi tiết: `docs/PLANNING.md`. Dashboard có thêm tab **Tính năng** và **Plan DAG**.
+Chi tiết: `Docs/PLANNING.md`. Dashboard có thêm tab **Tính năng** và **Plan DAG**.
 
 ## Quyền và tự động hóa: Agent Flight Recorder
 
@@ -174,28 +174,28 @@ Agent quyết định **làm gì**. Chương trình quyết định **có đư�
 | Graph có đáng tin? | Nhật ký JSONL chỉ ghi thêm, có **chuỗi hash** (`events verify`). Graph là hình chiếu tất định của nhật ký, xóa đi dựng lại được. |
 
 ```bash
-./tools/test-gate.sh task start "Dời câu hỏi 2px" --feature MathQuiz
-./tools/test-gate.sh dash          # ghi dữ liệu TestResults/dashboard/; mở tools/dashboard/index.html (--bundle: 1 file để gửi)
+./Tools/test-gate.sh task start "Dời câu hỏi 2px" --feature MathQuiz
+./Tools/test-gate.sh dash          # ghi dữ liệu Dashboard/Data/; mở Dashboard/index.html (--bundle: 1 file để gửi)
 ./tools/test-gate.sh serve         # http://localhost:8765, tự cập nhật
-./tools/test-gate.sh events verify # chuỗi hash còn nguyên?
-./tools/test-gate.sh task approve  # CHỈ NGƯỜI, trong terminal
+./Tools/test-gate.sh events verify # chuỗi hash còn nguyên?
+./Tools/test-gate.sh task approve  # CHỈ NGƯỜI, trong terminal
 ```
 
 ## Cấu trúc
 
 ```
-CLAUDE.md · AGENTS.md            rule cho AI (ngắn; chi tiết ở docs/RULES.md)
-ArchitecturePolicy.txt           vendor (tier, adapter, version/hash) + ngoại lệ có hạn dùng [bảo vệ]
-docs/architecture/overview.md    sơ đồ hệ thống SINH TỰ ĐỘNG (không sửa tay)
+CLAUDE.md · AGENTS.md            rule cho AI (ngắn; chi tiết ở Docs/RULES.md)
+Tools/ArchitecturePolicy.txt           vendor (tier, adapter, version/hash) + ngoại lệ có hạn dùng [bảo vệ]
+Docs/Architecture/overview.md    sơ đồ hệ thống SINH TỰ ĐỘNG (không sửa tay)
 Assets/ThirdParty/DemoAdsSdk/    SDK giả để minh họa ranh giới vendor
-docs/ARCHITECTURE.md · RULES.md  kiến trúc · từng rule: cấm gì, vì sao, sửa thế nào
+Docs/ARCHITECTURE.md · RULES.md  kiến trúc · từng rule: cấm gì, vì sao, sửa thế nào
 .claude/settings.json            hook PostToolUse + Stop, quyền (deny file rule/prefab/meta/baseline, --no-verify)
 .github/CODEOWNERS · workflows/  owner cho file rule (thay ARCHITECTURE_OWNERS) · CI
-tools/test-gate.sh               plan · run · check · refs · new-feature · new-view · roadmap · art · files · task · events · dash · serve · reset (TestGate, build sẵn → ~0,1 giây)
-tools/claude-hook.sh             cầu nối hook của Claude Code
-tools/git-hooks/pre-commit       + install-git-hooks.sh
+Tools/test-gate.sh               plan · run · check · refs · new-feature · new-view · roadmap · art · files · task · events · dash · serve · reset (TestGate, build sẵn → ~0,1 giây)
+Tools/claude-hook.sh             cầu nối hook của Claude Code
+Tools/GitHooks/pre-commit       + install-git-hooks.sh
 ProjectSettings/EditorSettings.asset   Force Text + Enter Play Mode không Domain Reload
-LogicTests/                      dotnet test (UniTask NuGet)
+Tools/LogicTests/                      dotnet test (UniTask NuGet)
 
 Assets/_Game/
 ├── Core/Runtime/          public, khóa bằng PublicApi.txt: Result, IRandom, IDelay, Lifetime, [OptionalReference], [VisualTuning], [AllowStatic]
@@ -212,11 +212,11 @@ Assets/_Game/
 ```
 
 ## Đã kiểm chứng / chưa kiểm chứng
-- ✅ `dotnet test LogicTests`: **409/409**. Mỗi rule tĩnh có fixture vi phạm và fixture hợp lệ. Có test meta bắt buộc rule mới phải kèm fixture.
+- ✅ `dotnet test Tools/LogicTests`: **409/409**. Mỗi rule tĩnh có fixture vi phạm và fixture hợp lệ. Có test meta bắt buộc rule mới phải kèm fixture.
 - ✅ Cố tình vi phạm để thử: partial + SendMessage + Find + config int (hook và pre-commit đều chặn), sửa Contract (ARCH023 in diff),
   để Logic thành public (ARCH020), Bootstrap tham chiếu Logic (**compiler CS0122** + ARCH012).
 - ✅ Hook: 0,09 giây khi sạch; Stop hook chặn khi đỏ, cho qua khi xanh, bỏ qua khi không có thay đổi; `refs` liệt kê đủ 7 tham chiếu tới Progress.
-- ✅ Dashboard: dữ liệu (`TestResults/dashboard/data.json`) tách khỏi giao diện tĩnh (`tools/dashboard/`). Ở 50k sự kiện: data.json 59 KB, bằng với lúc 5k (có test chặn); `dash` 0,96 giây (trước 3,1 giây), đầu phiên 0,77 giây (trước 1,8 giây). Có test bảo đảm giao diện chỉ đọc các trường có trong dữ liệu. Chuỗi hash được kiểm tăng dần theo điểm mốc, và nhật ký bị cắt đuôi giờ bị phát hiện.
+- ✅ Dashboard: dữ liệu (`Dashboard/Data/data.json`) tách khỏi giao diện tĩnh (`Dashboard/`). Ở 50k sự kiện: data.json 59 KB, bằng với lúc 5k (có test chặn); `dash` 0,96 giây (trước 3,1 giây), đầu phiên 0,77 giây (trước 1,8 giây). Có test bảo đảm giao diện chỉ đọc các trường có trong dữ liệu. Chuỗi hash được kiểm tăng dần theo điểm mốc, và nhật ký bị cắt đuôi giờ bị phát hiện.
 - ✅ MCP (Unity/Blender), phiên 7 của demo:
   - tool đọc được dùng tự do; tool ghi cần task, mục tiêu ngoài phạm vi bị chặn trước;
   - tác dụng phụ ngoài phạm vi (prefab ghi thêm vào `Assets/Prefabs/`) được ghi là của agent, nên Stop bị chặn;
@@ -273,7 +273,7 @@ Assets/_Game/
 - ✅ Unity **không chặn** Play Mode/build chỉ vì sơ đồ cũ: chỉ cảnh báo và có menu sinh lại.
 - ⚠️ Flight Recorder **chưa được chạy với một phiên Claude Code thật**: đã giả lập đúng định dạng JSON của hook, nhưng một số trường (`agent_type`, transcript) có thể khác theo phiên bản; thiếu thì chỉ mất nhãn, không gây lỗi. Nhật ký **chống sửa im lặng**, không chống được ghi đè: agent cùng user vẫn có thể xóa cả file hoặc cắt phần cuối (đã có test nêu rõ giới hạn này). Trọng tài cuối là CI. Adapter cho Codex chưa làm.
 - ⚠️ **Layout gate (L2/L3) và View Preview chưa chạy trong Unity thật** (chỉ mới biên dịch với stub). Lần chạy đầu:
-  owner chạy `LAYOUT_WRITE=1 ./tools/run-unity-tests.sh EditMode "View:MathQuiz.QuizView"` để tạo baseline, rồi commit
+  owner chạy `LAYOUT_WRITE=1 ./Tools/run-unity-tests.sh EditMode "View:MathQuiz.QuizView"` để tạo baseline, rồi commit
   `Tests/Layout/QuizView.layout.txt`. Nếu L2 báo lỗi thật (ví dụ chữ bị cắt trên tablet), sửa recipe. Nếu đo chữ sai khi chạy
   `-nographics`, bỏ cờ đó cho lượt chạy layout.
 - ⚠️ **Chưa chạy trong Unity Editor thật**: chưa kiểm chứng Play Mode gate, build gate, import validator, recipe prefab,
