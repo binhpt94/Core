@@ -508,8 +508,7 @@ internal static class Program
         }
         else if (args.Contains("--staged"))
         {
-            var files = Exec("git", "diff --cached --relative --name-only --diff-filter=ACMR", quiet: true).output
-                .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
+            var files = TestGate.AgentControl.GitChanges.Staged(_root);
             violations = ArchitectureScanner.ScanFiles(_root, files);
             scope = files.Count + " staged file(s)";
         }
@@ -767,37 +766,8 @@ internal static class Program
     }
 
     /// <summary>Returns null (= run everything) when git is unavailable.</summary>
-    private static List<string> ChangedFiles(string baseRef, out string fullReason)
-    {
-        fullReason = null;
-        var (inRepo, _) = Exec("git", "rev-parse --is-inside-work-tree", quiet: true);
-        if (inRepo != 0)
-        {
-            fullReason = "not a git repository";
-            return null;
-        }
-
-        if (string.IsNullOrEmpty(baseRef))
-            baseRef = Exec("git", "rev-parse --verify --quiet origin/main", quiet: true).code == 0 ? "origin/main" : "HEAD";
-
-        var files = new SortedSet<string>(StringComparer.Ordinal);
-        var (code1, committed) = Exec("git", "diff --relative --name-only " + baseRef + "...HEAD", quiet: true);
-        if (code1 != 0 && baseRef != "HEAD")
-        {
-            fullReason = "cannot diff against " + baseRef;
-            return null;
-        }
-        Add(files, committed);
-        Add(files, Exec("git", "diff --relative --name-only HEAD", quiet: true).output);           // staged + unstaged
-        Add(files, Exec("git", "ls-files --others --exclude-standard", quiet: true).output); // new files
-        return files.Where(f => !f.EndsWith(".meta", StringComparison.Ordinal)).ToList();
-    }
-
-    private static void Add(SortedSet<string> set, string output)
-    {
-        foreach (var line in output.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0))
-            set.Add(line);
-    }
+    private static List<string> ChangedFiles(string baseRef, out string fullReason) =>
+        TestGate.AgentControl.GitChanges.Files(_root, baseRef, out fullReason);
 
     private static (int code, string output) Exec(string file, string arguments, bool quiet = false)
     {
