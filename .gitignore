@@ -22,6 +22,7 @@ crashlytics-build.properties
 .idea/
 *.csproj
 *.sln
+*.slnx
 *.suo
 *.user
 *.userprefs
@@ -50,3 +51,4 @@ TestResults/
 
 # AI/human scratch work: outside Assets/ (Unity never imports it), never committed. `files clean --regenerable` empties it.
 /.scratch/
+.vscode/
