@@ -143,7 +143,9 @@ thread and checks the lifetime.
   `.scratch/features.draft.md`, run `./Tools/test-gate.sh roadmap draft .scratch/features.draft.md` and show the owner its list
   of changes (`+ R-…`, `~ R-…`, `- R-…` with their text). Adjust with the owner until agreed, then write `Docs/Plan/features.md`
   with **Edit/Write**: the gate checks the result and Claude Code asks the owner yes/no; one yes = one write. A single new R- may
-  skip the draft. Never write features.md through Bash/scripts (always a breach). Unsure? `roadmap propose "<what and why>"`.
+  skip the draft. `Docs/Plan/Core.md` (core idea) works the same way: show the owner the proposed text, then Edit/Write → yes/no
+  with the changed lines. `Docs/Plan/Notes.md` (owner's notes) is written freely on request. Never write features.md or Core.md
+  through Bash/scripts (always a breach). Unsure? `roadmap propose "<what and why>"`.
   `Docs/Plan/accepted.txt` stays denied, `roadmap accept` stays human only.
 - If Stop says **STALE task**: the human changed a requirement you were working on. Re-read it, adapt code and tests,
   `task close`, start again from `roadmap next`.
@@ -177,7 +179,7 @@ for replay/dispose/stale-result tests, assert `Logger.Errors` empty in `TearDown
 - Touch protected files (`Tools/`, `Assets/_Game/Architecture/`, `Assets/_Game/Tests/Architecture/`, `**/PublicApi.txt`,
   `Tools/ArchitecturePolicy.txt`, `Docs/Architecture/`, `Assets/ThirdParty/`, `Assets/Plugins/`, `.claude/`, `.github/`, `ProjectSettings/`,
   `Assets/_Game/Core/Editor/`, `**/Tests/Replays/`, `**/Tests/Layout/`, `Docs/Plan/accepted.txt`, `Docs/Plan/art-accepted.txt`;
-  `Docs/Plan/features.md` only via Edit/Write after the owner's yes, see §9):
+  `Docs/Plan/features.md` and `Docs/Plan/Core.md` only via Edit/Write after the owner's yes, see §9):
   they are denied to you and CODEOWNERS-reviewed. Need a new vendor or exception? Ask the human.
   Core maintenance (changing the rules or tools themselves): `task request --core "<why>"`; only after the human approves it
   may that task edit protected files (never `.agent/`). It ends with `task close`.

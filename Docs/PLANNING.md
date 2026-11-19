@@ -87,6 +87,8 @@ active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human).
   would write (invalid → blocked, the owner is not asked) and returns `ask`, so Claude Code shows the owner a yes/no with the same
   list. Yes → PostToolUse records `PLAN_EDIT_APPROVED` for that exact content; the change is in scope only while the file is that
   content. The next write asks again. Bash/scripts/MCP never ask: writing features.md through them is a scope breach.
+  `Docs/Plan/Core.md` (the core idea on the Dashboard) goes through the same gate; it is free Markdown, so nothing is checked
+  and the yes/no lists the changed lines (`+ …`, `- …`). An approval counts only for the file it was given for.
 - **Parallel work:** one git worktree per agent. `task start` refuses modules another worktree's open task is using
   (the registry lives in the git common dir, so all worktrees see it). `roadmap next` already puts such items "after".
 - **Rush:** the human tags a feature `[rush]`. Its contract dependencies may then be unfinished if their interface is frozen;

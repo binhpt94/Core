@@ -14,6 +14,7 @@ namespace TestGate.AgentControl
         public const string Ask = "ask";
         public const string Deny = "deny";
         public string Kind { get; set; }
+        public string Path { get; set; }
         public string Reason { get; set; }
         public string ProposedHash { get; set; }
     }
@@ -38,16 +39,35 @@ namespace TestGate.AgentControl
         public const string ApprovedEvent = "PLAN_EDIT_APPROVED";
         private const int MaxLines = 40;
 
+        public const string CorePath = "Docs/Plan/Core.md";
+
         public static bool IsPlan(string rel) => rel == PlanParser.RelativePath;
+
+        /// <summary>Files an AI writes only after the owner's yes/no: the plan (checked by ARCH110) and the core idea (free Markdown).</summary>
+        public static bool IsGated(string rel) => IsPlan(rel) || rel == CorePath;
 
         public static PlanEditDecision Decide(string root, HookInput h)
         {
-            string current = Current(root);
+            string fp = (h.Input("file_path") ?? h.Input("notebook_path") ?? "").Replace('\\', '/');
+            string rel = fp == CorePath || fp.EndsWith("/" + CorePath, StringComparison.Ordinal) ? CorePath : PlanParser.RelativePath;
+            string current = Current(root, rel);
             if (h.ToolName != "Edit" && h.ToolName != "Write")
-                return Denied(PlanParser.RelativePath + ": write it with Edit or Write, so the owner is asked yes/no for this exact change (" + h.ToolName + " is not)");
-            string proposed = Proposed(current, h, out string error);
+                return Denied(rel + ": write it with Edit or Write, so the owner is asked yes/no for this exact change (" + h.ToolName + " is not)");
+            string proposed = Proposed(current, h, out string error, rel);
             if (proposed == null)
                 return Denied(error);
+            if (rel == CorePath)
+            {
+                var diff = LineDiff(current, proposed);
+                if (diff.Count == 0)
+                    diff.Add("(không đổi dòng nào)");
+                return new PlanEditDecision
+                {
+                    Kind = PlanEditDecision.Ask, Path = rel, ProposedHash = Hash(proposed),
+                    Reason = "Ghi " + CorePath + " (ý tưởng cốt lõi)? Thay đổi:\n" +
+                             string.Join("\n", diff.Take(MaxLines)) + (diff.Count > MaxLines ? "\n… +" + (diff.Count - MaxLines) + " dòng" : "")
+                };
+            }
             var report = Draft(root, proposed);
             if (report.Errors.Count > 0)
                 return Denied("the plan would be invalid, so the owner is not asked. Fix the draft (./Tools/test-gate.sh roadmap draft <file>):\n" +
@@ -55,7 +75,7 @@ namespace TestGate.AgentControl
             var lines = report.Changes.Count == 0 ? new List<string> { "(không đổi feature/requirement nào: chỉ mô tả hoặc định dạng)" } : report.Changes;
             return new PlanEditDecision
             {
-                Kind = PlanEditDecision.Ask,
+                Kind = PlanEditDecision.Ask, Path = rel,
                 ProposedHash = Hash(proposed),
                 Reason = "Ghi " + PlanParser.RelativePath + "? Gate đã kiểm tra: hợp lệ (ARCH110). Thay đổi:\n" +
                          string.Join("\n", lines.Take(MaxLines)) + (lines.Count > MaxLines ? "\n… +" + (lines.Count - MaxLines) + " dòng" : "")
@@ -77,27 +97,44 @@ namespace TestGate.AgentControl
             var r = new PlanDraftReport();
             r.Errors.AddRange(PlanRules.CheckText(root, draft).Select(v => "ARCH110 line " + v.Line + ": " + v.Message));
             if (r.Errors.Count == 0)
-                r.Changes = Diff(PlanParser.Parse(Current(root)), PlanParser.Parse(draft));
+                r.Changes = Diff(PlanParser.Parse(Current(root, PlanParser.RelativePath)), PlanParser.Parse(draft));
             return r;
         }
 
         /// <summary>After the tool ran: the owner said yes. Records the approval only for the exact text that was asked.</summary>
-        public static void AfterWrite(string root, HookInput h)
+        public static void AfterWrite(string root, HookInput h, string rel)
         {
-            var asked = EventLog.For(root).ReadAll().LastOrDefault(e => e.Type == AskedEvent && e.Get("toolUseId") == h.ToolUseId);
-            string full = Path.Combine(root, PlanParser.RelativePath);
+            var asked = EventLog.For(root).ReadAll().LastOrDefault(e => e.Type == AskedEvent && e.Get("toolUseId") == h.ToolUseId && e.Get("path") == rel);
+            string full = Path.Combine(root, rel);
             if (asked == null || !File.Exists(full) || asked.Get("proposed") != Hash(File.ReadAllText(full)))
                 return;
-            Recorder.Emit(Recorder.New(ApprovedEvent, "hook").With("path", PlanParser.RelativePath).With("toolUseId", h.ToolUseId)
+            Recorder.Emit(Recorder.New(ApprovedEvent, "hook").With("path", rel).With("toolUseId", h.ToolUseId)
                 .With("proposed", asked.Get("proposed")).With("after", WorkSnapshot.HashFile(full)));
         }
 
-        /// <summary>Is this features.md content (snapshot hash) one the owner approved?</summary>
+        /// <summary>Is this content (snapshot hash) of this gated file one the owner approved? An approval never counts for another file.</summary>
         public static bool IsApproved(string root, string rel, string state) =>
-            IsPlan(rel) && EventLog.For(root).ReadAll().Any(e => e.Type == ApprovedEvent && e.Get("after") == state);
+            IsGated(rel) && EventLog.For(root).ReadAll().Any(e => e.Type == ApprovedEvent && e.Get("after") == state && e.Get("path") == rel);
 
-        public static string Proposed(string current, HookInput h, out string error)
+        /// <summary>Lines removed (- ) and added (+ ), in file order; unchanged lines are not listed.</summary>
+        public static List<string> LineDiff(string before, string after)
         {
+            var oldLines = Norm(before).Split('\n').Where(l => l.Trim().Length > 0).ToList();
+            var newLines = Norm(after).Split('\n').Where(l => l.Trim().Length > 0).ToList();
+            var pool = newLines.GroupBy(l => l).ToDictionary(g => g.Key, g => g.Count());
+            var removed = new List<string>();
+            foreach (var l in oldLines)
+                if (pool.TryGetValue(l, out int n) && n > 0) pool[l] = n - 1; else removed.Add("- " + l);
+            var keep = oldLines.GroupBy(l => l).ToDictionary(g => g.Key, g => g.Count());
+            var added = new List<string>();
+            foreach (var l in newLines)
+                if (keep.TryGetValue(l, out int n) && n > 0) keep[l] = n - 1; else added.Add("+ " + l);
+            return removed.Concat(added).ToList();
+        }
+
+        public static string Proposed(string current, HookInput h, out string error, string rel = null)
+        {
+            rel = rel ?? PlanParser.RelativePath;
             error = null;
             if (h.ToolName == "Write")
                 return h.Input("content") ?? "";
@@ -111,7 +148,7 @@ namespace TestGate.AgentControl
             bool all = (h.Input("replace_all") ?? "").Equals("true", StringComparison.OrdinalIgnoreCase);
             if (count == 0 || count > 1 && !all)
             {
-                error = PlanParser.RelativePath + ": old_string " + (count == 0 ? "not found" : "is not unique (" + count + "×)");
+                error = rel + ": old_string " + (count == 0 ? "not found" : "is not unique (" + count + "×)");
                 return null;
             }
             if (all)
@@ -172,9 +209,9 @@ namespace TestGate.AgentControl
 
         private static string Req(PlanRequirement r) => r.Text + ReqTags(r);
 
-        private static string Current(string root)
+        private static string Current(string root, string rel)
         {
-            string full = Path.Combine(root, PlanParser.RelativePath);
+            string full = Path.Combine(root, rel);
             return File.Exists(full) ? File.ReadAllText(full) : "";
         }
 
