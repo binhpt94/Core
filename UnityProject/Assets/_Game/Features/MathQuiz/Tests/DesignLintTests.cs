@@ -84,5 +84,19 @@ namespace Game.MathQuiz.Tests
                 Assert.That(ArtChecks.Check(s, ArtChecks.Graybox(s)), Is.Empty, s.Id + ": the graybox must meet its own contract");
             }
         }
+
+        [Test]
+        public void CoinFx_IsTheContractTheOwnerApproved()
+        {
+            var s = MathQuizArtSlots.CoinFx;
+            Assert.That(new MathQuizArtSlots().Slots, Has.Member(s));
+            Assert.That(s.Id, Is.EqualTo("MathQuiz.CoinFx"));
+            Assert.That(s.Kind, Is.EqualTo(ArtSlotKind.UiImage));
+            Assert.That(new[] { s.MinWidth, s.MaxWidth, s.MinHeight, s.MaxHeight }, Is.EqualTo(new[] { 24, 64, 24, 64 }));
+            Assert.That(new[] { s.PivotXPercent, s.PivotYPercent, s.PivotTolerancePercent }, Is.EqualTo(new[] { 50, 50, 10 }));
+            var fly = s.Actions.Single();
+            Assert.That(new object[] { fly.Clip, fly.Marker, fly.MinTick, fly.MaxTick, fly.MinSpeedPercent, fly.MaxSpeedPercent, fly.Required },
+                Is.EqualTo(new object[] { "Fly", "arrive", 10, 30, 80, 125, false }), "the coin reaches the total within 0.5–1.5 s at 20 Hz; animation optional");
+        }
     }
 }
