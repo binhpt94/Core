@@ -127,6 +127,8 @@ namespace TestGate.Planning
         public List<Gap> Gaps { get; set; } = new List<Gap>();
         public List<string> Proposals { get; set; } = new List<string>();
         public string ResultsUtc { get; set; }
+        /// <summary>Change requests not closed yet (CrPlanning): open ones wait for a decision, approved ones are requirements.</summary>
+        public List<CrView> Crs { get; set; } = new List<CrView>();
 
         public FeatureState Feature(string id) => Features.FirstOrDefault(f => f.Id == id);
         public RequirementState Requirement(string id) => Features.SelectMany(f => f.Requirements).FirstOrDefault(r => r.Id == id);
@@ -154,6 +156,9 @@ namespace TestGate.Planning
         public Dictionary<string, SlotState> Slots { get; set; } = new Dictionary<string, SlotState>(StringComparer.Ordinal);
         /// <summary>Feature folders with uncommitted changes (for UNPLANNED_CODE).</summary>
         public List<string> ChangedModules { get; set; } = new List<string>();
+        /// <summary>Change requests between modules (Docs/Plan/CRs) and "now" for their age.</summary>
+        public Dictionary<string, CrEntry> Crs { get; set; } = new Dictionary<string, CrEntry>(StringComparer.Ordinal);
+        public DateTime Now { get; set; } = DateTime.UtcNow;
 
         public static PlanInputs Load(string root)
         {
@@ -187,7 +192,8 @@ namespace TestGate.Planning
                 SealHash = req => SealStore.TestsHash(root, covers.Where(c => c.Requirement == req)),
                 Slots = ArtStatus.Compute(root),
                 Proposals = Directory.Exists(inbox) ? Directory.GetFiles(inbox, "*.md").Select(Path.GetFileName).OrderBy(x => x, StringComparer.Ordinal).ToList() : new List<string>(),
-                ChangedModules = changed
+                ChangedModules = changed,
+                Crs = CrLog.Load(root)
             };
         }
 
@@ -219,6 +225,7 @@ namespace TestGate.Planning
             report.Errors.AddRange(plan.Errors);
             report.Proposals.AddRange(input.Proposals);
             report.ResultsUtc = input.Results.LatestRunUtc?.ToString("yyyy-MM-dd HH:mm 'UTC'");
+            report.Crs = CrPlanning.Views(input.Crs, input.Now);
 
             foreach (var f in plan.Features)
             {
@@ -276,6 +283,7 @@ namespace TestGate.Planning
             var planned = new HashSet<string>(plan.Features.Where(f => f.Active).SelectMany(f => f.Modules), StringComparer.Ordinal);
             foreach (var m in input.ChangedModules.Where(m => !planned.Contains(m)))
                 report.Gaps.Add(new Gap { Kind = "UNPLANNED_CODE", Feature = null, Detail = "Features/" + m + " changed but no active feature lists it in [modules]", Actor = "human", Severity = 6 });
+            report.Gaps.AddRange(CrPlanning.Gaps(input.Crs, input.Now));
             foreach (var p in input.Proposals)
                 report.Gaps.Add(new Gap { Kind = "PROPOSAL", Detail = PlanParser.InboxFolder + p + " waits for the human", Actor = "human", Severity = 7 });
 
@@ -434,6 +442,13 @@ namespace TestGate.Planning
             if (f.ArtRisk)
                 foreach (var r in fs.Requirements.Where(x => plan.Requirement(x.Id).IsFeasibility && !ReqStatus.IsDone(x.Status)))
                     fs.BlockedBy.Add("art feasibility " + r.Id + " chưa được người duyệt");
+
+            // What this feature asked other modules for (CRs): owed until delivered; it works on a fake meanwhile, never waits idle.
+            foreach (var debt in CrPlanning.Debt(report, input.Crs, fs.Id))
+            {
+                depsOk = false;
+                fs.Debt.Add(debt);
+            }
 
             bool allReq = fs.Total > 0 && fs.Verified == fs.Total && fs.ArtDebt.Count == 0;
             bool started = fs.Requirements.Any(r => r.Status != ReqStatus.NoTest && r.Status != ReqStatus.NeedsReview);

@@ -73,7 +73,7 @@ Assets/_Game/
 | State/async | per-round state, `Lifetime` tree, `UniTask` returns | mutable statics, static events, `async void`/`UniTaskVoid` | 060–062 |
 | Determinism | `IRandomStreams.For("purpose", keys)`, integer ticks, commands, `StateHashBuilder` | `System.Random`, `DateTime.Now`, `GetHashCode()`, floats in Domain/Simulation, views touching Domain/Simulation | 051, 055–057 |
 | Unity data | config in the feature's ScriptableObject; references **required by default** (`[OptionalReference]` to opt out) | primitive `[SerializeField]` config on MonoBehaviours (`[VisualTuning]` for pure visuals), public SO state | 070–073 |
-| Assets | `Assets/Private` by default; others reference only `Assets/Public`; scene = GameRoot + layout | cross-feature private refs, scene data overrides, `Resources/`, binary serialization, assets without `.meta` | 080–084 |
+| Assets | `Assets/Private` by default; others reference only `Assets/Public`; scene = GameRoot + layout | cross-feature private refs, scene data overrides, `Resources/`, binary serialization, YAML assets (`.prefab/.unity/.asset`...) without `.meta` | 080–084 |
 | UI & dev tools | static layout in `Views/<V>/<V>Layout.cs` or the prefab; view moves only from data (`// layout: dynamic`, no constants); every view has fixtures (incl. `smoke`) + cases; cheats = scenarios (commands) in `DevTools/` | layout constants in views/installers, setting state for a cheat, runtime code referencing `DevTools` | 100–102 |
 | Art slots | contracts in `Logic/Domain/<F>ArtSlots.cs`, id `F.Name`; bindings name real slots of their feature | art prefab refs from gameplay, a binding to a typo | 120–121 |
 | Files | known layout; scratch in `.scratch/`; move assets with their `.meta` | loose/temp/copy files, scenes outside Scenes/, dangling GUIDs | 130–132 |
@@ -120,6 +120,12 @@ thread and checks the lifetime.
   Without an active task, or outside its scope, writes are **blocked before they happen** (PreToolUse).
 - Need another feature, a path outside features, or to change what a test expects? `task request --feature G | --path P | --tests "<why>"`
   and tell the human; only they can run `task approve` (needs a terminal; refused in your shell). Keep working inside the current scope.
+- **Need another module to change? Never ask its session by message** (SendMessage is logged; a request that way approves nothing).
+  `task need <F-ID|Module|Core> "<what, why>" [--api "<PublicApi line>"]…` files `CR-n`; keep working against a fake in your own
+  feature (it owes CR-n until delivered). New types only: the gate approves at once and your task may write B's Contracts (exactly
+  those PublicApi lines + a skeleton). Breaking: another session rules (`cr rule CR-n keep|reject|ask "<why>"`). No API (meaning) or
+  breaking Core: the owner (`cr decide`, theirs). An approved CR is a requirement of B: `task start … --from CR-n` (roles as usual).
+- A task without `--req`/`--from` is maintenance: changing a feature's `Contracts/` or `Logic/Domain/` there is `UNTRACED_CHANGE` at Stop.
 - Edits made through Bash (sed, scripts) are observed via git snapshots and judged like Edit. Undoing a change is always allowed.
 - At Stop: every changed file must be in scope, tests must not be weakened (fewer asserts/tests, new Ignore/Assume/#if), then the gate.
 - **MCP (Unity, Blender):** read tools (get/list/find/screenshot/run_tests) are free. Tools that change things need a task and
@@ -173,6 +179,8 @@ thread and checks the lifetime.
   nobody touched since; never tracked files, never a human's). After a crash: `files orphans` / `files clean --orphans --yes`.
 - Move or rename assets **in Unity** (or `git mv` file + `.meta`). ARCH132 = a reference to a GUID that no longer exists;
   its message prints the exact fix: run it only if you made the move, otherwise tell the human.
+- New `.cs` files and folders need **no** `.meta` to pass the gate (only YAML assets do, ARCH084); never write one yourself:
+  Unity creates it on the next open. Split code into new files freely; don't stuff it into an existing file to avoid a `.meta`.
 
 ## 11. Testing async & lifecycle
 `QuizHarness` + `ManualFrames`/`FakeClock` (tests drive frames and time; `Ticks(n)`, `Seconds(n)`), `IgnoreCancellation = true` for sources that ignore tokens, `[Category("Lifecycle")]`

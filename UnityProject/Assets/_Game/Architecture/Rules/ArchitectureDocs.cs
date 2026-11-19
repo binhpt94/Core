@@ -155,7 +155,7 @@ namespace Game.Architecture.Rules
                   .Append(" | ").Append(allowed).Append(" | ").Append(users).Append(" | ").Append(pin).Append(" |\n");
             }
             if (!g.AssetsKnown)
-                sb.Append("\n> Asset references: **UNKNOWN** until Unity has generated `.meta` files (open the project once). Any asset without its `.meta` fails ARCH084.\n");
+                sb.Append("\n> Asset references: **UNKNOWN** until Unity has generated `.meta` files (open the project once). Any YAML asset (`.prefab .unity .asset` ...) without its `.meta` fails ARCH084; scripts and folders don't need one.\n");
             return sb.ToString();
         }
 

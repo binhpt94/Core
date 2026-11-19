@@ -20,6 +20,10 @@ namespace TestGate.Planning
         public List<SlotState> Slots { get; set; } = new List<SlotState>();
         /// <summary>Work for artists / the human (not agents): art debt, approvals, feasibility.</summary>
         public List<Gap> ArtLane { get; set; } = new List<Gap>();
+        /// <summary>Change requests between modules not closed yet (who decides an open one: gate / arbiter / owner).</summary>
+        public List<CrView> Crs { get; set; } = new List<CrView>();
+        /// <summary>Decisions only the owner can make (CRs to decide, overdue CRs, proposals, manual reviews): "Cần bạn quyết".</summary>
+        public List<Gap> Owner { get; set; } = new List<Gap>();
 
         public static RoadmapView Build(string root)
         {
@@ -34,7 +38,9 @@ namespace TestGate.Planning
                 Features = report.Features, Gaps = report.Gaps, Next = PlanScheduler.Next(report, open),
                 Proposals = report.Proposals, OpenTasks = open,
                 Slots = inputs.Slots.Values.OrderBy(x => x.Id, System.StringComparer.Ordinal).ToList(),
-                ArtLane = report.Gaps.Where(g => g.Actor == "art" || (g.Actor == "human" && g.Kind == ReqStatus.NeedsReview)).ToList()
+                ArtLane = report.Gaps.Where(g => g.Actor == "art" || (g.Actor == "human" && g.Kind == ReqStatus.NeedsReview)).ToList(),
+                Crs = report.Crs,
+                Owner = report.Gaps.Where(g => g.Actor == "human").ToList()
             };
         }
     }

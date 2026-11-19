@@ -99,6 +99,38 @@ Code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestL
 - **Owner's last resorts** (terminal, denied to agents): `tests unseal R-… "<why>"`, and once when adopting this: `tests grandfather`
   (today's covering tests count as sealed, `author=legacy`).
 
+## Change requests between modules (CR)
+
+Code: `Tools/TestGate/Agent/CrCli.cs`, `CrClassifier.cs`, `CrStore.cs`, `Planning/CrPlanning.cs`; log parsing `CrLog` in
+`Architecture/Rules/PlanRules.cs`. Problem it closes: session A asks session B (by message) to "just change X"; B's task is valid
+for B's folder, so the gate saw nothing wrong. Now every change traces to an approved R- or CR, whoever asked.
+
+- `task need <F-ID|Module|Core> "<what, why>" [--api "<PublicApi line>"]… [--patch .scratch/x.diff]` appends to
+  `Docs/Plan/CRs/<target>.txt` (append-only, written only by the gate: `CR_WRITTEN` events; protected). Numbers are unique across
+  worktrees (counter in the git common dir).
+- Who decides is computed from the API diff, not from what the asker says:
+
+| Kind | What | Decides |
+|---|---|---|
+| `additive` | only new types in B's `Contracts/` | the gate at once; the asking task may write B's Contracts: exactly those PublicApi lines + a skeleton |
+| `breaking` | removes/changes a line, or adds a member to an existing type (breaks implementers and fakes) | an arbiter: another session, `cr rule CR-n keep \| reject \| ask` |
+| `meaning` | no `--api`: B's behaviour/requirement | the owner, batched: `cr decide` (terminal only) |
+| `core-additive` | new types in Core/Runtime | an arbiter |
+| `core-breaking`, `core-meaning` | | the owner; done in a core task of its own, closed with `cr deliver` |
+
+- **Approved = requirement of B:** CR-n joins B's feature (tag `[cr]`, features.md untouched): `[Covers("CR-n")]`, seals, roles,
+  `roadmap next` work like any R- (`task start … --from CR-n` = `--req CR-n`; a task on an API CR gets the same Contracts grant).
+- **Nobody waits idle:** the asker works on a fake; its feature carries debt `chờ … CR-n` and is never DONE until CR-n is VERIFIED.
+  CR work runs at the priority of the feature waiting for it; approved and undone after 24 h = `CR_OVERDUE` for the owner.
+- **Provenance:** a task without `--req`/`--from` is maintenance; changing `Contracts/` or `Logic/Domain/` there is `UNTRACED_CHANGE`.
+  `SendMessage` is logged (`AGENT_MESSAGE` with the sender's task) and answered with a hint to file a CR.
+- Dashboard (tab 1): "Cần bạn quyết" lists every owner gap and the open CRs.
+
+```bash
+./Tools/test-gate.sh task need Progress "ICoins để cộng xu" --api "interface Game.Progress.Contracts.ICoins"
+./Tools/test-gate.sh cr list | cr show CR-3 | cr rule CR-3 keep "…" | cr decide (HUMAN ONLY)
+```
+
 ## Working with it
 
 ```bash

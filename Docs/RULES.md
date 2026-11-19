@@ -211,9 +211,13 @@ Code stays in `Logic/`, `Unity/`, `Editor/`, `Contracts/`. This makes "copy/repl
 feature's asset entry; Addressables with typed `AssetReferenceT<T>` if you need streaming.
 
 ## ARCH084
-**Asset Serialization = Force Text** (`ProjectSettings/EditorSettings.asset`: `m_SerializationMode: 2`) **and every asset has its `.meta`.**
+**Asset Serialization = Force Text** (`ProjectSettings/EditorSettings.asset`: `m_SerializationMode: 2`) **and every serialized YAML
+asset** (`.prefab .unity .asset .mat .controller .anim ...`, list: `AssetRules.YamlExtensions`) **has its `.meta`.**
 Required for the GUID/override scans, readable diffs and merging. A YAML asset without `.meta` fails (fail-closed): its references are
 UNKNOWN and teammates' clones would get new GUIDs. Keep *Visible Meta Files* (default) and commit every `.meta`.
+**Not checked:** scripts (`.cs`, `.asmdef`), text files and folders. A new `.cs` file or folder without `.meta` passes the gate
+(`dotnet test` compiles by glob); Unity creates its `.meta` on the next open, commit it then. Agents never write a `.meta` (protected):
+create new files freely instead of stuffing code into an existing one.
 
 ## UI testability & dev tools
 

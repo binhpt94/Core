@@ -101,6 +101,8 @@ internal static class Program
                     return AgentCli.Task(_root, args);
                 case "tests":
                     return TestSeal.Cli(_root, args);
+                case "cr":
+                    return CrCli.Cli(_root, args);
                 case "events":
                     return AgentCli.Events(_root, args);
                 case "reconcile":
@@ -120,7 +122,7 @@ internal static class Program
                     Console.WriteLine("Unity retry budget reset.");
                     return 0;
                 default:
-                    Console.Error.WriteLine("Usage: TestGate plan|run|reset|check|refs|graph|vendor-hash|new-feature|new-view|roadmap|art|files|task|events|reconcile|dash|serve|hook-pre|hook-post|hook-stop|hook-session|hook-subagent-stop");
+                    Console.Error.WriteLine("Usage: TestGate plan|run|reset|check|refs|graph|vendor-hash|new-feature|new-view|roadmap|art|files|task|cr|tests|events|reconcile|dash|serve|hook-pre|hook-post|hook-stop|hook-session|hook-subagent-stop");
                     return 64;
             }
         }

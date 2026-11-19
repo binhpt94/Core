@@ -42,6 +42,8 @@ namespace TestGate.AgentControl
         public const string ArtAccepted = "ART_ACCEPTED";
         public const string FileCleaned = "FILE_CLEANED";
         public const string HumanFixNeeded = "HUMAN_FIX_NEEDED";
+        public const string CrFiled = "CR_FILED";            // task need: a module asked another one for a change (Docs/Plan/CRs)
+        public const string AgentMessage = "AGENT_MESSAGE";  // a session messaged another agent/session (SendMessage): logged, never trusted as approval
     }
 
     public sealed class AgentEvent
