@@ -15,6 +15,12 @@ namespace Game.Bootstrap.Tests
     {
         private GameObject _root;
 
+        /// <summary>
+        /// Commands (Start, Restart, answers) apply at the NEXT simulation tick (20 Hz = 50 ms) and the view renders only
+        /// after a tick, so one frame is not enough. 0.1 s = 2 ticks; the timer still shows "10s" (seconds round up).
+        /// </summary>
+        private static WaitForSeconds FirstTick() => new WaitForSeconds(0.1f);
+
         [SetUp]
         public void SetUp() => PlayerPrefs.DeleteKey(ProgressInstaller.PlayerPrefsKey);
 
@@ -33,6 +39,7 @@ namespace Game.Bootstrap.Tests
             var composition = _root.AddComponent<GameCompositionRoot>();
 
             yield return null; // Awake + Start
+            yield return FirstTick();
 
             var view = composition.View;
             Assert.That(view, Is.Not.Null);
@@ -54,6 +61,7 @@ namespace Game.Bootstrap.Tests
             _root = new GameObject("GameRoot");
             var composition = _root.AddComponent<GameCompositionRoot>();
             yield return null;
+            yield return FirstTick();
             var view = composition.View;
 
             Assert.That(view.TimerText, Is.EqualTo("10s"));
@@ -61,7 +69,7 @@ namespace Game.Bootstrap.Tests
             Assert.That(view.TimerText, Is.EqualTo("8s"));
 
             view.SimulateRestartClick();
-            yield return null;
+            yield return FirstTick();
             Assert.That(view.TimerText, Is.EqualTo("10s"));
 
             yield return new WaitForSeconds(1.2f);

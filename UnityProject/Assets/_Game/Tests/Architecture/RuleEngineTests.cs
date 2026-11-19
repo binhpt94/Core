@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Game.Architecture.Rules;
 using NUnit.Framework;
 
@@ -593,13 +594,51 @@ namespace Game.Architecture.Tests
             Assert.That(v.Any(x => x.RuleId == "ARCH095" && x.Message.Contains("owner= and reason")), Is.True, all);
         }
 
-        [Test, Order(int.MaxValue)]
+        [Test]
         public void Coverage_EveryStaticRuleHasAPositiveFixture()
         {
-            // Runs last (Order) after the fixtures above have recorded which rules fired.
+            // NUnit starts [Order] tests BEFORE unordered ones, so "run last and read what the others recorded" never
+            // worked (always 0, Inconclusive). Replay every other test of this fixture here instead: the result no
+            // longer depends on run order, filters or which tests ran before.
+            Fired.Clear();
+            foreach (var method in typeof(RuleEngineTests).GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
+            {
+                if (method.Name == nameof(Coverage_EveryStaticRuleHasAPositiveFixture))
+                    continue;
+                var cases = method.GetCustomAttributes(typeof(TestCaseAttribute), false).Cast<TestCaseAttribute>().Select(c => c.Arguments).ToList();
+                if (method.IsDefined(typeof(TestAttribute), false))
+                    cases.Add(new object[0]);
+                foreach (var args in cases)
+                    Replay(method, args);
+            }
+
+            Assert.That(Fired.Count, Is.GreaterThan(10), "the replay must reach the fixtures above");
             var missing = RuleCatalog.All.Where(r => r.IsStatic && !Fired.Contains(r.Id)).Select(r => r.Id).ToList();
-            Assume.That(Fired.Count, Is.GreaterThan(10), "run the whole fixture, not a single test");
             Assert.That(missing, Is.Empty, "Add a positive fixture for each static rule");
+        }
+
+        /// <summary>One test case with its own SetUp/TearDown; its pass/fail is reported by that test itself.</summary>
+        private static void Replay(MethodInfo method, object[] args)
+        {
+            var parameters = method.GetParameters();
+            var full = new object[parameters.Length];
+            for (int i = 0; i < full.Length; i++)
+                full[i] = i < args.Length ? args[i] : parameters[i].DefaultValue;
+
+            var fixture = new RuleEngineTests();
+            fixture.CreateTemp();
+            try
+            {
+                method.Invoke(fixture, full);
+            }
+            catch (TargetInvocationException)
+            {
+                // A failing case fails under its own name; here only the rules it fired matter.
+            }
+            finally
+            {
+                fixture.DeleteTemp();
+            }
         }
     }
 }
