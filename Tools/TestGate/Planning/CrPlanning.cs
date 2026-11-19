@@ -92,6 +92,27 @@ namespace TestGate.Planning
             return rank;
         }
 
+        /// <summary>
+        /// Is interface `iface` frozen? A type with exactly that name is in a PublicApi.txt baseline (not just the word somewhere in it),
+        /// and no open or approved CR is still changing its members (lines not in place yet): work against it would chase a moving target.
+        /// </summary>
+        public static bool Frozen(string root, string allApi, Dictionary<string, CrEntry> crs, string iface)
+        {
+            var headers = new HashSet<string>(CrClassifier.Types(allApi).Keys.Where(h => TypeName(h) == iface), StringComparer.Ordinal);
+            if (headers.Count == 0)
+                return false;
+            return !crs.Values.Any(c => !c.Closed && c.Status != CrLog.Delivered && c.Api.Any(l => headers.Contains(l.Trim())) && !CrStore.ApiInPlace(root, c));
+        }
+
+        /// <summary>"interface Game.B.Contracts.IThing`1" → "IThing".</summary>
+        public static string TypeName(string header)
+        {
+            string full = header.Trim().Split(' ').Last();
+            string name = full.Substring(full.LastIndexOf('.') + 1);
+            int tick = name.IndexOf('`');
+            return tick >= 0 ? name.Substring(0, tick) : name;
+        }
+
         private static double Age(CrEntry c, DateTime now) =>
             DateTime.TryParse(c.FiledTs, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var t) ? (now - t).TotalHours : 0;
     }

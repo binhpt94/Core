@@ -87,11 +87,16 @@ namespace TestGate.AgentControl
                     foreach (var id in reqs)
                         task.Requirements[id] = plan.Requirement(id).Hash;
                     task.RushDebt = notes;
-                    // Working on an approved CR that changes contracts: its PublicApi lines + a skeleton are this task's to write.
+                    // Working on a CR filed in another worktree: its lines travel with this branch (the tests covering it need them).
                     var crs = CrStore.Load(root);
                     foreach (var id in reqs)
-                        if (crs.TryGetValue(id, out var cr) && cr.IsRequirement && cr.Api.Count > 0 && cr.Module != "Core")
-                            task.CrGrants[id] = cr.Module;
+                        if (crs.TryGetValue(id, out var cr) && CrStore.Adopt(root, cr) > 0)
+                            Console.WriteLine(id + ": copied from the shared CR log into " + Game.Architecture.Rules.CrLog.FileOf(cr.To) + " (commit it with your work)");
+                    // Contracts grants: CRs this task works on, and approved API CRs this feature asked for that are not in place yet.
+                    foreach (var g in CrStore.GrantsFor(root, reqs, CrCli.FromOf(plan, task)))
+                        task.CrGrants[g.Key] = g.Value;
+                    if (task.Provenance == "maintenance")
+                        task.CoverBaseline = Provenance.CoverResults(root, task.Features);
                     TaskStore.Save(root, task);
                     TaskRegistry.Upsert(root, task, reqs);
                     Recorder.Emit(Recorder.New(EventTypes.TaskCreated, "task-cli").With("id", task.Id).With("title", text).With("status", task.Status)

@@ -45,16 +45,65 @@ namespace Game.Architecture.Rules
 
         public static string FileOf(string target) => Dir + "/" + target + ".txt";
 
+        /// <summary>
+        /// Tracked logs of this checkout + the mirror every worktree of the repository shares (git common dir): a CR filed in A's
+        /// worktree is visible to B's worktree before A's branch is merged. Same line in both = one event; order = time, then file first.
+        /// </summary>
         public static Dictionary<string, CrEntry> Load(string repoRoot)
         {
             var crs = new Dictionary<string, CrEntry>(StringComparer.Ordinal);
-            string dir = Path.Combine(repoRoot ?? "", Dir);
-            if (repoRoot == null || !Directory.Exists(dir))
+            if (repoRoot == null)
                 return crs;
-            foreach (var file in Directory.GetFiles(dir, "*.txt").OrderBy(f => f, StringComparer.Ordinal))
-                foreach (var line in File.ReadAllLines(file).Where(l => l.Trim().Length > 0))
-                    Apply(crs, line);
+            var lines = new List<string>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var dir in new[] { Path.Combine(repoRoot, Dir), MirrorDir(repoRoot) })
+                if (dir != null && Directory.Exists(dir))
+                    foreach (var file in Directory.GetFiles(dir, "*.txt").OrderBy(f => f, StringComparer.Ordinal))
+                        foreach (var line in File.ReadAllLines(file).Select(l => l.Trim()).Where(l => l.Length > 0))
+                            if (seen.Add(line))
+                                lines.Add(line);
+            foreach (var line in lines.OrderBy(TsOf, StringComparer.Ordinal).ThenBy(l => l.StartsWith("file ", StringComparison.Ordinal) ? 0 : 1))
+                Apply(crs, line);
             return crs;
+        }
+
+        /// <summary>Lines of one tracked log (this checkout only: what a commit will carry).</summary>
+        public static List<string> TrackedLines(string repoRoot, string target)
+        {
+            string p = Path.Combine(repoRoot, FileOf(target));
+            return File.Exists(p) ? File.ReadAllLines(p).Select(l => l.Trim()).Where(l => l.Length > 0).ToList() : new List<string>();
+        }
+
+        private static string TsOf(string line)
+        {
+            var m = Regex.Match(line, @"\bts=(\S+)");
+            return m.Success ? m.Groups[1].Value : "";
+        }
+
+        /// <summary>&lt;git common dir&gt;/agent-control/crs, found from files only (works in a worktree, where .git is a file); null if no git.</summary>
+        public static string MirrorDir(string repoRoot)
+        {
+            try
+            {
+                string git = Path.Combine(repoRoot, ".git");
+                string common = null;
+                if (Directory.Exists(git))
+                    common = git;
+                else if (File.Exists(git))
+                {
+                    string first = File.ReadAllText(git).Trim();
+                    if (!first.StartsWith("gitdir:", StringComparison.Ordinal))
+                        return null;
+                    string gitdir = first.Substring(7).Trim();
+                    if (!Path.IsPathRooted(gitdir))
+                        gitdir = Path.GetFullPath(Path.Combine(repoRoot, gitdir));
+                    string cd = Path.Combine(gitdir, "commondir");
+                    common = File.Exists(cd) ? Path.GetFullPath(Path.Combine(gitdir, File.ReadAllText(cd).Trim())) : gitdir;
+                }
+                return common == null ? null : Path.Combine(common, "agent-control", "crs");
+            }
+            catch (IOException) { return null; }
+            catch (UnauthorizedAccessException) { return null; }
         }
 
         public static void Apply(Dictionary<string, CrEntry> crs, string line)

@@ -40,7 +40,7 @@ namespace TestGate.Planning
                 Slots = inputs.Slots.Values.OrderBy(x => x.Id, System.StringComparer.Ordinal).ToList(),
                 ArtLane = report.Gaps.Where(g => g.Actor == "art" || (g.Actor == "human" && g.Kind == ReqStatus.NeedsReview)).ToList(),
                 Crs = report.Crs,
-                Owner = report.Gaps.Where(g => g.Actor == "human").ToList()
+                Owner = report.Gaps.Where(g => g.Actor == "human").Concat(MessageTrace.Gaps(root)).ToList()
             };
         }
     }

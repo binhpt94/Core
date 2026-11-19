@@ -136,6 +136,9 @@ namespace TestGate.AgentControl
                 return Fail("Refused: the session that asked for " + id + " can't rule on it (another session is the arbiter)", 3);
             string verb = ruling == "keep" ? "approve" : ruling;
             CrStore.Append(root, cr.To, verb + " " + id + " by=arbiter:" + session + " ts=" + Now + " reason=" + why.Trim());
+            string asker = ruling == "keep" ? CrStore.GrantToAsker(root, CrStore.Load(root)[id]) : null;
+            if (asker != null)
+                Console.WriteLine(id + ": the asking task " + asker + " may now write " + CrStore.ContractsDir(cr.Module) + " (the CR's PublicApi lines + a skeleton).");
             Console.WriteLine(id + ": " + (ruling == "keep" ? "approved: it is now a requirement of " + cr.To + " (roadmap next)" : ruling == "reject" ? "rejected (the asker changes approach or files another CR)" : "asked the owner (cr decide)"));
             return 0;
         }
@@ -196,6 +199,8 @@ namespace TestGate.AgentControl
                 Console.Write("Why (optional): ");
                 string why = (Console.ReadLine() ?? "").Trim();
                 CrStore.Append(root, c.To, (answer == "y" ? "approve " : "reject ") + c.Id + " by=owner ts=" + Now + " reason=" + (why.Length > 0 ? why : "owner"));
+                if (answer == "y")
+                    CrStore.GrantToAsker(root, CrStore.Load(root)[c.Id]);
                 if (answer == "y" && c.Kind.EndsWith(CrClassifier.Meaning, StringComparison.Ordinal) && c.To != CrLog.CoreTarget)
                     Console.WriteLine("  → " + c.Id + " is now a requirement of " + c.To + ". To reword the plan itself, add the R- line to features.md.");
             }

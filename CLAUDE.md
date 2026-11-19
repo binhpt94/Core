@@ -125,7 +125,9 @@ thread and checks the lifetime.
   feature (it owes CR-n until delivered). New types only: the gate approves at once and your task may write B's Contracts (exactly
   those PublicApi lines + a skeleton). Breaking: another session rules (`cr rule CR-n keep|reject|ask "<why>"`). No API (meaning) or
   breaking Core: the owner (`cr decide`, theirs). An approved CR is a requirement of B: `task start … --from CR-n` (roles as usual).
-- A task without `--req`/`--from` is maintenance: changing a feature's `Contracts/` or `Logic/Domain/` there is `UNTRACED_CHANGE` at Stop.
+  A CR filed in another worktree is visible here at once; starting on it copies its lines into your branch: commit them.
+- A task without `--req`/`--from` is maintenance: changing a feature's `Contracts/` or `Logic/Domain/` there, or turning one of its
+  `[Covers]` tests from red to green, is `UNTRACED_CHANGE` at Stop.
 - Edits made through Bash (sed, scripts) are observed via git snapshots and judged like Edit. Undoing a change is always allowed.
 - At Stop: every changed file must be in scope, tests must not be weakened (fewer asserts/tests, new Ignore/Assume/#if), then the gate.
 - **MCP (Unity, Blender):** read tools (get/list/find/screenshot/run_tests) are free. Tools that change things need a task and

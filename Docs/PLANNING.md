@@ -108,6 +108,9 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
 - `task need <F-ID|Module|Core> "<what, why>" [--api "<PublicApi line>"]… [--patch .scratch/x.diff]` appends to
   `Docs/Plan/CRs/<target>.txt` (append-only, written only by the gate: `CR_WRITTEN` events; protected). Numbers are unique across
   worktrees (counter in the git common dir).
+- **Across worktrees:** every write also goes to a mirror in the git common dir (`agent-control/crs/`), so B's worktree sees A's CR
+  before A's branch is merged. The same line in both logs is one event. `task start --from CR-n` copies the CR's lines into this
+  branch's tracked log (a gate write: commit it), so the branch carrying `[Covers("CR-n")]` also carries the CR (ARCH111 on CI).
 - Who decides is computed from the API diff, not from what the asker says:
 
 | Kind | What | Decides |
@@ -120,11 +123,20 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
 
 - **Approved = requirement of B:** CR-n joins B's feature (tag `[cr]`, features.md untouched): `[Covers("CR-n")]`, seals, roles,
   `roadmap next` work like any R- (`task start … --from CR-n` = `--req CR-n`; a task on an API CR gets the same Contracts grant).
+- **Grants arrive late too:** when an arbiter or the owner approves an API CR, the asker's task (if still open, in any worktree)
+  gets its Contracts grant at once; a later task of the asking feature gets it at start while the CR's lines are not in place.
+- **Frozen interface** (`contract F-X (IName)`): a type named exactly `IName` is in a PublicApi.txt baseline, and no open or approved
+  CR is still changing its members (lines not in place yet). A word somewhere in the file is not enough.
 - **Nobody waits idle:** the asker works on a fake; its feature carries debt `chờ … CR-n` and is never DONE until CR-n is VERIFIED.
   CR work runs at the priority of the feature waiting for it; approved and undone after 24 h = `CR_OVERDUE` for the owner.
-- **Provenance:** a task without `--req`/`--from` is maintenance; changing `Contracts/` or `Logic/Domain/` there is `UNTRACED_CHANGE`.
-  `SendMessage` is logged (`AGENT_MESSAGE` with the sender's task) and answered with a hint to file a CR.
-- Dashboard (tab 1): "Cần bạn quyết" lists every owner gap and the open CRs.
+- **Provenance:** a task without `--req`/`--from` is maintenance. `UNTRACED_CHANGE` at Stop when it changes `Contracts/` or
+  `Logic/Domain/`, or when a `[Covers]` test of its features that was red at task start is green after the gate (behaviour delivered
+  that nothing asked for). `SendMessage` is logged (`AGENT_MESSAGE` with the sender's task) and answered with a hint to file a CR.
+- Dashboard (tab 1): "Cần bạn quyết" lists every owner gap, the open CRs, and `MESSAGE_THEN_EDIT` pairs: a message, then within 2 h
+  another session editing a feature in a task without requirement (event logs of every worktree with an open task; evidence, not a block).
+- Owner-only commands (`task approve`, `roadmap accept`, `art accept`, `tests unseal|grandfather`, `cr decide`) are refused when the
+  gate is really invoked with them (also via `bash -c`, pipes, `dotnet run --project Tools/TestGate`); quoting them in a commit
+  message or a grep is not running them.
 
 ```bash
 ./Tools/test-gate.sh task need Progress "ICoins để cộng xu" --api "interface Game.Progress.Contracts.ICoins"
