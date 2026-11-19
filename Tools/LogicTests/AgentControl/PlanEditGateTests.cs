@@ -118,6 +118,51 @@ namespace LogicTests.AgentControl
             Assert.That(AgentHooks.Post(_root, bash, NoRules), Is.EqualTo(2));
         }
 
+        private string CorePath => Path.Combine(_root, "Docs", "Plan", "Core.md");
+
+        [Test]
+        public void ACoreEdit_AsksTheOwner_WithTheLinesThatChange()
+        {
+            Write("Docs/Plan/Core.md", "# Game\n\nĐúng thì hạ slime.\nSai thì slime nổi điên.\n");
+            var edit = Tool("Edit", "tc1", new Dictionary<string, object> { ["file_path"] = CorePath, ["old_string"] = "Sai thì slime nổi điên.", ["new_string"] = "Sai thì mất máu." });
+            var d = PlanEditGate.Decide(_root, edit);
+            Assert.That(d.Kind, Is.EqualTo(PlanEditDecision.Ask));
+            Assert.That(d.Reason, Does.Contain("Docs/Plan/Core.md"));
+            Assert.That(d.Reason, Does.Contain("+ Sai thì mất máu."));
+            Assert.That(d.Reason, Does.Contain("- Sai thì slime nổi điên."));
+            Assert.That(d.Reason, Does.Not.Contain("Đúng thì hạ slime."), "unchanged lines are not listed");
+        }
+
+        [Test]
+        public void AnApprovedCoreWrite_IsInScope_ALaterBashChangeIsNot()
+        {
+            Write("Docs/Plan/Core.md", "# Game\n");
+            var write = Tool("Write", "tc2", new Dictionary<string, object> { ["file_path"] = CorePath, ["content"] = "# Game\n\nMới.\n" });
+            Assert.That(AgentHooks.Pre(_root, write), Is.EqualTo(0));
+            File.WriteAllText(CorePath, "# Game\n\nMới.\n");
+            Assert.That(AgentHooks.Post(_root, write, NoRules), Is.EqualTo(0));
+
+            var bash = Tool("Bash", "tc3", new Dictionary<string, object> { ["command"] = "echo x >> Docs/Plan/Core.md" });
+            AgentHooks.Pre(_root, bash);
+            File.AppendAllText(CorePath, "x\n");
+            Assert.That(AgentHooks.Post(_root, bash, NoRules), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void AnApproval_CountsOnlyForItsOwnFile()
+        {
+            // The plan approved with some content; the same content written to Core.md through Bash is still a breach.
+            string proposed = Plan + "- R-A-TWO  Hai\n";
+            var write = Tool("Write", "tc4", new Dictionary<string, object> { ["file_path"] = PlanPath, ["content"] = proposed });
+            AgentHooks.Pre(_root, write);
+            File.WriteAllText(PlanPath, proposed);
+            AgentHooks.Post(_root, write, NoRules);
+            var bash = Tool("Bash", "tc5", new Dictionary<string, object> { ["command"] = "cp Docs/Plan/features.md Docs/Plan/Core.md" });
+            AgentHooks.Pre(_root, bash);
+            File.WriteAllText(CorePath, proposed);
+            Assert.That(AgentHooks.Post(_root, bash, NoRules), Is.EqualTo(2));
+        }
+
         [Test]
         public void Draft_IsCheckedByTheGate_AndListsEveryChange()
         {

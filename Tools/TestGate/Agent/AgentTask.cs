@@ -87,7 +87,7 @@ namespace TestGate.AgentControl
         /// <summary>Owner-only paths: never writable by an agent, whatever the task says (mirrors .claude/settings.json + CODEOWNERS).</summary>
         public static readonly string[] Protected =
         {
-            ".agent/", ".claude/", ".github/", "Tools/", "Docs/Plan/features.md", "Docs/Plan/accepted.txt", "Docs/Plan/art-accepted.txt", "UnityProject/ProjectSettings/", "Tools/LogicTests/LogicTests.csproj", "Tools/ArchitecturePolicy.txt", "CLAUDE.md",
+            ".agent/", ".claude/", ".github/", "Tools/", "Docs/Plan/features.md", "Docs/Plan/Core.md", "Docs/Plan/accepted.txt", "Docs/Plan/art-accepted.txt", "UnityProject/ProjectSettings/", "Tools/LogicTests/LogicTests.csproj", "Tools/ArchitecturePolicy.txt", "CLAUDE.md",
             Game + "Architecture/", Game + "Tests/Architecture/", Game + "Core/Editor/", "UnityProject/Assets/ThirdParty/", "UnityProject/Assets/Plugins/", "Docs/RULES.md"
         };
 
@@ -96,8 +96,8 @@ namespace TestGate.AgentControl
 
         private static readonly string[] ProtectedSegments = { "/Tests/Replays/", "/Tests/Layout/" };
 
-        /// <summary>The Dashboard's hand-written sources: the owner asks an AI to edit them, in any task (no rule reads them).</summary>
-        public static bool IsDashboardSource(string path) => path == "Docs/Plan/Core.md" || path == ProjectNotes.RelativePath;
+        /// <summary>The owner's notes (Dashboard): an AI edits them on request, in any task. Core.md goes through PlanEditGate (yes/no).</summary>
+        public static bool IsDashboardSource(string path) => path == ProjectNotes.RelativePath;
 
         /// <summary>Written only by generators whose output a rule verifies (ARCH090): safe for any active task.</summary>
         public static bool IsGenerated(string path) => path.StartsWith("Docs/Architecture/", StringComparison.Ordinal);

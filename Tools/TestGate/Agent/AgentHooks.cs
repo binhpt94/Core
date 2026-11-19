@@ -113,8 +113,8 @@ namespace TestGate.AgentControl
             if (WriteTools.Contains(h.ToolName ?? ""))
             {
                 string rel = Rel(root, h.Input("file_path") ?? h.Input("notebook_path"));
-                if (PlanEditGate.IsPlan(rel))
-                    return PrePlan(root, h);       // before scope: even a core-maintenance task asks the owner for the plan
+                if (PlanEditGate.IsGated(rel))
+                    return PrePlan(root, h, rel);  // before scope: even a core-maintenance task asks the owner for the plan / core idea
                 var d = ScopePolicy.Check(task, rel);
                 if (d.Allowed)
                     return 0;
@@ -150,16 +150,16 @@ namespace TestGate.AgentControl
         }
 
         /// <summary>features.md: checked by the gate, then the owner answers yes/no in Claude Code (PlanEditGate).</summary>
-        private static int PrePlan(string root, HookInput h)
+        private static int PrePlan(string root, HookInput h, string rel)
         {
             var d = PlanEditGate.Decide(root, h);
             if (d.Kind == PlanEditDecision.Deny)
             {
-                Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "hook").With("tool", h.ToolName).With("target", PlanParser.RelativePath).With("reason", Trim(d.Reason, 300)));
+                Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "hook").With("tool", h.ToolName).With("target", rel).With("reason", Trim(d.Reason, 300)));
                 Console.Error.WriteLine("BLOCKED: " + d.Reason);
                 return 2;
             }
-            Recorder.Emit(Recorder.New(PlanEditGate.AskedEvent, "hook").With("tool", h.ToolName).With("path", PlanParser.RelativePath)
+            Recorder.Emit(Recorder.New(PlanEditGate.AskedEvent, "hook").With("tool", h.ToolName).With("path", rel)
                 .With("toolUseId", h.ToolUseId).With("proposed", d.ProposedHash).With("changes", Trim(d.Reason, 600)));
             Console.WriteLine(PlanEditGate.AskJson(d));
             return 0;
@@ -240,8 +240,8 @@ namespace TestGate.AgentControl
                 string rel = Rel(root, h.Input("file_path") ?? h.Input("notebook_path"));
                 if (rel == null)
                     return 0;
-                if (PlanEditGate.IsPlan(rel))
-                    PlanEditGate.AfterWrite(root, h);   // the tool ran = the owner said yes to this exact text
+                if (PlanEditGate.IsGated(rel))
+                    PlanEditGate.AfterWrite(root, h, rel);   // the tool ran = the owner said yes to this exact text
                 RecordFile(root, task, rel, h.ToolName, null, null, feedback);
                 feedback.AddRange(checkFiles(new[] { rel }));
             }

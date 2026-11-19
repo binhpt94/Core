@@ -27,11 +27,12 @@ namespace LogicTests.AgentControl
         }
 
         [Test]
-        public void AnAI_MayFillTheDashboardSources_InAnyTask()
+        public void AnAI_MayFillTheNotes_InAnyTask_TheCoreIdeaGoesThroughTheOwnersYesNo()
         {
             var task = ScopePolicy.Start("T1", "x", new[] { "A" }, new string[0], false, "now");
-            Assert.That(ScopePolicy.Check(task, "Docs/Plan/Core.md").Allowed, Is.True);
             Assert.That(ScopePolicy.Check(task, "Docs/Plan/Notes.md").Allowed, Is.True);
+            Assert.That(ScopePolicy.Check(task, "Docs/Plan/Core.md").Allowed, Is.False, "Core.md: only Edit/Write after the owner's yes (PlanEditGate)");
+            Assert.That(PlanEditGate.IsGated("Docs/Plan/Core.md"), Is.True);
             Assert.That(ScopePolicy.Check(task, "Docs/Plan/features.md").Allowed, Is.False, "the plan stays the owner's");
         }
     }
