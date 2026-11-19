@@ -60,8 +60,8 @@ namespace TestGate.AgentControl
             var agentChanged = changed.Where(p => AuthorOf(p, authors) == "agent").ToList();
             var humanChanged = changed.Where(p => AuthorOf(p, authors) == "human").ToList();
             bool agentTouchedCode = agentChanged.Any(IsCode);
-            // Docs/Plan/Inbox/ = proposals the agent is supposed to write; no rule reads them
-            bool agentTouchedAssetsOrPlan = agentChanged.Where(p => !p.StartsWith("Docs/Plan/Inbox/", StringComparison.Ordinal)).Any(p => AssetRules.IsYaml(p) || p.StartsWith("Docs/Plan/", StringComparison.Ordinal) || p.EndsWith(".meta", StringComparison.Ordinal) || !p.StartsWith("UnityProject/Assets/_Game/", StringComparison.Ordinal) && p.StartsWith("UnityProject/Assets/", StringComparison.Ordinal));
+            // Docs/Plan/Inbox/ and the Dashboard sources (Core.md, Notes.md) = what the agent is supposed to write; no rule reads them
+            bool agentTouchedAssetsOrPlan = agentChanged.Where(p => !p.StartsWith("Docs/Plan/Inbox/", StringComparison.Ordinal) && !ScopePolicy.IsDashboardSource(p)).Any(p => AssetRules.IsYaml(p) || p.StartsWith("Docs/Plan/", StringComparison.Ordinal) || p.EndsWith(".meta", StringComparison.Ordinal) || !p.StartsWith("UnityProject/Assets/_Game/", StringComparison.Ordinal) && p.StartsWith("UnityProject/Assets/", StringComparison.Ordinal));
             var fixes = new List<Fix>();
 
             foreach (var v in violations)

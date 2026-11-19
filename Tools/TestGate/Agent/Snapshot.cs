@@ -23,6 +23,8 @@ namespace TestGate.AgentControl
         public TaskView Task { get; set; }
         public Attention Attention { get; set; } = new Attention();
         public object Roadmap { get; set; }
+        public string Core { get; set; } = "";                         // Docs/Plan/Core.md as written (the project's core idea)
+        public ProjectNotesResult Notes { get; set; } = new ProjectNotesResult();  // Docs/Plan/Notes.md, newest first
         public Anomalies Anomalies { get; set; } = new Anomalies();
         public List<SessionSummary> Sessions { get; set; } = new List<SessionSummary>();
         public object Housekeeping { get; set; }

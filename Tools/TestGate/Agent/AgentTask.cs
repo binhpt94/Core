@@ -96,6 +96,9 @@ namespace TestGate.AgentControl
 
         private static readonly string[] ProtectedSegments = { "/Tests/Replays/", "/Tests/Layout/" };
 
+        /// <summary>The Dashboard's hand-written sources: the owner asks an AI to edit them, in any task (no rule reads them).</summary>
+        public static bool IsDashboardSource(string path) => path == "Docs/Plan/Core.md" || path == ProjectNotes.RelativePath;
+
         /// <summary>Written only by generators whose output a rule verifies (ARCH090): safe for any active task.</summary>
         public static bool IsGenerated(string path) => path.StartsWith("Docs/Architecture/", StringComparison.Ordinal);
 
@@ -123,6 +126,8 @@ namespace TestGate.AgentControl
                 return ScopeDecision.Allow("generated output (verified by ARCH090)");
             if (path.StartsWith("Docs/Plan/Inbox/", StringComparison.Ordinal))
                 return ScopeDecision.Allow("proposal for the human (Docs/Plan/Inbox)");
+            if (IsDashboardSource(path))
+                return ScopeDecision.Allow("dashboard source the owner asked an AI to fill");
             foreach (var f in task.Features)
                 if (path.StartsWith(Game + "Features/" + f + "/", StringComparison.Ordinal))
                     return ScopeDecision.Allow("inside feature " + f);
