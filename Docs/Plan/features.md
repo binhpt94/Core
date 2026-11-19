@@ -63,5 +63,16 @@ deps: hard F-ARENA
 - R-PAUSE-RESUME  Tiếp tục đúng trạng thái trước khi dừng
 deps: hard F-TIMER
 
+## F-COINS  Xu thưởng khi thắng  [P2] [modules: MathQuiz, Progress] [slots: MathQuiz.CoinFx] [art: approved]
+Thắng = qua hết 10 câu của vòng mà căn cứ còn máu. Xu được tích lũy qua các vòng (để sau này dùng ở cửa hàng).
+- R-COIN-WIN  Thắng vòng thì nhận xu; thua thì không nhận xu nào
+- R-COIN-AMOUNT  Số xu = 10 xu thắng vòng + 1 xu cho mỗi câu trả lời đúng
+- R-COIN-ONCE  Mỗi vòng chỉ cộng xu một lần, kể cả bấm đúp; phát replay không cộng xu
+- R-COIN-SAVE  Tổng xu được lưu, mở lại game vẫn còn; dữ liệu hỏng được sửa an toàn
+- R-COIN-SUMMARY  Màn tổng kết hiện số xu vừa nhận và tổng xu hiện có
+- R-COIN-SFX  Nhận xu thì phát âm thanh nhận xu đúng một lần; thua thì không phát
+- R-COIN-FX  Nhận xu có hiệu ứng xu bay vào tổng xu, rõ và vui mắt trên điện thoại  [manual]
+deps: hard F-QUIZ-CORE · hard F-ARENA · soft F-SUMMARY
+
 ## F-SHOP  Cửa hàng skin  [P3] [deferred]
 - R-SHOP-BUY  Mua skin bằng điểm

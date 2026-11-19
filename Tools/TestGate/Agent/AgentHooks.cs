@@ -113,6 +113,8 @@ namespace TestGate.AgentControl
             if (WriteTools.Contains(h.ToolName ?? ""))
             {
                 string rel = Rel(root, h.Input("file_path") ?? h.Input("notebook_path"));
+                if (PlanEditGate.IsPlan(rel))
+                    return PrePlan(root, h);       // before scope: even a core-maintenance task asks the owner for the plan
                 var d = ScopePolicy.Check(task, rel);
                 if (d.Allowed)
                     return 0;
@@ -144,6 +146,22 @@ namespace TestGate.AgentControl
                 Recorder.Emit(Recorder.New(EventTypes.AgentSpawned, "hook")
                     .With("agent", h.Input("subagent_type") ?? "general-purpose")
                     .With("description", Trim(h.Input("description") ?? h.Input("prompt"), 200)));
+            return 0;
+        }
+
+        /// <summary>features.md: checked by the gate, then the owner answers yes/no in Claude Code (PlanEditGate).</summary>
+        private static int PrePlan(string root, HookInput h)
+        {
+            var d = PlanEditGate.Decide(root, h);
+            if (d.Kind == PlanEditDecision.Deny)
+            {
+                Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "hook").With("tool", h.ToolName).With("target", PlanParser.RelativePath).With("reason", Trim(d.Reason, 300)));
+                Console.Error.WriteLine("BLOCKED: " + d.Reason);
+                return 2;
+            }
+            Recorder.Emit(Recorder.New(PlanEditGate.AskedEvent, "hook").With("tool", h.ToolName).With("path", PlanParser.RelativePath)
+                .With("toolUseId", h.ToolUseId).With("proposed", d.ProposedHash).With("changes", Trim(d.Reason, 600)));
+            Console.WriteLine(PlanEditGate.AskJson(d));
             return 0;
         }
 
@@ -222,6 +240,8 @@ namespace TestGate.AgentControl
                 string rel = Rel(root, h.Input("file_path") ?? h.Input("notebook_path"));
                 if (rel == null)
                     return 0;
+                if (PlanEditGate.IsPlan(rel))
+                    PlanEditGate.AfterWrite(root, h);   // the tool ran = the owner said yes to this exact text
                 RecordFile(root, task, rel, h.ToolName, null, null, feedback);
                 feedback.AddRange(checkFiles(new[] { rel }));
             }
@@ -266,7 +286,9 @@ namespace TestGate.AgentControl
             string state = after ?? (File.Exists(full) ? WorkSnapshot.HashFile(full) : WorkSnapshot.Deleted);
             // Undoing a change (back to HEAD, or to how it was when the task started) is always allowed.
             bool restored = state == WorkSnapshot.Clean || (task != null && task.Baseline.TryGetValue(rel, out var bh) && bh == state);
-            var d = restored ? ScopeDecision.Allow("restored to its original content") : ScopePolicy.Check(task, rel);
+            var d = restored ? ScopeDecision.Allow("restored to its original content")
+                : PlanEditGate.IsApproved(root, rel, state) ? ScopeDecision.Allow("plan change the owner approved (yes/no)")
+                : ScopePolicy.Check(task, rel);
             string impact;
             try
             {
@@ -390,7 +412,7 @@ namespace TestGate.AgentControl
                 if (baseline.TryGetValue(kv.Key, out var b) && b == kv.Value)
                     continue; // already like this before the task/session: not this agent's change
                 // Scope judges what the agent was SEEN doing; a change no observer saw (human in the IDE) is UNOBSERVED, not a scope breach.
-                var d = ScopePolicy.Check(task, kv.Key);
+                var d = PlanEditGate.IsApproved(root, kv.Key, kv.Value) ? ScopeDecision.Allow("plan change the owner approved (yes/no)") : ScopePolicy.Check(task, kv.Key);
                 if (!d.Allowed && !unobserved.Contains(kv.Key))
                     findings.Add("SCOPE " + kv.Key + ": " + d.Reason);
                 // Weakened tests are judged whoever changed them: a fake fix must not slip through an unobserved channel.

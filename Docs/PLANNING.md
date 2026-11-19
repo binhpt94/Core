@@ -1,7 +1,7 @@
 # Product plan: features, requirements, gaps, rush
 
-The plan is **data the human owns** (`Docs/Plan/features.md`), not a prompt. Agents read it, never edit it, and propose changes
-in `Docs/Plan/Inbox/`. Nothing in it says "done": every status is **computed** from tests and evidence.
+The plan is **data the human owns** (`Docs/Plan/features.md`), not a prompt. Agents propose changes in `Docs/Plan/Inbox/`, or,
+when the owner asks, write it after the owner's yes/no for that exact change (see "Changing the plan with an AI"). Nothing in it says "done": every status is **computed** from tests and evidence.
 
 ```
 Docs/Plan/features.md   the plan (human; CODEOWNERS; denied to agents)          ARCH110 checks it on every gate/commit
@@ -81,6 +81,12 @@ active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human).
 ./Tools/test-gate.sh roadmap accept R-ARENA-FEEL     # HUMAN ONLY (terminal)
 ```
 
+- **Changing the plan with an AI** (`Tools/TestGate/Agent/PlanEditGate.cs`): the agent drafts the whole file in
+  `.scratch/features.draft.md`, `roadmap draft <file>` checks it (ARCH110) and lists every change (`+ F-…`, `~ R-…: "old" → "new"`,
+  `- R-…`). Owner and agent adjust until agreed. The agent then writes features.md with Edit/Write: PreToolUse checks the text it
+  would write (invalid → blocked, the owner is not asked) and returns `ask`, so Claude Code shows the owner a yes/no with the same
+  list. Yes → PostToolUse records `PLAN_EDIT_APPROVED` for that exact content; the change is in scope only while the file is that
+  content. The next write asks again. Bash/scripts/MCP never ask: writing features.md through them is a scope breach.
 - **Parallel work:** one git worktree per agent. `task start` refuses modules another worktree's open task is using
   (the registry lives in the git common dir, so all worktrees see it). `roadmap next` already puts such items "after".
 - **Rush:** the human tags a feature `[rush]`. Its contract dependencies may then be unfinished if their interface is frozen;
