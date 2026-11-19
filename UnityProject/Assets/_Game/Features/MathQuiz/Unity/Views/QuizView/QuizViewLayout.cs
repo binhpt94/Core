@@ -39,7 +39,9 @@ namespace Game.MathQuiz.Presentation
             var root = CreatePanel("Background", canvasGo.transform, Background);
             Stretch(root);
             var layout = root.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(60, 60, 80, 80);
+            // Top/bottom clear the largest safe-area insets of the standard devices (notch phone: ≈118 top, ≈85 bottom
+            // in canvas units) with a small margin; the tablet still fits all minimum heights.
+            layout.padding = new RectOffset(60, 60, 128, 96);
             layout.spacing = 40;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = true;

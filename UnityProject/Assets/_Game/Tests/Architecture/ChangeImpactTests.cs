@@ -100,7 +100,7 @@ namespace Game.Architecture.Tests
             {
                 var i = C(path);
                 Assert.That(i.Roles, Is.EquivalentTo(new[] { ChangeRole.Integration, ChangeRole.FeatureViews }), i.ToString());
-                Assert.That(i.Views, Has.Count.EqualTo(2));
+                Assert.That(i.Views.Count, Is.EqualTo(2)); // not Has.Count: Unity's NUnit 3.5 can't find Count on an array
             }
         }
 
@@ -109,7 +109,7 @@ namespace Game.Architecture.Tests
         {
             var i = C("UnityProject/Assets/_Game/Core/Editor/ViewStage.cs");
             Assert.That(i.Roles, Is.EqualTo(new[] { ChangeRole.AllViews }));
-            Assert.That(i.Views, Has.Count.EqualTo(2));
+            Assert.That(i.Views.Count, Is.EqualTo(2)); // not Has.Count: Unity's NUnit 3.5 can't find Count on an array
         }
 
         [Test]
