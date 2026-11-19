@@ -15,6 +15,7 @@ namespace TestGate.Planning
     ///   roadmap next              what to do now, in parallel lanes, with the exact `task start` command
     ///   roadmap propose "text" [--feature F-ID]   agent → Docs/Plan/Inbox/ (the human decides)
     ///   roadmap accept R-ID       HUMAN ONLY: accept a [manual] requirement / a reworded one
+    ///   roadmap draft &lt;file&gt;      check a proposed features.md and list its feature/requirement changes
     /// </summary>
     public static class RoadmapCli
     {
@@ -23,6 +24,8 @@ namespace TestGate.Planning
         public static int Run(string root, string[] args)
         {
             string sub = args.Length > 1 ? args[1] : "status";
+            if (sub == "draft")
+                return Draft(root, args.Length > 2 ? args[2] : null);
             if (PlanParser.Load(root) == null)
             {
                 Console.WriteLine("No " + PlanParser.RelativePath + " yet. The human writes it (syntax: Docs/PLANNING.md).");
@@ -36,6 +39,31 @@ namespace TestGate.Planning
                 case "accept": return Accept(root, args.Length > 2 ? args[2] : null);
                 default: return Status(root, args.Length > 2 ? args[2] : null);
             }
+        }
+
+        /// <summary>
+        /// `roadmap draft &lt;file&gt;`: a whole proposed features.md (e.g. .scratch/features.draft.md) checked like the real one,
+        /// with every feature/requirement change. Show this to the owner; when agreed, write features.md (the owner is asked yes/no).
+        /// </summary>
+        private static int Draft(string root, string file)
+        {
+            if (file == null || !File.Exists(Path.Combine(root, file)) && !File.Exists(file))
+            {
+                Console.Error.WriteLine("usage: roadmap draft <file>   (a whole proposed " + PlanParser.RelativePath + ", e.g. .scratch/features.draft.md)");
+                return 2;
+            }
+            var r = PlanEditGate.Draft(root, File.ReadAllText(File.Exists(file) ? file : Path.Combine(root, file)));
+            foreach (var e in r.Errors)
+                Console.WriteLine("ERROR " + e);
+            if (r.Errors.Count > 0)
+            {
+                Console.WriteLine("Draft is invalid: fix it before asking the owner.");
+                return 1;
+            }
+            Console.WriteLine("Draft OK (ARCH110). Changes against " + PlanParser.RelativePath + ":");
+            foreach (var c in r.Changes.DefaultIfEmpty("(không đổi feature/requirement nào)"))
+                Console.WriteLine("  " + c);
+            return 0;
         }
 
         private static int Status(string root, string feature)

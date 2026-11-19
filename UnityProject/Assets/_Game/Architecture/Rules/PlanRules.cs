@@ -46,6 +46,16 @@ namespace Game.Architecture.Rules
                                                                              " (typo, or the requirement was removed: ask the human / propose it in " + PlanParser.InboxFolder + ")");
         }
 
+        /// <summary>ARCH110 on a proposed text (a draft, or what an edit would write): the same checks as on the file, nothing read from it.</summary>
+        public static IEnumerable<RuleViolation> CheckText(string repoRoot, string text)
+        {
+            var plan = PlanParser.Parse(text);
+            foreach (var e in plan.Errors)
+                yield return new RuleViolation("ARCH110", PlanParser.RelativePath, LineOf(e), e);
+            foreach (var v in Consistency(repoRoot, plan))
+                yield return v;
+        }
+
         private static IEnumerable<RuleViolation> Consistency(string repoRoot, Plan plan)
         {
             string P = PlanParser.RelativePath;

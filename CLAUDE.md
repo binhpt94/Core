@@ -139,8 +139,12 @@ thread and checks the lifetime.
 - Start planned work with `--req`: the task's scope comes from the feature's `[modules]`; blocked items are refused
   (hard dependency not DONE, contract not frozen, or not `[rush]`). Rush prints the integration debt it creates.
 - New tests that implement a requirement get `[Covers("R-ID")]` (`using Game.TestSupport;`). Unknown ids fail ARCH111.
-- Need a requirement/feature the plan doesn't have? `roadmap propose "<what and why>" --feature F-ID`. Never edit
-  `Docs/Plan/features.md` / `Docs/Plan/accepted.txt` (denied), never `roadmap accept` (human only).
+- **Adding or changing features/requirements (only when the owner asks):** write the whole proposed file to
+  `.scratch/features.draft.md`, run `./Tools/test-gate.sh roadmap draft .scratch/features.draft.md` and show the owner its list
+  of changes (`+ R-…`, `~ R-…`, `- R-…` with their text). Adjust with the owner until agreed, then write `Docs/Plan/features.md`
+  with **Edit/Write**: the gate checks the result and Claude Code asks the owner yes/no; one yes = one write. A single new R- may
+  skip the draft. Never write features.md through Bash/scripts (always a breach). Unsure? `roadmap propose "<what and why>"`.
+  `Docs/Plan/accepted.txt` stays denied, `roadmap accept` stays human only.
 - If Stop says **STALE task**: the human changed a requirement you were working on. Re-read it, adapt code and tests,
   `task close`, start again from `roadmap next`.
 - Syntax and statuses: `Docs/PLANNING.md`.
@@ -172,7 +176,8 @@ for replay/dispose/stale-result tests, assert `Logger.Errors` empty in `TearDown
 ## 13. Never
 - Touch protected files (`Tools/`, `Assets/_Game/Architecture/`, `Assets/_Game/Tests/Architecture/`, `**/PublicApi.txt`,
   `Tools/ArchitecturePolicy.txt`, `Docs/Architecture/`, `Assets/ThirdParty/`, `Assets/Plugins/`, `.claude/`, `.github/`, `ProjectSettings/`,
-  `Assets/_Game/Core/Editor/`, `**/Tests/Replays/`, `**/Tests/Layout/`, `Docs/Plan/features.md`, `Docs/Plan/accepted.txt`, `Docs/Plan/art-accepted.txt`):
+  `Assets/_Game/Core/Editor/`, `**/Tests/Replays/`, `**/Tests/Layout/`, `Docs/Plan/accepted.txt`, `Docs/Plan/art-accepted.txt`;
+  `Docs/Plan/features.md` only via Edit/Write after the owner's yes, see §9):
   they are denied to you and CODEOWNERS-reviewed. Need a new vendor or exception? Ask the human.
   Core maintenance (changing the rules or tools themselves): `task request --core "<why>"`; only after the human approves it
   may that task edit protected files (never `.agent/`). It ends with `task close`.

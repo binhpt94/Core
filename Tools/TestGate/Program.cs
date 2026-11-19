@@ -581,7 +581,13 @@ internal static class Program
 
     private static string ReadStdin()
     {
-        try { return Console.In.ReadToEnd(); }
+        // Hook JSON is UTF-8. Console.In uses the console code page on Windows and mangles Vietnamese text
+        // (an Edit's old_string would no longer match the file).
+        try
+        {
+            using (var reader = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false)))
+                return reader.ReadToEnd();
+        }
         catch (IOException) { return ""; }
     }
 
