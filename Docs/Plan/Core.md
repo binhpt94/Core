@@ -1,5 +1,7 @@
 # Quiz Defense
 
+Đây là demo core.
+
 Câu hỏi phép cộng (chọn 1 trong 3, 10 giây mỗi câu) trong khi slime ngẫu nhiên bò về căn cứ của bạn.
 
 - **Trả lời đúng:** hạ ngay con slime gần nhất.
