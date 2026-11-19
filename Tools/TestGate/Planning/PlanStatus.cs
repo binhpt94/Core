@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using TestGate.AgentControl;
 using System.Text.RegularExpressions;
 using Game.Architecture.Rules;
 
@@ -18,6 +19,9 @@ namespace TestGate.Planning
         public const string Unverified = "UNVERIFIED";      // code of its modules changed after the last test run
         public const string Stale = "STALE";                // its wording changed after it was verified
         public const string NeedsReview = "NEEDS_REVIEW";   // [manual], waiting for a human
+        public const string Unsealed = "UNSEALED";          // tests exist but no independent session sealed them (TestRoles)
+        public const string Tampered = "TAMPERED";          // sealed tests changed after sealing
+        public const string Disputed = "DISPUTED";          // the impl session says a sealed test is wrong: an arbiter (or the owner) decides
         public const string Deferred = "DEFERRED";
         public const string Dropped = "DROPPED";
 
@@ -29,9 +33,12 @@ namespace TestGate.Planning
             {
                 case Failing: return 0;
                 case Stale: return 1;
+                case Tampered: return 1;
                 case Unverified: return 2;
+                case Disputed: return 2;
                 case NotRun: return 3;
                 case NoTest: return 4;
+                case Unsealed: return 4;
                 default: return 5;
             }
         }
@@ -57,6 +64,8 @@ namespace TestGate.Planning
         public string Discipline { get; set; }
         public string Hash { get; set; }
         public List<string> Tests { get; set; } = new List<string>();
+        public bool OwnerDecides { get; set; }           // a dispute escalated to the owner (reword the requirement)
+        public string Role { get; set; }                 // who works this gap: tests | impl | arbiter (TestRoles)
     }
 
     public sealed class DependencyState
@@ -104,6 +113,7 @@ namespace TestGate.Planning
         /// <summary>agent = work an agent can do now; human = needs a decision/acceptance.</summary>
         public string Actor { get; set; }
         public int Severity { get; set; }
+        public string Role { get; set; }      // tests | impl | arbiter: which lane of `roadmap next` takes it
 
         public override string ToString() => Kind + " " + (Requirement ?? Feature) + ": " + Detail;
     }
@@ -136,6 +146,9 @@ namespace TestGate.Planning
         /// <summary>Interface name → frozen (listed in a PublicApi.txt baseline).</summary>
         public Func<string, bool> ContractFrozen { get; set; } = _ => false;
         public Func<string, string> TestsHash { get; set; } = _ => "";
+        /// <summary>Sealed tests per requirement (SealStore) and the current hash of a requirement's covering test methods.</summary>
+        public Dictionary<string, SealState> Seals { get; set; } = new Dictionary<string, SealState>(StringComparer.Ordinal);
+        public Func<string, string> SealHash { get; set; } = _ => "";
         public List<string> Proposals { get; set; } = new List<string>();
         /// <summary>Computed art level of every slot (ArtStatus).</summary>
         public Dictionary<string, SlotState> Slots { get; set; } = new Dictionary<string, SlotState>(StringComparer.Ordinal);
@@ -170,6 +183,8 @@ namespace TestGate.Planning
                 },
                 ContractFrozen = iface => Regex.IsMatch(api, @"(^|[\s.])" + Regex.Escape(iface) + @"(\s|$)", RegexOptions.Multiline),
                 TestsHash = req => PlanLedger.TestsHash(root, covers.Where(c => c.Requirement == req)),
+                Seals = SealStore.Load(root),
+                SealHash = req => SealStore.TestsHash(root, covers.Where(c => c.Requirement == req)),
                 Slots = ArtStatus.Compute(root),
                 Proposals = Directory.Exists(inbox) ? Directory.GetFiles(inbox, "*.md").Select(Path.GetFileName).OrderBy(x => x, StringComparer.Ordinal).ToList() : new List<string>(),
                 ChangedModules = changed
@@ -249,7 +264,7 @@ namespace TestGate.Planning
                     report.Gaps.Add(new Gap
                     {
                         Kind = r.Status, Feature = fs.Id, Requirement = r.Id, Detail = r.Detail,
-                        Actor = r.Status == ReqStatus.NeedsReview ? "human" : "agent", Severity = ReqStatus.Severity(r.Status)
+                        Actor = r.Status == ReqStatus.NeedsReview || r.OwnerDecides ? "human" : "agent", Severity = ReqStatus.Severity(r.Status), Role = r.Role
                     });
                 foreach (var a in fs.ArtDebt)
                     report.Gaps.Add(new Gap { Kind = "ART_DEBT", Feature = fs.Id, Detail = a, Actor = "art", Severity = 5 });
@@ -301,9 +316,13 @@ namespace TestGate.Planning
             if (covers.Count == 0)
             {
                 s.Status = ReqStatus.NoTest;
+                s.Role = TestRoles.Tests;
                 s.Detail = "no test has [Covers(\"" + r.Id + "\")]";
                 return s;
             }
+            if (SealProblem(input, r, s))
+                return s;
+            s.Role = TestRoles.Impl;
             var outcomes = covers.Select(c => (c, input.Results.Find(c.TestKey))).ToList();
             var missing = outcomes.Where(o => o.Item2.Count == 0).Select(o => o.c.TestKey).ToList();
             var failed = outcomes.SelectMany(o => o.Item2).Where(o => !o.Passed).Select(o => o.Key).Distinct().ToList();
@@ -321,6 +340,7 @@ namespace TestGate.Planning
             }
             if (input.Ledger.TryGetValue(r.Id, out var e) && e.RequirementHash != r.Hash)
             {
+                s.Role = TestRoles.Tests;
                 s.Status = ReqStatus.Stale;
                 s.Detail = e.TestsHash == input.TestsHash(r.Id)
                     ? "wording changed after verification and no covering test was updated (update the tests, or a human runs `roadmap accept`)"
@@ -338,6 +358,36 @@ namespace TestGate.Planning
             s.Status = ReqStatus.Verified;
             s.Detail = covers.Count + " test(s) passed at " + runAt.ToString("yyyy-MM-dd HH:mm") + " UTC";
             return s;
+        }
+
+        /// <summary>Separation of duties: a requirement counts only with tests sealed by another session, unchanged since, and undisputed.</summary>
+        private static bool SealProblem(PlanInputs input, PlanRequirement r, RequirementState s)
+        {
+            input.Seals.TryGetValue(r.Id, out var seal);
+            string who = seal?.Author == "legacy" ? "grandfathered" : "sealed by " + seal?.Author;
+            if (seal == null || seal.Void)
+                (s.Status, s.Role, s.Detail) = (ReqStatus.Unsealed, TestRoles.Tests,
+                    "tests not sealed by an independent session: task start --role tests --req " + r.Id + ", then tests seal " + r.Id);
+            else if (seal.RequirementHash != null && seal.RequirementHash != r.Hash)
+            {
+                // Reworded after it was verified: STALE says more (were the tests updated?); it still needs a new seal to count again.
+                if (input.Ledger.TryGetValue(r.Id, out var verified) && verified.RequirementHash != r.Hash)
+                    return false;
+                (s.Status, s.Role, s.Detail) = (ReqStatus.Unsealed, TestRoles.Tests, "wording changed after the tests were sealed: update them and seal again");
+            }
+            else if (seal.Ask)
+                (s.Status, s.Role, s.Detail, s.OwnerDecides) = (ReqStatus.Disputed, null, "the owner decides the wording (dispute escalated); the arbiter proposes it", true);
+            else if (seal.OpenDispute)
+                (s.Status, s.Role, s.Detail) = (ReqStatus.Disputed, TestRoles.Arbiter, "disputed by " + seal.DisputedBy + ": an arbiter rules (task start --role arbiter --req " + r.Id + ")");
+            else if (seal.Suspect)
+                (s.Status, s.Role, s.Detail) = (ReqStatus.Disputed, TestRoles.Arbiter, "re-check: other seals of " + seal.Author + " were fixed by an arbiter");
+            else if (seal.Red == "pending")
+                (s.Status, s.Role, s.Detail) = (ReqStatus.Unsealed, TestRoles.Tests, "red first not confirmed yet (Unity-only tests): CI/Unity must show them red at " + seal.Commit);
+            else if (input.SealHash(r.Id) != seal.Hash)
+                (s.Status, s.Role, s.Detail) = (ReqStatus.Tampered, TestRoles.Tests, "covering tests changed after they were " + who + ": revert, or a tests/arbiter session seals them again");
+            else
+                return false;
+            return true;
         }
 
         private static string Resolve(Plan plan, PlanReport report, FeatureState fs, PlanInputs input, Dictionary<string, string> memo, HashSet<string> visiting)

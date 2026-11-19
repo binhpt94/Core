@@ -139,6 +139,16 @@ thread and checks the lifetime.
 - Start planned work with `--req`: the task's scope comes from the feature's `[modules]`; blocked items are refused
   (hard dependency not DONE, contract not frozen, or not `[rush]`). Rush prints the integration debt it creates.
 - New tests that implement a requirement get `[Covers("R-ID")]` (`using Game.TestSupport;`). Unknown ids fail ARCH111.
+- **Separation of duties (requirement tests):** the session that writes a requirement's tests never writes its code. `roadmap next`
+  gives three lanes, each with its exact command:
+  - `--role tests`: write tests in `Features/<F>/Tests/` plus a skeleton (new members with `=> default` bodies, never `throw`), commit,
+    then `./Tools/test-gate.sh tests seal R-…` (lint: real asserts; red first: they must FAIL ON AN ASSERTION, twice the same).
+  - `--role impl` (another session): write the code until the sealed tests pass. `Tests/` is read-only to you. A test you think is
+    wrong: `tests dispute R-… "<what R- says vs what the test demands>"` and work on another requirement; never edit it.
+  - `--role arbiter` (a third session): `tests rule R-… keep|fix|ask "<why>"`. fix = correct the test and seal again; ask = the
+    requirement is ambiguous: propose the new wording to the owner (features.md yes/no). The 3rd dispute of one R- becomes ask.
+  - A requirement counts (VERIFIED) only with live, unchanged, undisputed sealed tests. Sealed tests that are red because the code
+    isn't written yet are reported by the gate, not a failure. `tests unseal` / `tests grandfather` are the owner's (denied to you).
 - **Adding or changing features/requirements (only when the owner asks):** write the whole proposed file to
   `.scratch/features.draft.md`, run `./Tools/test-gate.sh roadmap draft .scratch/features.draft.md` and show the owner its list
   of changes (`+ R-…`, `~ R-…`, `- R-…` with their text). Adjust with the owner until agreed, then write `Docs/Plan/features.md`
@@ -169,8 +179,8 @@ thread and checks the lifetime.
 for replay/dispose/stale-result tests, assert `Logger.Errors` empty in `TearDown`. C# 9 + NUnit 3.5 APIs only.
 
 ## 12. Workflow
-1. Restate the task; `roadmap next` → `task start ... --req R-...` (or `--feature F` for unplanned maintenance).
-2. `test-gate.sh plan` → failing test first → implement → `dotnet test Tools/LogicTests`.
+1. Restate the task; `roadmap next` → `task start ... --role tests|impl|arbiter --req R-...` (or `--feature F` for unplanned maintenance).
+2. `test-gate.sh plan` → role tests: failing test first, commit, `tests seal`; role impl: implement until the sealed tests pass → `dotnet test Tools/LogicTests`.
 3. Unity-side changes are batched; `test-gate.sh run` once at the end.
 4. Update the feature README if API/lifetimes/invariants changed.
 5. Report: what changed, which gates ran / didn't, anything you couldn't follow and why.

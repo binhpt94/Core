@@ -15,6 +15,7 @@ namespace TestGate.Planning
         public string Worktree { get; set; }
         public List<string> Modules { get; set; } = new List<string>();
         public List<string> Requirements { get; set; } = new List<string>();
+        public string Role { get; set; }           // TestRoles: tests and impl of one module may run side by side
         public string Status { get; set; }
         public string StartedUtc { get; set; }
     }
@@ -63,12 +64,13 @@ namespace TestGate.Planning
             }
         }
 
-        /// <summary>Other worktrees' open tasks whose modules overlap these.</summary>
-        public static List<RegisteredTask> Conflicts(string root, IEnumerable<string> modules)
+        /// <summary>Other worktrees' open tasks whose modules overlap these AND that write the same folders (TestRoles.Conflict).</summary>
+        public static List<RegisteredTask> Conflicts(string root, IEnumerable<string> modules, string role = null)
         {
             var mine = new HashSet<string>(modules, StringComparer.Ordinal);
             string here = Path.GetFullPath(root);
-            return Load(root).Where(t => t.Status != AgentTask.Closed && Path.GetFullPath(t.Worktree) != here && t.Modules.Any(mine.Contains)).ToList();
+            return Load(root).Where(t => t.Status != AgentTask.Closed && Path.GetFullPath(t.Worktree) != here && t.Modules.Any(mine.Contains)
+                                         && TestRoles.Conflict(t.Role, role)).ToList();
         }
 
         public static void Upsert(string root, AgentTask task, IEnumerable<string> requirements)
@@ -80,7 +82,7 @@ namespace TestGate.Planning
                     list.Add(new RegisteredTask
                     {
                         Id = task.Id, Title = task.Title, Worktree = Path.GetFullPath(root), Modules = task.Features.ToList(),
-                        Requirements = requirements.ToList(), Status = task.Status, StartedUtc = task.CreatedTs
+                        Requirements = requirements.ToList(), Role = task.Role, Status = task.Status, StartedUtc = task.CreatedTs
                     });
             });
         }

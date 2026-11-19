@@ -58,10 +58,18 @@ namespace TestGate.AgentControl
                     }
                     if (string.IsNullOrWhiteSpace(text) || (features.Count == 0 && paths.Count == 0))
                     {
-                        Console.Error.WriteLine("Usage: task start \"<what>\" (--req R-ID ... | --feature <Feature>) [--path P] [--tests]   (see: roadmap next)");
+                        Console.Error.WriteLine("Usage: task start \"<what>\" (--req R-ID ... | --feature <Feature>) [--role tests|impl|arbiter] [--path P] [--tests]   (see: roadmap next)");
                         return 64;
                     }
-                    var clash = TaskRegistry.Conflicts(root, features);
+                    string role = Value(args, "--role");
+                    string roleError = RoleError(root, role, reqs);
+                    if (roleError != null)
+                    {
+                        Console.Error.WriteLine("Cannot start: " + roleError);
+                        Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "task-cli").With("target", "task start --role " + role).With("reason", roleError));
+                        return 1;
+                    }
+                    var clash = TaskRegistry.Conflicts(root, features, role);
                     if (clash.Count > 0)
                     {
                         string why = string.Join("; ", clash.Select(c => c.Id + " in " + c.Worktree + " (modules " + string.Join(",", c.Modules.Intersect(features)) + ")"));
@@ -72,6 +80,7 @@ namespace TestGate.AgentControl
                     var unknown = features.Where(f => !Directory.Exists(Path.Combine(root, "UnityProject", "Assets", "_Game", "Features", f))).ToList();
                     task = ScopePolicy.Start("T" + DateTime.UtcNow.ToString("MMdd-HHmmss", CultureInfo.InvariantCulture), text, features, paths, tests, now);
                     task.Baseline = WorkSnapshot.Take(root).ToDictionary(k => k.Key, k => k.Value);
+                    task.Role = role;
                     var plan = Game.Architecture.Rules.PlanParser.Load(root);
                     foreach (var id in reqs)
                         task.Requirements[id] = plan.Requirement(id).Hash;
@@ -79,7 +88,7 @@ namespace TestGate.AgentControl
                     TaskStore.Save(root, task);
                     TaskRegistry.Upsert(root, task, reqs);
                     Recorder.Emit(Recorder.New(EventTypes.TaskCreated, "task-cli").With("id", task.Id).With("title", text).With("status", task.Status)
-                        .With("scope", task.ScopeText).With("baselineFiles", task.Baseline.Count.ToString())
+                        .With("scope", task.ScopeText).With("baselineFiles", task.Baseline.Count.ToString()).With("role", role)
                         .With("requirements", reqs.Count > 0 ? string.Join(",", reqs) : null).With("rush", notes.Count > 0 ? string.Join(" | ", notes) : null));
                     foreach (var n in notes)
                         Console.WriteLine(n);
@@ -169,6 +178,28 @@ namespace TestGate.AgentControl
             Recorder.Emit(Recorder.New(EventTypes.TaskApproved, "human-terminal").With("id", task.Id).With("scope", task.ScopeText));
             Console.WriteLine("Approved: " + task.ScopeText);
             return 0;
+        }
+
+        /// <summary>Can this role work these requirements now? impl needs live seals (no open dispute); arbiter needs something to rule on.</summary>
+        private static string RoleError(string root, string role, List<string> reqs)
+        {
+            if (role == null)
+                return null;
+            if (!TestRoles.All.Contains(role))
+                return "--role is one of: " + string.Join(", ", TestRoles.All);
+            if (reqs.Count == 0)
+                return "--role " + role + " needs the requirements it works on (--req R-ID ...)";
+            var seals = SealStore.Load(root);
+            foreach (var id in reqs)
+            {
+                seals.TryGetValue(id, out var s);
+                bool live = s != null && !s.Void;
+                if (role == TestRoles.Impl && (!live || s.OpenDispute || s.Ask || s.Suspect))
+                    return id + (live ? " is disputed or being re-checked: an arbiter settles it first" : " has no sealed tests yet: a --role tests session writes and seals them first");
+                if (role == TestRoles.Arbiter && !(live && (s.OpenDispute || s.Suspect)))
+                    return id + ": nothing to rule on (no open dispute, not marked for re-check)";
+            }
+            return null;
         }
 
         public static int Events(string root, string[] args)
@@ -379,6 +410,6 @@ namespace TestGate.AgentControl
         private static string Value(string[] args, string name) => Values(args, name).FirstOrDefault();
 
         private static bool IsValueOf(string[] args, int index) =>
-            index > 0 && (args[index - 1] == "--feature" || args[index - 1] == "--path" || args[index - 1] == "--out" || args[index - 1] == "--port" || args[index - 1] == "--session" || args[index - 1] == "--req");
+            index > 0 && (args[index - 1] == "--feature" || args[index - 1] == "--path" || args[index - 1] == "--out" || args[index - 1] == "--port" || args[index - 1] == "--session" || args[index - 1] == "--req" || args[index - 1] == "--role");
     }
 }

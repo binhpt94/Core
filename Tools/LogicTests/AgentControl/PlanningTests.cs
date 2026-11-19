@@ -69,7 +69,7 @@ namespace LogicTests.AgentControl
             var results = new TestResultsIndex();
             void T(string key, bool ok) => results.Add(new TestOutcome { Key = key, Passed = ok, RunUtc = Run });
             T("CoreTests.Ok", true); T("CoreTests.Fail", false); T("UiTests.Ui", true); T("AdsTests.Ads", true); T("RushTests.Rush", true);
-            return new PlanInputs
+            return SealFixture.SealAll(new PlanInputs
             {
                 Plan = PlanParser.Parse(plan),
                 Covers = new List<CoverEntry>
@@ -80,7 +80,7 @@ namespace LogicTests.AgentControl
                 Results = results,
                 ModuleChangedUtc = m => Run.AddMinutes(-5),
                 ContractFrozen = i => i == "IAds",
-            };
+            });
         }
 
         private static CoverEntry C(string req, string cls, string method) => new CoverEntry { Requirement = req, Class = cls, Method = method, File = "x.cs" };

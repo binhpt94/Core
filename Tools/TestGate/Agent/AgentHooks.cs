@@ -109,6 +109,20 @@ namespace TestGate.AgentControl
         {
             Recorder.Use(h);
             var task = TaskStore.Load(root);
+            RememberSession(root, h);
+
+            // Separation of duties: the session that wrote/sealed (or disputed) a requirement's tests can't write its code or rule on it.
+            if (task != null && task.IsActive && (task.Role == TestRoles.Impl || task.Role == TestRoles.Arbiter) &&
+                (WriteTools.Contains(h.ToolName ?? "") || h.ToolName == "Bash" || McpPolicy.IsMcp(h.ToolName)))
+            {
+                string conflict = TestSeal.SessionConflict(root, task, h.Session);
+                if (conflict != null)
+                {
+                    Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "hook").With("tool", h.ToolName).With("target", "role " + task.Role).With("reason", conflict));
+                    Console.Error.WriteLine("BLOCKED: " + conflict);
+                    return 2;
+                }
+            }
 
             if (WriteTools.Contains(h.ToolName ?? ""))
             {
@@ -147,6 +161,34 @@ namespace TestGate.AgentControl
                     .With("agent", h.Input("subagent_type") ?? "general-purpose")
                     .With("description", Trim(h.Input("description") ?? h.Input("prompt"), 200)));
             return 0;
+        }
+
+        /// <summary>The agent's session for gate commands run through Bash (`tests seal`/`dispute`/`rule` attribute by it).</summary>
+        private static void RememberSession(string root, HookInput h)
+        {
+            if (string.IsNullOrEmpty(h.Session))
+                return;
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, ".agent"));
+                File.WriteAllText(Path.Combine(root, ".agent", TestSeal.SessionFile), h.Session);
+            }
+            catch (IOException) { }
+        }
+
+        /// <summary>Tests/arbiter sessions may add only a skeleton to Logic/ or Contracts/ (default bodies), never the solution.</summary>
+        private static List<string> SkeletonFindings(string root, AgentTask task, string rel)
+        {
+            if (task == null || !task.IsActive || (task.Role != TestRoles.Tests && task.Role != TestRoles.Arbiter))
+                return new List<string>();
+            var feature = task.Features.FirstOrDefault(f => TestRoles.IsSkeletonPath(ScopePolicy.Game + "Features/" + f + "/", rel));
+            if (feature == null)
+                return new List<string>();
+            var (code, before) = AgentGit.Run(root, "show HEAD:" + rel);
+            string full = Path.Combine(root, rel);
+            string after = File.Exists(full) ? File.ReadAllText(full) : "";
+            return TestRoles.SkeletonViolations(code == 0 ? before : null, after).Take(5)
+                .Select(v => "SKELETON " + rel + ": " + v + " (role " + task.Role + " writes tests; the impl session writes the code)").ToList();
         }
 
         /// <summary>features.md: checked by the gate, then the owner answers yes/no in Claude Code (PlanEditGate).</summary>
@@ -221,6 +263,8 @@ namespace TestGate.AgentControl
                 return "accepting a requirement is a human decision (./Tools/test-gate.sh roadmap accept in a terminal)";
             if (c.Contains("task approve"))
                 return "approving a task's scope is for a human in a terminal (./Tools/test-gate.sh task approve)";
+            if (c.Contains("tests unseal") || c.Contains("tests grandfather"))
+                return "unsealing / grandfathering tests is the owner's last resort (a human at a terminal)";
             if (!viaGate && c.Contains(".agent"))
                 return ".agent/ (event log, task) is written only by the test gate";
             return null;
@@ -288,6 +332,7 @@ namespace TestGate.AgentControl
             bool restored = state == WorkSnapshot.Clean || (task != null && task.Baseline.TryGetValue(rel, out var bh) && bh == state);
             var d = restored ? ScopeDecision.Allow("restored to its original content")
                 : PlanEditGate.IsApproved(root, rel, state) ? ScopeDecision.Allow("plan change the owner approved (yes/no)")
+                : SealStore.IsGateWrite(root, rel, state) ? ScopeDecision.Allow("seal log written by the gate (tests …)")
                 : ScopePolicy.Check(task, rel);
             string impact;
             try
@@ -306,6 +351,12 @@ namespace TestGate.AgentControl
                 Recorder.Emit(Recorder.New(EventTypes.PolicyViolation, "git-observer").With("rule", "scope").With("path", rel).With("reason", d.Reason));
                 feedback.Add("SCOPE " + rel + " was changed by " + via + " but " + d.Reason + ". Revert it (git checkout -- " + rel + ") or ask for scope.");
             }
+            else if (!restored)
+                foreach (var s in SkeletonFindings(root, task, rel))
+                {
+                    Recorder.Emit(Recorder.New(EventTypes.PolicyViolation, "git-observer").With("rule", "skeleton").With("path", rel).With("reason", s));
+                    feedback.Add(s);
+                }
         }
 
         // ------------------------------------------------------------------ SessionStart / SubagentStop
@@ -412,9 +463,13 @@ namespace TestGate.AgentControl
                 if (baseline.TryGetValue(kv.Key, out var b) && b == kv.Value)
                     continue; // already like this before the task/session: not this agent's change
                 // Scope judges what the agent was SEEN doing; a change no observer saw (human in the IDE) is UNOBSERVED, not a scope breach.
-                var d = PlanEditGate.IsApproved(root, kv.Key, kv.Value) ? ScopeDecision.Allow("plan change the owner approved (yes/no)") : ScopePolicy.Check(task, kv.Key);
+                var d = PlanEditGate.IsApproved(root, kv.Key, kv.Value) ? ScopeDecision.Allow("plan change the owner approved (yes/no)")
+                    : SealStore.IsGateWrite(root, kv.Key, kv.Value) ? ScopeDecision.Allow("seal log written by the gate (tests …)")
+                    : ScopePolicy.Check(task, kv.Key);
                 if (!d.Allowed && !unobserved.Contains(kv.Key))
                     findings.Add("SCOPE " + kv.Key + ": " + d.Reason);
+                else if (d.Allowed && !unobserved.Contains(kv.Key))
+                    findings.AddRange(SkeletonFindings(root, task, kv.Key));
                 // Weakened tests are judged whoever changed them: a fake fix must not slip through an unobserved channel.
                 if (TestGuard.IsTestFile(kv.Key) && (task == null || !task.AllowTestChanges))
                 {
