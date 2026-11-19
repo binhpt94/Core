@@ -87,7 +87,17 @@ function foundation(M) {
   const list = rows.length ? `<table><thead><tr><th>Mã</th><th>Feature</th><th>Trạng thái</th><th>Ưu tiên</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
     : `<p class="muted">${featuresOf(M).length ? "Không có feature nào khớp bộ lọc." : "Chưa có <code>Docs/Plan/features.md</code>."}</p>`;
   const errors = M.roadmap && M.roadmap.errors.length ? M.roadmap.errors.map(e => `<p class="err">${esc(e)}</p>`).join("") : "";
-  return `<div class="card"><h2>Ý tưởng cốt lõi</h2>${doc}</div><div class="card"><h2>Danh sách feature (${features.length}/${featuresOf(M).length})</h2>${toolbar(M)}${list}${errors}</div>`;
+  return `<div class="card"><h2>Ý tưởng cốt lõi</h2>${doc}</div>${owner(M)}<div class="card"><h2>Danh sách feature (${features.length}/${featuresOf(M).length})</h2>${toolbar(M)}${list}${errors}</div>`;
+}
+
+// What only the owner can decide (CRs, proposals, reviews) + every change request between modules still open.
+function owner(M) {
+  const r = M.roadmap || {}, asks = r.owner || [], crs = r.crs || [];
+  if (!asks.length && !crs.length) return "";
+  const items = asks.map(g => `<li>${tag(g.kind, "warn")} ${esc(g.detail)}</li>`).join("");
+  const rows = crs.map(c => `<tr><td><code>${esc(c.id)}</code></td><td>${esc(c.from)} → ${esc(c.to)}</td><td>${esc(c.kind)}</td><td>${esc(c.status)}${c.decides ? " · " + esc(c.decides) + " quyết" : ""}</td><td>${esc(c.text)}</td></tr>`).join("");
+  return `<div class="card"><h2>Cần bạn quyết (${asks.length})</h2>${items ? `<ul>${items}</ul>` : `<p class="muted">Không có gì chờ bạn.</p>`}` +
+    (rows ? `<h3>Yêu cầu thay đổi giữa các module (CR)</h3><table><thead><tr><th>CR</th><th>Từ → tới</th><th>Loại</th><th>Trạng thái</th><th>Nội dung</th></tr></thead><tbody>${rows}</tbody></table>` : "") + `</div>`;
 }
 
 // Small Markdown: headings, bullets, paragraphs, `code`, **bold**. Escaped first: the file can't inject HTML.

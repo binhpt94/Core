@@ -15,6 +15,8 @@ namespace TestGate.AgentControl
     ///   task start "&lt;what&gt;" --feature F [--feature G] [--path P] [--tests]   one feature = active at once; wider = waits for approval
     ///   task request --feature G | --path P | --tests "&lt;why&gt;"               ask for more scope (current scope keeps working)
     ///   task request --core "&lt;why&gt;"                                          core maintenance: owner-only files writable (human approves)
+    ///   task need &lt;F-ID|Module|Core&gt; "&lt;what&gt;" [--api L]… [--patch P]  another module must change: a CR, never a chat message (CrCli)
+    ///   task start … --from CR-n                                             work on an approved CR (= --req CR-n)
     ///   task approve                                                         HUMAN ONLY: needs a terminal, refused inside Claude Code
     ///   task show | task close
     ///   events verify | events tail [n] | reconcile
@@ -42,7 +44,7 @@ namespace TestGate.AgentControl
                         Console.Error.WriteLine("Task " + task.Id + " is " + task.Status + ". Close it first (task close) or ask for more scope (task request).");
                         return 1;
                     }
-                    var reqs = Values(args, "--req");
+                    var reqs = Values(args, "--req").Concat(Values(args, "--from")).Distinct().ToList();
                     var notes = new List<string>();
                     if (reqs.Count > 0)
                     {
@@ -85,6 +87,11 @@ namespace TestGate.AgentControl
                     foreach (var id in reqs)
                         task.Requirements[id] = plan.Requirement(id).Hash;
                     task.RushDebt = notes;
+                    // Working on an approved CR that changes contracts: its PublicApi lines + a skeleton are this task's to write.
+                    var crs = CrStore.Load(root);
+                    foreach (var id in reqs)
+                        if (crs.TryGetValue(id, out var cr) && cr.IsRequirement && cr.Api.Count > 0 && cr.Module != "Core")
+                            task.CrGrants[id] = cr.Module;
                     TaskStore.Save(root, task);
                     TaskRegistry.Upsert(root, task, reqs);
                     Recorder.Emit(Recorder.New(EventTypes.TaskCreated, "task-cli").With("id", task.Id).With("title", text).With("status", task.Status)
@@ -114,6 +121,11 @@ namespace TestGate.AgentControl
 
                 case "approve":
                     return Approve(root, task, now);
+
+                case "need":
+                    return CrCli.Need(root, task, args.Length > 2 && !args[2].StartsWith("--", StringComparison.Ordinal) ? args[2] : null,
+                        args.Skip(3).Where((a, i) => !a.StartsWith("--", StringComparison.Ordinal) && !IsValueOf(args, i + 3)).FirstOrDefault(),
+                        Values(args, "--api"), Value(args, "--patch"));
 
                 case "close":
                     if (task == null || task.Status == AgentTask.Closed)
@@ -410,6 +422,7 @@ namespace TestGate.AgentControl
         private static string Value(string[] args, string name) => Values(args, name).FirstOrDefault();
 
         private static bool IsValueOf(string[] args, int index) =>
-            index > 0 && (args[index - 1] == "--feature" || args[index - 1] == "--path" || args[index - 1] == "--out" || args[index - 1] == "--port" || args[index - 1] == "--session" || args[index - 1] == "--req" || args[index - 1] == "--role");
+            index > 0 && (args[index - 1] == "--feature" || args[index - 1] == "--path" || args[index - 1] == "--out" || args[index - 1] == "--port" || args[index - 1] == "--session" || args[index - 1] == "--req" || args[index - 1] == "--role"
+                             || args[index - 1] == "--from" || args[index - 1] == "--api" || args[index - 1] == "--patch");
     }
 }

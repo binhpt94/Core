@@ -375,7 +375,7 @@ namespace TestGate.AgentControl
             SealOutcome o;
             switch (sub)
             {
-                case "seal": o = Seal(root, task, args.Skip(2).Where(a => a.StartsWith("R-", StringComparison.Ordinal)), session, now); break;
+                case "seal": o = Seal(root, task, args.Skip(2).Where(a => a.StartsWith("R-", StringComparison.Ordinal) || a.StartsWith("CR-", StringComparison.Ordinal)), session, now); break;
                 case "dispute": o = Dispute(root, task, Arg(2), session, Arg(3), now); break;
                 case "rule": o = Rule(root, task, Arg(2), Arg(3), session, Arg(4), now); break;
                 case "unseal":

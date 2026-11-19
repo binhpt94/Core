@@ -37,6 +37,11 @@ namespace TestGate.AgentControl
         public Dictionary<string, string> Baseline { get; set; } = new Dictionary<string, string>();
         /// <summary>tests | impl | arbiter | null (TestRoles): who writes the tests vs the code of its requirements.</summary>
         public string Role { get; set; }
+        /// <summary>CR id → module: an approved CR lets this task write that module's Contracts (its PublicApi lines + a skeleton, nothing else).</summary>
+        public Dictionary<string, string> CrGrants { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>Where the work comes from: plan requirements / approved CRs, core maintenance, or none (maintenance: no behaviour change).</summary>
+        public string Provenance => CoreMaintenance ? "core" : Requirements.Count > 0 ? "plan" : "maintenance";
 
         public const string Active = "active";
         public const string PendingApproval = "pending_approval";
@@ -89,7 +94,7 @@ namespace TestGate.AgentControl
         /// <summary>Owner-only paths: never writable by an agent, whatever the task says (mirrors .claude/settings.json + CODEOWNERS).</summary>
         public static readonly string[] Protected =
         {
-            ".agent/", ".claude/", ".github/", "Tools/", "Docs/Plan/features.md", "Docs/Plan/Core.md", "Docs/Plan/accepted.txt", "Docs/Plan/Seals/", "Docs/Plan/art-accepted.txt", "UnityProject/ProjectSettings/", "Tools/LogicTests/LogicTests.csproj", "Tools/ArchitecturePolicy.txt", "CLAUDE.md",
+            ".agent/", ".claude/", ".github/", "Tools/", "Docs/Plan/features.md", "Docs/Plan/Core.md", "Docs/Plan/accepted.txt", "Docs/Plan/Seals/", "Docs/Plan/CRs/", "Docs/Plan/art-accepted.txt", "UnityProject/ProjectSettings/", "Tools/LogicTests/LogicTests.csproj", "Tools/ArchitecturePolicy.txt", "CLAUDE.md",
             Game + "Architecture/", Game + "Tests/Architecture/", Game + "Core/Editor/", "UnityProject/Assets/ThirdParty/", "UnityProject/Assets/Plugins/", "Docs/RULES.md"
         };
 
@@ -118,6 +123,8 @@ namespace TestGate.AgentControl
                 return ScopeDecision.Allow("scratch (gitignored, outside Assets/)");
             if (task != null && task.IsActive && task.CoreMaintenance && !path.StartsWith(GateLog, StringComparison.Ordinal))
                 return ScopeDecision.Allow("core maintenance (approved by a human)");
+            if (CrStore.IsGranted(task, path, out var cr))
+                return ScopeDecision.Allow("contracts change approved by " + cr + " (checked: its PublicApi lines + a skeleton only)");
             if (IsProtected(path))
                 return ScopeDecision.Deny(path + " is owner-only (protected); ask the human");
             if (task == null || task.Status == AgentTask.Closed)

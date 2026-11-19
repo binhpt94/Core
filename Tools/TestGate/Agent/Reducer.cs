@@ -309,7 +309,8 @@ namespace TestGate.AgentControl
                 case EventTypes.GateStarted: case EventTypes.GateFinished: return "gate";
                 case EventTypes.PolicyDenied: case EventTypes.PolicyViolation: return "policy";
                 case EventTypes.Claim: return "claim";
-                case EventTypes.AgentSpawned: case EventTypes.AgentStopped: case EventTypes.SessionStarted: return "agent";
+                case EventTypes.AgentSpawned: case EventTypes.AgentStopped: case EventTypes.SessionStarted: case EventTypes.AgentMessage: return "agent";
+                case EventTypes.CrFiled: return "task";
                 case EventTypes.CommandRun: return "command";
                 case EventTypes.StopAllowed: case EventTypes.StopBlocked: return "stop";
                 default: return e.Type.StartsWith("TASK_", StringComparison.Ordinal) ? "task" : "tool";
@@ -327,6 +328,8 @@ namespace TestGate.AgentControl
                 case EventTypes.TaskClosed: return "Đóng task " + e.Get("id");
                 case EventTypes.AgentSpawned: return "Tạo agent " + (e.Get("agent") ?? "");
                 case EventTypes.AgentStopped: return "Agent kết thúc";
+                case EventTypes.CrFiled: return "Yêu cầu thay đổi " + e.Get("id") + ": " + e.Get("from") + " → " + e.Get("to") + " (" + e.Get("kind") + ")";
+                case EventTypes.AgentMessage: return "Nhắn " + (e.Get("to") ?? "?") + (e.Get("fromTask") != null ? " (từ task " + e.Get("fromTask") + ")" : "");
                 case EventTypes.ToolUsed: return e.Get("tool");
                 case EventTypes.CommandRun: return "Bash: " + Trim(e.Get("command"), 48);
                 case EventTypes.FileModified: return (e.Get("inScope") == "false" ? "NGOÀI PHẠM VI: " : "Sửa ") + FileName(e.Get("path"));

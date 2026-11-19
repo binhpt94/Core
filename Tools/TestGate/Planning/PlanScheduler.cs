@@ -54,7 +54,7 @@ namespace TestGate.Planning
 
             var order = items
                 .OrderBy(i => i.BlockedBy.Count > 0 ? 1 : 0)
-                .ThenBy(i => Rank(i.Priority))
+                .ThenBy(i => CrPlanning.Rank(report, i, Rank(i.Priority)))
                 .ThenBy(i => report.Gaps.Where(g => g.Feature == i.Feature).Select(g => g.Severity).DefaultIfEmpty(9).Min())
                 .ThenBy(i => report.Feature(i.Feature).Depth)
                 .ThenBy(i => i.Feature, StringComparer.Ordinal)

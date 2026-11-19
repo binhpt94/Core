@@ -16,7 +16,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash|Task|Agent|mcp__.*",
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash|Task|Agent|SendMessage|mcp__.*",
         "hooks": [
           {
             "type": "command",
@@ -96,6 +96,8 @@
       "Bash(Tools/test-gate.sh roadmap accept:*)",
       "Bash(./Tools/test-gate.sh art accept:*)",
       "Bash(Tools/test-gate.sh art accept:*)",
+      "Bash(./Tools/test-gate.sh cr decide:*)",
+      "Bash(Tools/test-gate.sh cr decide:*)",
       "Bash(./Tools/test-gate.sh files clean --regenerable --library:*)",
       "Read(Dashboard/Data/**)",
       "Read(.agent/**)"

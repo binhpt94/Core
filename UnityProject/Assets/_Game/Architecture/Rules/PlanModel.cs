@@ -117,7 +117,9 @@ namespace Game.Architecture.Rules
         public static Plan Load(string repoRoot)
         {
             string path = Path.Combine(repoRoot, RelativePath);
-            return File.Exists(path) ? Parse(File.ReadAllText(path)) : null;
+            var plan = File.Exists(path) ? Parse(File.ReadAllText(path)) : null;
+            CrLog.AddTo(plan, repoRoot); // approved change requests (Docs/Plan/CRs) are requirements of their target feature
+            return plan;
         }
 
         public static Plan Parse(string text)

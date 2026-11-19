@@ -88,6 +88,8 @@ namespace TestGate.AgentControl
     {
         private static readonly HashSet<string> WriteTools = new HashSet<string> { "Edit", "MultiEdit", "Write", "NotebookEdit" };
         private static readonly HashSet<string> SpawnTools = new HashSet<string> { "Task", "Agent" };
+        /// <summary>Talking to another agent/session: logged with the sender's task (a request made this way is never an approval).</summary>
+        private static readonly HashSet<string> MessageTools = new HashSet<string> { "SendMessage" };
 
         public static string Rel(string root, string path)
         {
@@ -156,6 +158,17 @@ namespace TestGate.AgentControl
             if (McpPolicy.IsMcp(h.ToolName))
                 return PreMcp(root, h, task);
 
+            if (MessageTools.Contains(h.ToolName ?? ""))
+            {
+                Recorder.Emit(Recorder.New(EventTypes.AgentMessage, "hook").With("to", h.Input("to") ?? h.Input("recipient"))
+                    .With("summary", Trim(h.Input("summary") ?? h.Input("message"), 200))
+                    .With("fromTask", task != null && task.IsActive ? task.Id : null)
+                    .With("fromScope", task != null && task.IsActive ? task.ScopeText : null));
+                Console.Error.WriteLine("Note: asking another session to change its module is not an approval. Need a change in another module? " +
+                                        "./Tools/test-gate.sh task need <F-ID|Module> \"<what, why>\" (a CR; keep working on a fake meanwhile).");
+                return 0;
+            }
+
             if (SpawnTools.Contains(h.ToolName ?? ""))
                 Recorder.Emit(Recorder.New(EventTypes.AgentSpawned, "hook")
                     .With("agent", h.Input("subagent_type") ?? "general-purpose")
@@ -189,6 +202,24 @@ namespace TestGate.AgentControl
             string after = File.Exists(full) ? File.ReadAllText(full) : "";
             return TestRoles.SkeletonViolations(code == 0 ? before : null, after).Take(5)
                 .Select(v => "SKELETON " + rel + ": " + v + " (role " + task.Role + " writes tests; the impl session writes the code)").ToList();
+        }
+
+        /// <summary>
+        /// A task without provenance (no --req R-/CR-, not core maintenance) is maintenance: it may refactor, fix tooling, tidy; it may
+        /// not change what a feature promises (its Contracts, its Domain rules). Such a change must trace to a requirement or an
+        /// approved CR, whoever asked for it: that is what makes "please change X for me" from another session visible.
+        /// </summary>
+        public static List<string> Untraced(AgentTask task, string rel)
+        {
+            var list = new List<string>();
+            if (task == null || !task.IsActive || task.Provenance != "maintenance" || rel == null || !rel.EndsWith(".cs", StringComparison.Ordinal))
+                return list;
+            var m = System.Text.RegularExpressions.Regex.Match(rel, "^" + ScopePolicy.Game + @"Features/([^/]+)/(Contracts|Logic/Domain)/");
+            if (m.Success && !CrStore.IsGranted(task, rel, out _))
+                list.Add("UNTRACED_CHANGE " + rel + ": changes what " + m.Groups[1].Value + " promises (" + m.Groups[2].Value + "/) in a task with no requirement. " +
+                         "Start the task from the plan or a CR (task start … --req R-…|--from CR-n); another module needing it files `task need`. " +
+                         "Pure refactor? Revert the behaviour change, or ask the human.");
+            return list;
         }
 
         /// <summary>features.md: checked by the gate, then the owner answers yes/no in Claude Code (PlanEditGate).</summary>
@@ -263,6 +294,8 @@ namespace TestGate.AgentControl
                 return "accepting a requirement is a human decision (./Tools/test-gate.sh roadmap accept in a terminal)";
             if (c.Contains("task approve"))
                 return "approving a task's scope is for a human in a terminal (./Tools/test-gate.sh task approve)";
+            if (c.Contains("cr decide"))
+                return "deciding change requests is the owner's (./Tools/test-gate.sh cr decide in a terminal)";
             if (c.Contains("tests unseal") || c.Contains("tests grandfather"))
                 return "unsealing / grandfathering tests is the owner's last resort (a human at a terminal)";
             if (!viaGate && c.Contains(".agent"))
@@ -308,7 +341,7 @@ namespace TestGate.AgentControl
             }
             // Reading (Read/Grep/Glob/...) changes nothing and is most of all tool calls: not logged (the log stays small; the
             // session's transcript has it if ever needed).
-            else if (!string.IsNullOrEmpty(h.ToolName) && !SpawnTools.Contains(h.ToolName) && !Reducer.Browsing.Contains(h.ToolName))
+            else if (!string.IsNullOrEmpty(h.ToolName) && !SpawnTools.Contains(h.ToolName) && !MessageTools.Contains(h.ToolName) && !Reducer.Browsing.Contains(h.ToolName))
             {
                 string target = h.Input("file_path") ?? h.Input("pattern") ?? h.Input("path") ?? h.Input("url") ?? h.Input("query") ?? h.Input("description");
                 Recorder.Emit(Recorder.New(EventTypes.ToolUsed, "hook").With("tool", h.ToolName).With("target", Trim(Rel(root, target) ?? target, 200)));
@@ -333,6 +366,7 @@ namespace TestGate.AgentControl
             var d = restored ? ScopeDecision.Allow("restored to its original content")
                 : PlanEditGate.IsApproved(root, rel, state) ? ScopeDecision.Allow("plan change the owner approved (yes/no)")
                 : SealStore.IsGateWrite(root, rel, state) ? ScopeDecision.Allow("seal log written by the gate (tests …)")
+                : CrStore.IsGateWrite(root, rel, state) ? ScopeDecision.Allow("CR log written by the gate (task need / cr …)")
                 : ScopePolicy.Check(task, rel);
             string impact;
             try
@@ -352,9 +386,9 @@ namespace TestGate.AgentControl
                 feedback.Add("SCOPE " + rel + " was changed by " + via + " but " + d.Reason + ". Revert it (git checkout -- " + rel + ") or ask for scope.");
             }
             else if (!restored)
-                foreach (var s in SkeletonFindings(root, task, rel))
+                foreach (var s in SkeletonFindings(root, task, rel).Concat(CrStore.GrantFindings(root, task, rel)).Concat(Untraced(task, rel)))
                 {
-                    Recorder.Emit(Recorder.New(EventTypes.PolicyViolation, "git-observer").With("rule", "skeleton").With("path", rel).With("reason", s));
+                    Recorder.Emit(Recorder.New(EventTypes.PolicyViolation, "git-observer").With("rule", s.Split(' ')[0].ToLowerInvariant()).With("path", rel).With("reason", s));
                     feedback.Add(s);
                 }
         }
@@ -465,11 +499,12 @@ namespace TestGate.AgentControl
                 // Scope judges what the agent was SEEN doing; a change no observer saw (human in the IDE) is UNOBSERVED, not a scope breach.
                 var d = PlanEditGate.IsApproved(root, kv.Key, kv.Value) ? ScopeDecision.Allow("plan change the owner approved (yes/no)")
                     : SealStore.IsGateWrite(root, kv.Key, kv.Value) ? ScopeDecision.Allow("seal log written by the gate (tests …)")
+                    : CrStore.IsGateWrite(root, kv.Key, kv.Value) ? ScopeDecision.Allow("CR log written by the gate (task need / cr …)")
                     : ScopePolicy.Check(task, kv.Key);
                 if (!d.Allowed && !unobserved.Contains(kv.Key))
                     findings.Add("SCOPE " + kv.Key + ": " + d.Reason);
                 else if (d.Allowed && !unobserved.Contains(kv.Key))
-                    findings.AddRange(SkeletonFindings(root, task, kv.Key));
+                    findings.AddRange(SkeletonFindings(root, task, kv.Key).Concat(CrStore.GrantFindings(root, task, kv.Key)).Concat(Untraced(task, kv.Key)));
                 // Weakened tests are judged whoever changed them: a fake fix must not slip through an unobserved channel.
                 if (TestGuard.IsTestFile(kv.Key) && (task == null || !task.AllowTestChanges))
                 {

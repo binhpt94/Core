@@ -120,6 +120,12 @@ thread and checks the lifetime.
   Without an active task, or outside its scope, writes are **blocked before they happen** (PreToolUse).
 - Need another feature, a path outside features, or to change what a test expects? `task request --feature G | --path P | --tests "<why>"`
   and tell the human; only they can run `task approve` (needs a terminal; refused in your shell). Keep working inside the current scope.
+- **Need another module to change? Never ask its session by message** (SendMessage is logged; a request that way approves nothing).
+  `task need <F-ID|Module|Core> "<what, why>" [--api "<PublicApi line>"]…` files `CR-n`; keep working against a fake in your own
+  feature (it owes CR-n until delivered). New types only: the gate approves at once and your task may write B's Contracts (exactly
+  those PublicApi lines + a skeleton). Breaking: another session rules (`cr rule CR-n keep|reject|ask "<why>"`). No API (meaning) or
+  breaking Core: the owner (`cr decide`, theirs). An approved CR is a requirement of B: `task start … --from CR-n` (roles as usual).
+- A task without `--req`/`--from` is maintenance: changing a feature's `Contracts/` or `Logic/Domain/` there is `UNTRACED_CHANGE` at Stop.
 - Edits made through Bash (sed, scripts) are observed via git snapshots and judged like Edit. Undoing a change is always allowed.
 - At Stop: every changed file must be in scope, tests must not be weakened (fewer asserts/tests, new Ignore/Assume/#if), then the gate.
 - **MCP (Unity, Blender):** read tools (get/list/find/screenshot/run_tests) are free. Tools that change things need a task and
