@@ -55,6 +55,8 @@ internal static class Program
 
     private static int Main(string[] args)
     {
+        // Vietnamese plan text: the Windows console default code page turns it into '?', also in hook output the agent reads.
+        Console.OutputEncoding = new UTF8Encoding(false);
         _root = FindRepoRoot();
         Recorder.Root = _root;
         string command = args.Length > 0 ? args[0] : "plan";

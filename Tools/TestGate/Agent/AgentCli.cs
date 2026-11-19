@@ -244,6 +244,11 @@ namespace TestGate.AgentControl
                 s.Housekeeping = new TestGate.Files.FilesView { Violations = { "files unavailable: " + e.Message } };
             }
             s.Attention.HumanFixes = Attribution.Load(root);
+            // The Dashboard's two hand-written sources (an AI edits them on request; the page only reads).
+            string core = Path.Combine(root, "Docs", "Plan", "Core.md"), notes = Path.Combine(root, ProjectNotes.RelativePath);
+            s.Core = File.Exists(core) ? File.ReadAllText(core) : "";
+            if (File.Exists(notes))
+                s.Notes = ProjectNotes.Parse(File.ReadAllText(notes));
             return (s, events);
         }
 

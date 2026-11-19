@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Project Dashboard</title>
-<!-- View only. Static: edit these 3 files directly. Data: Dashboard/Data/ (written by ./Tools/test-gate.sh dash). -->
+<!-- View only, read-only. Data: Dashboard/Data/data.js, written by ./Tools/test-gate.sh dash from
+     Docs/Plan/Core.md, Docs/Plan/features.md (+ test results) and Docs/Plan/Notes.md. To change data, ask an AI to edit those files. -->
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,29 +14,16 @@
     <h1 id="project">Dashboard</h1>
     <p class="muted" id="generated"></p>
   </div>
-  <div class="chips" id="health"></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="foundation">Nền tảng dự án</button>
+    <button role="tab" data-tab="progress">Tiến độ</button>
+    <button role="tab" data-tab="notes">Ghi chú</button>
+  </nav>
 </header>
 <main>
-  <section id="attention" aria-labelledby="h-attention">
-    <h2 id="h-attention">1 · Cần bạn làm</h2>
-    <div id="attentionBody"></div>
-  </section>
-  <section id="progress" aria-labelledby="h-progress">
-    <h2 id="h-progress">2 · Dự án tới đâu</h2>
-    <div id="progressBody"></div>
-  </section>
-  <section id="execution" aria-labelledby="h-execution">
-    <h2 id="h-execution">3 · Thực thi (node)</h2>
-    <div id="executionBody"></div>
-  </section>
-  <section id="anomalies" aria-labelledby="h-anomalies">
-    <h2 id="h-anomalies">4 · Bất thường</h2>
-    <div id="anomaliesBody"></div>
-  </section>
-  <section id="details" aria-labelledby="h-details">
-    <h2 id="h-details">Chi tiết</h2>
-    <div id="detailsBody"></div>
-  </section>
+  <section id="foundation" role="tabpanel"></section>
+  <section id="progress" role="tabpanel" hidden></section>
+  <section id="notes" role="tabpanel" hidden></section>
 </main>
 <p class="muted foot" id="noData" hidden>Chưa có dữ liệu. Chạy <code>./Tools/test-gate.sh dash</code> rồi mở lại trang này.</p>
 <script src="Data/data.js"></script>
