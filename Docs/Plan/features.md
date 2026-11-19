@@ -66,7 +66,7 @@ deps: hard F-TIMER
 ## F-COINS  Xu thưởng khi thắng  [P2] [modules: MathQuiz, Progress] [slots: MathQuiz.CoinFx] [art: approved]
 Thắng = qua hết 10 câu của vòng mà căn cứ còn máu. Xu được tích lũy qua các vòng (để sau này dùng ở cửa hàng).
 - R-COIN-WIN  Thắng vòng thì nhận xu; thua thì không nhận xu nào
-- R-COIN-AMOUNT  Số xu = 10 xu thắng vòng + 1 xu cho mỗi câu trả lời đúng
+- R-COIN-AMOUNT  Số xu = 5 xu thắng vòng + 2 xu cho mỗi câu trả lời đúng
 - R-COIN-ONCE  Mỗi vòng chỉ cộng xu một lần, kể cả bấm đúp; phát replay không cộng xu
 - R-COIN-SAVE  Tổng xu được lưu, mở lại game vẫn còn; dữ liệu hỏng được sửa an toàn
 - R-COIN-SUMMARY  Màn tổng kết hiện số xu vừa nhận và tổng xu hiện có
