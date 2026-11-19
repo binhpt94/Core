@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Game.Architecture.Rules;
 
 namespace TestGate.AgentControl
@@ -283,21 +284,27 @@ namespace TestGate.AgentControl
             return 0;
         }
 
+        /// <summary>
+        /// Owner-only gate subcommands, matched only where the gate is really invoked (test-gate.sh, the TestGate binary, `dotnet run
+        /// --project Tools/TestGate`), also inside bash -c, pipes and chains. Mentioning one in text (a commit message, a doc) is not running it.
+        /// </summary>
+        private static readonly (Regex rx, string why)[] OwnerCommands = new[]
+        {
+            (@"art\s+accept", "approving art is a human decision (./Tools/test-gate.sh art accept in a terminal)"),
+            (@"roadmap\s+accept", "accepting a requirement is a human decision (./Tools/test-gate.sh roadmap accept in a terminal)"),
+            (@"task\s+approve", "approving a task's scope is for a human in a terminal (./Tools/test-gate.sh task approve)"),
+            (@"cr\s+decide", "deciding change requests is the owner's (./Tools/test-gate.sh cr decide in a terminal)"),
+            (@"tests\s+(?:unseal|grandfather)", "unsealing / grandfathering tests is the owner's last resort (a human at a terminal)"),
+        }.Select(x => (new Regex(@"(?:test-gate\.sh|TestGate(?:\.dll|\.exe)?|Tools[/\\]TestGate)[""']?\s+(?:-\S*\s+)*" + x.Item1 + @"\b"), x.Item2)).ToArray();
+
         /// <summary>Commands no agent may run: touching the event store/task by hand, approving its own scope.</summary>
         public static string ForbiddenCommand(string cmd)
         {
             string c = cmd.Trim();
             bool viaGate = c.StartsWith("./Tools/test-gate.sh", StringComparison.Ordinal) || c.StartsWith("Tools/test-gate.sh", StringComparison.Ordinal);
-            if (c.Contains("art accept"))
-                return "approving art is a human decision (./Tools/test-gate.sh art accept in a terminal)";
-            if (c.Contains("roadmap accept"))
-                return "accepting a requirement is a human decision (./Tools/test-gate.sh roadmap accept in a terminal)";
-            if (c.Contains("task approve"))
-                return "approving a task's scope is for a human in a terminal (./Tools/test-gate.sh task approve)";
-            if (c.Contains("cr decide"))
-                return "deciding change requests is the owner's (./Tools/test-gate.sh cr decide in a terminal)";
-            if (c.Contains("tests unseal") || c.Contains("tests grandfather"))
-                return "unsealing / grandfathering tests is the owner's last resort (a human at a terminal)";
+            foreach (var (rx, why) in OwnerCommands)
+                if (rx.IsMatch(c))
+                    return why;
             if (!viaGate && c.Contains(".agent"))
                 return ".agent/ (event log, task) is written only by the test gate";
             return null;

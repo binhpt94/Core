@@ -18,14 +18,39 @@ namespace TestGate.AgentControl
 
         public static Dictionary<string, CrEntry> Load(string root) => CrLog.Load(root);
 
-        public static void Append(string root, string target, string line)
+        /// <summary>Appends to the tracked log (travels with the commit) and to the shared mirror (other worktrees see it at once).</summary>
+        public static void Append(string root, string target, string line, bool mirror = true)
         {
+            line = line.Replace("\r", " ").Replace("\n", " ").Trim();
             string rel = CrLog.FileOf(target);
             string full = Path.Combine(root, rel);
             Directory.CreateDirectory(Path.GetDirectoryName(full));
-            File.AppendAllText(full, line.Replace("\r", " ").Replace("\n", " ") + "\n");
+            File.AppendAllText(full, line + "\n");
             Recorder.Emit(Recorder.New(WrittenEvent, "cr-cli").With("path", rel).With("line", line.Length > 300 ? line.Substring(0, 300) : line)
                 .With("after", WorkSnapshot.HashFile(full)));
+            string dir = mirror ? CrLog.MirrorDir(root) : null;
+            if (dir == null)
+                return;
+            Directory.CreateDirectory(dir);
+            string m = Path.Combine(dir, target + ".txt");
+            if (!File.Exists(m) || !File.ReadAllLines(m).Contains(line))
+                File.AppendAllText(m, line + "\n");
+        }
+
+        /// <summary>
+        /// A task starting on a CR filed in another worktree copies its lines into this checkout's tracked log, so the branch that
+        /// carries the tests ([Covers("CR-n")]) also carries the CR they cover (ARCH111 on CI sees it without the mirror).
+        /// </summary>
+        public static int Adopt(string root, CrEntry cr)
+        {
+            var tracked = new HashSet<string>(CrLog.TrackedLines(root, cr.To), StringComparer.Ordinal);
+            int n = 0;
+            foreach (var line in cr.History.Where(l => !tracked.Contains(l)))
+            {
+                Append(root, cr.To, line, mirror: false);
+                n++;
+            }
+            return n;
         }
 
         /// <summary>Is this content of a CR log one the gate wrote? (Bash running `task need` / `cr …` changes it; that change is allowed.)</summary>
@@ -59,6 +84,45 @@ namespace TestGate.AgentControl
                     Thread.Sleep(10);
                 }
             }
+        }
+
+        /// <summary>Are the CR's PublicApi lines already in the module's baseline (its contract part is done)?</summary>
+        public static bool ApiInPlace(string root, CrEntry cr)
+        {
+            string p = Path.Combine(root, ContractsDir(cr.Module) + "PublicApi.txt");
+            var have = new HashSet<string>((File.Exists(p) ? File.ReadAllLines(p) : new string[0]).Select(l => l.Trim()), StringComparer.Ordinal);
+            return cr.Api.Select(l => l.Trim()).Where(l => !l.StartsWith("- ", StringComparison.Ordinal)).All(have.Contains)
+                   && cr.Api.Select(l => l.Trim()).Where(l => l.StartsWith("- ", StringComparison.Ordinal)).All(l => !have.Contains(l.Substring(2).Trim()));
+        }
+
+        /// <summary>
+        /// Contracts grants a task gets at start: every approved API CR it works on (B's side), and every approved API CR its own
+        /// feature filed whose lines are not in place yet (A's side, e.g. a breaking CR the arbiter approved after A's task ended).
+        /// </summary>
+        public static Dictionary<string, string> GrantsFor(string root, IEnumerable<string> reqs, string fromFeature)
+        {
+            var grants = new Dictionary<string, string>(StringComparer.Ordinal);
+            var ids = new HashSet<string>(reqs, StringComparer.Ordinal);
+            foreach (var cr in Load(root).Values.Where(c => c.IsRequirement && c.Api.Count > 0 && c.Module != "Core"))
+                if (ids.Contains(cr.Id) || (fromFeature != null && cr.From == fromFeature && !ApiInPlace(root, cr)))
+                    grants[cr.Id] = cr.Module;
+            return grants;
+        }
+
+        /// <summary>A CR approved later (arbiter / owner): the asker's task, if still open in any worktree, gets its grant now.</summary>
+        public static string GrantToAsker(string root, CrEntry cr)
+        {
+            if (cr.Api.Count == 0 || cr.Module == "Core" || cr.Task == null)
+                return null;
+            var entry = TaskRegistry.Load(root).FirstOrDefault(t => t.Id == cr.Task);
+            if (entry == null)
+                return null;
+            var task = TaskStore.Load(entry.Worktree);
+            if (task == null || !task.IsActive || task.Id != cr.Task)
+                return null;
+            task.CrGrants[cr.Id] = cr.Module;
+            TaskStore.Save(entry.Worktree, task);
+            return task.Id;
         }
 
         /// <summary>Contracts folder a CR may change ("Core" = Core/Runtime).</summary>

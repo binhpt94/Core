@@ -168,6 +168,7 @@ namespace TestGate.Planning
                 ? string.Join("\n", Directory.GetFiles(Path.Combine(root, "UnityProject", "Assets"), "PublicApi.txt", SearchOption.AllDirectories).Select(File.ReadAllText))
                 : "";
             var moduleTimes = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+            var crs = CrLog.Load(root);
             string inbox = Path.Combine(root, PlanParser.InboxFolder);
             var changed = TestGate.AgentControl.WorkSnapshot.Take(root).Keys
                 .Select(p => Regex.Match(p, @"^Assets/_Game/Features/([^/]+)/")).Where(m => m.Success).Select(m => m.Groups[1].Value).Distinct().ToList();
@@ -186,14 +187,14 @@ namespace TestGate.Planning
                     t = Directory.Exists(dir) ? Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories).Select(File.GetLastWriteTimeUtc).DefaultIfEmpty(DateTime.MinValue).Max() : DateTime.MinValue;
                     return moduleTimes[m] = t;
                 },
-                ContractFrozen = iface => Regex.IsMatch(api, @"(^|[\s.])" + Regex.Escape(iface) + @"(\s|$)", RegexOptions.Multiline),
+                ContractFrozen = iface => CrPlanning.Frozen(root, api, crs, iface),
                 TestsHash = req => PlanLedger.TestsHash(root, covers.Where(c => c.Requirement == req)),
                 Seals = SealStore.Load(root),
                 SealHash = req => SealStore.TestsHash(root, covers.Where(c => c.Requirement == req)),
                 Slots = ArtStatus.Compute(root),
                 Proposals = Directory.Exists(inbox) ? Directory.GetFiles(inbox, "*.md").Select(Path.GetFileName).OrderBy(x => x, StringComparer.Ordinal).ToList() : new List<string>(),
                 ChangedModules = changed,
-                Crs = CrLog.Load(root)
+                Crs = crs
             };
         }
 

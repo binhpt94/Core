@@ -656,6 +656,15 @@ internal static class Program
         try
         {
             code = agentFindings.Count > 0 ? 1 : Run(BuildPlan(null, false));
+            if (code == 0 && agentFindings.Count == 0)
+            {
+                // Only now are the results fresh: a maintenance task that turned requirement tests green changed behaviour untraced.
+                agentFindings.AddRange(Provenance.Findings(_root, TaskStore.Load(_root)));
+                foreach (var f in agentFindings)
+                    Recorder.Emit(Recorder.New(EventTypes.PolicyViolation, "testgate").With("rule", "untraced_change").With("reason", f));
+                if (agentFindings.Count > 0)
+                    code = 1;
+            }
             if (agentFindings.Count > 0)
                 foreach (var f in agentFindings)
                     Console.WriteLine(f);

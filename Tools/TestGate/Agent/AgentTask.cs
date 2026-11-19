@@ -40,6 +40,9 @@ namespace TestGate.AgentControl
         /// <summary>CR id → module: an approved CR lets this task write that module's Contracts (its PublicApi lines + a skeleton, nothing else).</summary>
         public Dictionary<string, string> CrGrants { get; set; } = new Dictionary<string, string>();
 
+        /// <summary>Maintenance tasks: [Covers] test results of its features at start (Provenance: red → green later = untraced behaviour).</summary>
+        public Dictionary<string, string> CoverBaseline { get; set; }
+
         /// <summary>Where the work comes from: plan requirements / approved CRs, core maintenance, or none (maintenance: no behaviour change).</summary>
         public string Provenance => CoreMaintenance ? "core" : Requirements.Count > 0 ? "plan" : "maintenance";
 
