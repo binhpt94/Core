@@ -35,6 +35,8 @@ namespace TestGate.AgentControl
 
         /// <summary>Files already dirty when the task started (path → hash): not the task's changes.</summary>
         public Dictionary<string, string> Baseline { get; set; } = new Dictionary<string, string>();
+        /// <summary>tests | impl | arbiter | null (TestRoles): who writes the tests vs the code of its requirements.</summary>
+        public string Role { get; set; }
 
         public const string Active = "active";
         public const string PendingApproval = "pending_approval";
@@ -87,7 +89,7 @@ namespace TestGate.AgentControl
         /// <summary>Owner-only paths: never writable by an agent, whatever the task says (mirrors .claude/settings.json + CODEOWNERS).</summary>
         public static readonly string[] Protected =
         {
-            ".agent/", ".claude/", ".github/", "Tools/", "Docs/Plan/features.md", "Docs/Plan/Core.md", "Docs/Plan/accepted.txt", "Docs/Plan/art-accepted.txt", "UnityProject/ProjectSettings/", "Tools/LogicTests/LogicTests.csproj", "Tools/ArchitecturePolicy.txt", "CLAUDE.md",
+            ".agent/", ".claude/", ".github/", "Tools/", "Docs/Plan/features.md", "Docs/Plan/Core.md", "Docs/Plan/accepted.txt", "Docs/Plan/Seals/", "Docs/Plan/art-accepted.txt", "UnityProject/ProjectSettings/", "Tools/LogicTests/LogicTests.csproj", "Tools/ArchitecturePolicy.txt", "CLAUDE.md",
             Game + "Architecture/", Game + "Tests/Architecture/", Game + "Core/Editor/", "UnityProject/Assets/ThirdParty/", "UnityProject/Assets/Plugins/", "Docs/RULES.md"
         };
 
@@ -130,7 +132,7 @@ namespace TestGate.AgentControl
                 return ScopeDecision.Allow("dashboard source the owner asked an AI to fill");
             foreach (var f in task.Features)
                 if (path.StartsWith(Game + "Features/" + f + "/", StringComparison.Ordinal))
-                    return ScopeDecision.Allow("inside feature " + f);
+                    return TestRoles.Check(task.Role, Game + "Features/" + f + "/", f, path);
             foreach (var p in task.Paths)
                 if (path == p || path.StartsWith(p.TrimEnd('/') + "/", StringComparison.Ordinal))
                     return ScopeDecision.Allow("approved path " + p);

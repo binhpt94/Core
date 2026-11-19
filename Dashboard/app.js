@@ -14,7 +14,8 @@ const FEATURE = { DONE: ["Xong", "ok"], IN_PROGRESS: ["Đang làm", "info"], PLA
 const REQ = {
   VERIFIED: ["Đã kiểm chứng", "ok"], ACCEPTED: ["Người đã duyệt", "ok"], NEEDS_REVIEW: ["Chờ người xem", "info"],
   UNVERIFIED: ["Code đổi, chưa chạy lại", "warn"], STALE: ["Plan đổi, test chưa theo", "warn"], NOT_RUN: ["Test chưa chạy", "warn"],
-  FAILING: ["Test đỏ", "bad"], NO_TEST: ["Chưa có test", "none"], DEFERRED: ["Hoãn", "none"], DROPPED: ["Bỏ", "none"]
+  FAILING: ["Test đỏ", "bad"], TAMPERED: ["Test bị sửa sau niêm phong", "bad"], DISPUTED: ["Đang tranh chấp (trọng tài)", "info"],
+  UNSEALED: ["Test chưa niêm phong", "warn"], NO_TEST: ["Chưa có test", "none"], DEFERRED: ["Hoãn", "none"], DROPPED: ["Bỏ", "none"]
 };
 const DONE = new Set(["VERIFIED", "ACCEPTED"]);
 const label = (map, k) => map[k] || [k, ""];

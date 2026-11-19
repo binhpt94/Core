@@ -62,6 +62,9 @@ Requirement:
 | UNVERIFIED | code changed after the last test run | agent |
 | STALE | the human reworded it after it was verified, and no covering test changed since (re-running old tests doesn't count) | agent / human |
 | NEEDS_REVIEW | `[manual]`, waiting for a human | human |
+| UNSEALED | tests exist but no independent session sealed them (or the wording changed since, or red first is pending on Unity) | agent (role tests) |
+| TAMPERED | sealed tests changed after sealing | agent (role tests/arbiter) |
+| DISPUTED | the impl session says a sealed test is wrong: an arbiter rules; escalated (`ask`, or the 3rd dispute) it is the owner's | agent (arbiter) / human |
 
 Feature: **DONE** = every requirement VERIFIED/ACCEPTED, every hard and contract dependency DONE, no debt.
 Otherwise IN_PROGRESS / PLANNED / BLOCKED (a hard dependency not done and nothing started) / DEFERRED / DROPPED.
@@ -69,6 +72,32 @@ Progress is shown as "5/7 requirement đã kiểm chứng": never a guessed perc
 
 Other gaps: `DEBT` (rush integration still owed), `NO_REQUIREMENTS`, `UNPLANNED_CODE` (a feature folder changed that no
 active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human).
+
+## Separation of duties: who writes the tests
+
+Code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestLint.cs`. Three roles, each a separate session
+(`task start --role …`; PreToolUse refuses a session that sealed the tests to write their code, or one that wrote or disputed them to rule):
+
+| Role | Writes | Ends with |
+|---|---|---|
+| `tests` | `Features/<F>/Tests/**` + a skeleton in `Logic/`/`Contracts/` (declarations, `=> default`, `return default;`, `{ }`) | commit, `tests seal R-…` |
+| `impl` | the feature's code; never `Tests/**` | sealed tests green; or `tests dispute R-… "<why>"` |
+| `arbiter` | like `tests` | `tests rule R-… keep \| fix \| ask "<why>"` (fix → seal again) |
+
+- **Seal** (`Docs/Plan/Seals/<F-ID>.txt`, one append-only log per feature, written only by the gate): the covering tests were written in
+  this task by this session and committed; **lint** (an assertion, none of `Assert.Pass`, literal/self comparisons, swallowing catch);
+  **red first** (`dotnet test --filter` on just those tests, twice: they build, both runs agree, at least one fails on an assertion,
+  not only by an exception). A re-seal is red-checked against the old seal's commit in a temporary worktree. Unity-only tests seal as
+  `red=pending` and count once CI/Unity confirms.
+- **Gate:** sealed tests of a requirement that never passed are red by design (reported, not a failure). Once they pass the gate
+  appends `verified R-…` to the seal log (tracked, so CI knows): red after that is a regression.
+- **Disputes never wait for the owner:** the impl session moves on; an arbiter session rules. The 3rd dispute of one requirement goes
+  to the owner automatically, as do the rewording proposals (one yes/no in chat). An author with 2 "fix" rulings among their last 5 seals
+  gets their other seals re-checked (DISPUTED) before impl runs into them.
+- **Parallel:** tasks conflict only if they share modules AND write the same folders: a `tests` and an `impl` task of one feature run
+  side by side, two `impl` tasks of one module don't. `roadmap next` gives one item per (feature, role).
+- **Owner's last resorts** (terminal, denied to agents): `tests unseal R-… "<why>"`, and once when adopting this: `tests grandfather`
+  (today's covering tests count as sealed, `author=legacy`).
 
 ## Working with it
 

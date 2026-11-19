@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TestGate.AgentControl;
 
 namespace TestGate.Planning
 {
@@ -14,10 +15,11 @@ namespace TestGate.Planning
         public List<string> Why { get; set; } = new List<string>();
         public bool Rush { get; set; }
         public string Lane { get; set; }          // "now" | "after <id>" (same modules) | "blocked"
+        public string Role { get; set; }          // tests ("Viết test") | impl ("Làm code") | arbiter ("Phân xử")
         public List<string> BlockedBy { get; set; } = new List<string>();
 
         public string Command =>
-            "./Tools/test-gate.sh task start \"" + Feature + ": " + Title + "\" " + string.Join(" ", Requirements.Select(r => "--req " + r));
+            "./Tools/test-gate.sh task start \"" + Feature + ": " + Title + "\" " + (Role != null ? "--role " + Role + " " : "") + string.Join(" ", Requirements.Select(r => "--req " + r));
     }
 
     /// <summary>
@@ -33,19 +35,21 @@ namespace TestGate.Planning
             var items = new List<WorkItem>();
             foreach (var f in report.Features.Where(x => x.Status != FeatureStatus.Done && x.Status != FeatureStatus.Deferred && x.Status != FeatureStatus.Dropped))
             {
-                var gaps = report.Gaps.Where(g => g.Feature == f.Id && g.Actor == "agent" && g.Requirement != null).ToList();
-                if (gaps.Count == 0)
-                    continue;
-                var item = new WorkItem
+                // One item per role: tests can be written ahead while code is written for sealed ones, and disputes are ruled meanwhile.
+                foreach (var byRole in report.Gaps.Where(g => g.Feature == f.Id && g.Actor == "agent" && g.Requirement != null).GroupBy(g => g.Role))
                 {
-                    Feature = f.Id, Title = f.Title, Priority = f.Priority, Modules = f.Modules.ToList(), Rush = f.Tags.Contains("rush"),
-                    Requirements = gaps.OrderBy(g => g.Severity).Select(g => g.Requirement).Distinct().ToList(),
-                    Why = gaps.OrderBy(g => g.Severity).Select(g => g.Kind + " " + g.Requirement).Distinct().ToList(),
-                    BlockedBy = f.BlockedBy.ToList()
-                };
-                if (item.Rush && f.Debt.Count > 0)
-                    item.Why.Add("RUSH: " + f.Debt.Count + " khoản nợ tích hợp sẽ được theo dõi");
-                items.Add(item);
+                    var gaps = byRole.ToList();
+                    var item = new WorkItem
+                    {
+                        Feature = f.Id, Title = f.Title, Priority = f.Priority, Modules = f.Modules.ToList(), Rush = f.Tags.Contains("rush"), Role = byRole.Key,
+                        Requirements = gaps.OrderBy(g => g.Severity).Select(g => g.Requirement).Distinct().ToList(),
+                        Why = gaps.OrderBy(g => g.Severity).Select(g => g.Kind + " " + g.Requirement).Distinct().ToList(),
+                        BlockedBy = f.BlockedBy.ToList()
+                    };
+                    if (item.Rush && f.Debt.Count > 0)
+                        item.Why.Add("RUSH: " + f.Debt.Count + " khoản nợ tích hợp sẽ được theo dõi");
+                    items.Add(item);
+                }
             }
 
             var order = items
@@ -64,8 +68,8 @@ namespace TestGate.Planning
                     i.Lane = "blocked";
                     continue;
                 }
-                var clashTask = busy.FirstOrDefault(t => t.Modules.Intersect(i.Modules).Any());
-                var clashItem = taken.FirstOrDefault(t => t.Modules.Intersect(i.Modules).Any());
+                var clashTask = busy.FirstOrDefault(t => t.Modules.Intersect(i.Modules).Any() && TestRoles.Conflict(t.Role, i.Role));
+                var clashItem = taken.FirstOrDefault(t => t.Modules.Intersect(i.Modules).Any() && TestRoles.Conflict(t.Role, i.Role));
                 if (clashTask != null)
                     i.Lane = "after task " + clashTask.Id + " (cùng module " + string.Join(",", clashTask.Modules.Intersect(i.Modules)) + ")";
                 else if (clashItem != null)

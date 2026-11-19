@@ -26,6 +26,7 @@
 //   task start|request|approve|show|close   permission unit = one feature (wider scope: a human approves)
 //   roadmap status|gaps|next|propose|accept   product plan (Docs/Plan/features.md): computed status, gaps, parallel lanes
 //   files [orphans|clean|unused|du]  loose/orphan/junk files (derived from git + event log), unused assets (GUID graph), disk use
+//   tests seal|dispute|rule|status   requirement tests by roles: a tests session seals (lint + red first), impl codes, arbiter rules
 //   art status|accept             art slots: computed level (graybox/candidate/approved/final), human approval by content hash
 //   events verify|tail · reconcile · dash · serve   tamper-evident event log → deterministic dashboard (Agent/)
 //   hook-pre                      PreToolUse: scope guard blocks writes BEFORE they happen; snapshot before Bash
@@ -98,6 +99,8 @@ internal static class Program
                     return AgentHooks.SubagentStop(_root, HookInput.Parse(ReadStdin()));
                 case "task":
                     return AgentCli.Task(_root, args);
+                case "tests":
+                    return TestSeal.Cli(_root, args);
                 case "events":
                     return AgentCli.Events(_root, args);
                 case "reconcile":
@@ -395,27 +398,39 @@ internal static class Program
         XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
         var doc = XDocument.Load(trx);
         var all = doc.Descendants(ns + "UnitTestResult").ToList();
-        var failed = all.Where(r => (string)r.Attribute("outcome") == "Failed").ToList();
-        RecordTests("G1 dotnet", failed.Count == 0 && code == 0 ? "passed" : "failed", all.Count - failed.Count, failed.Count, all.Count, trx,
-            failed.Count == 0 ? null : string.Join("; ", failed.Take(3).Select(r => (string)r.Attribute("testName"))));
+        // Sealed tests of requirements never verified yet are red BY DESIGN (red first, the impl session is on it): reported, not a
+        // failure, so one feature's pending work never blocks the gate of everyone else. A verified requirement turning red is a failure.
+        var classes = doc.Descendants(ns + "UnitTest").ToDictionary(u => (string)u.Attribute("id"), u => (string)u.Element(ns + "TestMethod")?.Attribute("className") ?? "");
+        var awaiting = TestSeal.AwaitingImpl(_root);
+        var allFailed = all.Where(r => (string)r.Attribute("outcome") == "Failed").ToList();
+        var expected = allFailed.Where(r => awaiting.Contains(TestSeal.KeyOf((string)r.Attribute("testName"), classes.TryGetValue((string)r.Attribute("testId") ?? "", out var cn) ? cn : ""))).ToList();
+        var failed = allFailed.Except(expected).ToList();
+        bool green = failed.Count == 0 && (code == 0 || expected.Count > 0);
+        RecordTests("G1 dotnet", green ? "passed" : "failed", all.Count - allFailed.Count, failed.Count, all.Count, trx,
+            failed.Count > 0 ? string.Join("; ", failed.Take(3).Select(r => (string)r.Attribute("testName")))
+            : expected.Count > 0 ? expected.Count + " sealed test(s) red by design, awaiting impl" : null);
 
-        if (failed.Count == 0 && code == 0)
+        if (green)
         {
             try
             {
                 var plan = PlanParser.Load(_root);
                 if (plan != null)
                 {
-                    int n = TestGate.Planning.PlanLedger.RecordVerified(_root, plan, PlanRules.Covers(_root), TestGate.Planning.TestResultsIndex.Load(_root));
+                    var index = TestGate.Planning.TestResultsIndex.Load(_root);
+                    int n = TestGate.Planning.PlanLedger.RecordVerified(_root, plan, PlanRules.Covers(_root), index);
                     if (n > 0)
                         Console.WriteLine("roadmap: " + n + " requirement(s) recorded as verified");
+                    foreach (var id in TestSeal.MarkVerified(_root, plan, index))
+                        Console.WriteLine("seal: " + id + " verified (its sealed tests pass): a later red is a regression, not pending work");
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine("roadmap ledger not updated: " + e.Message);
             }
-            Console.WriteLine("G0+G1 passed: " + all.Count + " tests.");
+            Console.WriteLine("G0+G1 passed: " + all.Count + " tests." + (expected.Count > 0 ? " (" + expected.Count + " sealed test(s) red by design, awaiting impl: " +
+                              string.Join(", ", expected.Take(5).Select(r => (string)r.Attribute("testName"))) + ")" : ""));
             return true;
         }
 
