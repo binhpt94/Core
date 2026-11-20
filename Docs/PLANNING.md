@@ -41,6 +41,8 @@ deps: hard F-QUIZ-CORE · contract F-ADS (IAdsService) · soft F-ARENA
   of the story, checked by design-lint tests over content), `[art]`, `[feasibility]` (manual: "can art deliver this?"),
   `[critical]` (high risk: simulation rules, money, saved data; its tests go through separation of duties, see below. Not part
   of the requirement's hash: tagging it makes nothing STALE).
+  `[dropped]` (cancelled by the owner; a `[dropped]` feature drops all its requirements): it no longer counts toward DONE, and
+  whatever it left in game code is a `RETIRE` gap (see "Cancelling a requirement" below).
 - Art (see "Story · Gameplay · Art" below): `[slots: F.Name, ...]` the art slots the feature shows, `[art: graybox|candidate|final]`
   the art level it should ship with (below it = art debt, which never blocks DONE or dependants; the legacy `approved` reads as
   `candidate`), `[art-risk]` warns the owner while the `[feasibility]` requirements are not accepted (it never blocks gameplay).
@@ -67,6 +69,7 @@ Requirement:
 | NEEDS_REVIEW | `[manual]`, waiting for a human | human |
 | UNSEALED | `[critical]` only: tests exist but no independent session sealed them (or the wording changed since, or red first is pending on Unity) | agent (role tests) |
 | TAMPERED | `[critical]` only: sealed tests changed after sealing | agent (role tests/arbiter) |
+| DROPPED | `[dropped]` itself or in a `[dropped]` feature: not counted (its leftovers are a `RETIRE` gap) | |
 | DISPUTED | `[critical]` only: the impl session says a sealed test is wrong: an arbiter rules; escalated (`ask`, or the 3rd dispute) it is the owner's | agent (arbiter) / human |
 
 Feature: **DONE** = every requirement VERIFIED/ACCEPTED, every hard and contract dependency DONE, no debt.
@@ -74,7 +77,20 @@ Otherwise IN_PROGRESS / PLANNED / BLOCKED (a hard dependency not done and nothin
 Progress is shown as "5/7 requirement đã kiểm chứng": never a guessed percentage.
 
 Other gaps: `DEBT` (rush integration still owed), `NO_REQUIREMENTS`, `UNPLANNED_CODE` (a feature folder changed that no
-active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human).
+active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human), `RETIRE` (a dropped requirement still has
+`[Covers]` or mentions in game code).
+
+## Cancelling a requirement (`[dropped]` → `task start --retire`)
+
+1. The owner tags the requirement (or its feature) `[dropped]` in `features.md` (Edit + yes/no, as for any plan change).
+   A task working on it becomes STALE.
+2. `roadmap next` lists it first, under "DỌN NỢ HỦY TRƯỚC", with the command:
+   `./Tools/test-gate.sh task start "Retire R-X" --retire R-X` (only dropped ids; scope = its feature's modules).
+3. The retire task deletes the tests covering only R-X: that is **not** weakening (tests of live requirements stay guarded),
+   then the code those tests kept alive: once they are gone nothing references it, and ARCH033 names it.
+4. Stop blocks while `RETIRE_LEFT R-X path:line` remains (a `[Covers("R-X")]` or the id anywhere in game code), and on ARCH033.
+   A golden replay or layout snapshot that changes goes to the owner as usual (`GOLDEN_WRITE` / `LAYOUT_WRITE`, yes/no).
+   A whole dropped feature: `test-gate.sh refs Assets/_Game/Features/X` must print nothing before the folder goes.
 
 ## Separation of duties: who writes the tests (`[critical]` only)
 

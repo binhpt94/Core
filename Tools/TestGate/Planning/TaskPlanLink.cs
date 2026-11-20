@@ -30,6 +30,28 @@ namespace TestGate.Planning
             return result;
         }
 
+        /// <summary>`task start --retire`: only [dropped] requirements (or of a [dropped] feature); scope = their feature's modules.</summary>
+        public static (List<string> modules, List<string> errors) PrepareRetire(string root, IEnumerable<string> ids)
+        {
+            var errors = new List<string>();
+            var modules = new List<string>();
+            var plan = PlanParser.Load(root);
+            if (plan == null)
+                return (modules, new List<string> { "no " + PlanParser.RelativePath + ": --retire needs a plan" });
+            var dropped = new HashSet<string>(plan.DroppedRequirements.Select(r => r.Id), StringComparer.Ordinal);
+            foreach (var id in ids)
+            {
+                var r = plan.Requirement(id);
+                if (r == null)
+                    errors.Add(id + " is not in the plan (a removed requirement: the owner marks it [dropped] instead, so its leftovers can be found)");
+                else if (!dropped.Contains(id))
+                    errors.Add(id + " is not [dropped]: only the owner cancels a requirement (features.md, yes/no)");
+                else
+                    modules.AddRange(plan.Feature(r.Feature).Modules);
+            }
+            return (modules.Distinct().ToList(), errors);
+        }
+
         /// <summary>Checks requirements for `task start --req`: exist, not blocked. Returns modules (scope) or errors.</summary>
         public static (List<string> modules, List<string> errors, List<string> notes) Prepare(string root, IEnumerable<string> reqIds)
         {

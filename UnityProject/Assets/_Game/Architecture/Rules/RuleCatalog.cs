@@ -71,6 +71,7 @@ namespace Game.Architecture.Rules
             // Code shape
             new RuleInfo("ARCH030", "No partial types in hand-written code", true),
             new RuleInfo("ARCH031", "File too long (split responsibilities)", true),
+            new RuleInfo("ARCH033", "Code nothing references (Roslyn, TestGate only: changed files)", false),
 
             // Hidden invocation / lookup by string
             new RuleInfo("ARCH040", "No Unity string dispatch (SendMessage, Invoke(\"..\"), StartCoroutine(\"..\"))", true),

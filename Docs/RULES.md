@@ -99,6 +99,15 @@ Only generated code may be partial: under a `Generated/` folder **and** starting
 ## ARCH031
 **Max 300 lines per runtime file** (tests excluded). Catches god-classes early (and the "split it with partial" workaround). Fix: split by responsibility.
 
+## ARCH033
+**No code nothing references** (type, method, property, field, event), judged in the files a change touches. A name counts as
+used when it appears as an identifier anywhere else in `Assets/` (tests too), in a `PublicApi.txt`, or, for fields and public
+members, in a serialized asset or in `Tools/`/`.github/` (`-executeMethod` targets). Unity messages, overrides, explicit/external
+interface members, test/editor attributes (`[Test]`, `[MenuItem]`, `[Preserve]`, …) and types Unity finds itself (external base,
+MonoBehaviour in its own file) are skipped. Checked by TestGate with Roslyn (`check`, `run`, Stop), not in Unity.
+Fix: delete it, with the "for later" option or parameter it served. Unity or a tool calls it by name? `[Preserve]` it.
+`./Tools/test-gate.sh deadcode --all` lists old dead code in untouched files (not a gate: the owner decides).
+
 ## Hidden invocation (calls the compiler can't see)
 
 ## ARCH040

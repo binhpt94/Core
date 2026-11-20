@@ -126,6 +126,18 @@ namespace TestGate.Planning
         {
             var r = Report(root);
             var items = PlanScheduler.Next(r, TaskRegistry.Load(root).Where(t => t.Status != AgentTask.Closed));
+            var retire = r.Gaps.Where(g => g.Actor == RetireScan.Actor).ToList();
+            if (retire.Count > 0)
+            {
+                Console.WriteLine("DỌN NỢ HỦY TRƯỚC (requirement [dropped] còn test/code):");
+                foreach (var g in retire)
+                {
+                    Console.WriteLine("  " + g.Requirement + " (" + g.Feature + ") · " + g.Detail);
+                    Console.WriteLine("     ./Tools/test-gate.sh task start \"Retire " + g.Requirement + "\" --retire " + g.Requirement);
+                }
+            }
+            if (items.Count == 0 && retire.Count > 0)
+                return 0;
             if (items.Count == 0)
             {
                 Console.WriteLine("Nothing for an agent: " + (r.Gaps.Count == 0 ? "no gaps." : "remaining gaps need a human (roadmap gaps)."));

@@ -46,6 +46,7 @@ using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
 using TestGate.AgentControl;
+using TestGate.DeadCode;
 using Game.Architecture.Rules;
 
 internal static class Program
@@ -107,6 +108,8 @@ internal static class Program
                     return Check(args.Skip(1).ToArray(), baseRef);
                 case "refs":
                     return Refs(args.Length > 1 ? args[1] : null);
+                case "deadcode":
+                    return DeadCode(args.Skip(1).ToArray(), baseRef);
                 case "graph":
                     return GraphCommands.Run(_root, args, (f, a) => Exec(f, a, quiet: true));
                 case "vendor-hash":
@@ -371,6 +374,7 @@ internal static class Program
 
         // G0a: static rules on the changed files first: milliseconds, no build. Fail fast.
         var violations = plan.Full ? ArchitectureScanner.ScanAll(_root) : ArchitectureScanner.ScanFiles(_root, plan.ChangedFiles);
+        violations.AddRange(DeadCodeScan.Check(_root, plan.Full ? ChangedFiles(null, out _) ?? new List<string>() : plan.ChangedFiles));
         RecordTests("G0 static rules", violations.Count == 0 ? "passed" : "failed", 0, violations.Count, violations.Count, null,
             violations.Count == 0 ? "no violation" : string.Join("; ", violations.Take(3)));
         if (violations.Count > 0)
@@ -610,6 +614,21 @@ internal static class Program
 
     // ------------------------------------------------------------------ check / refs / hooks
 
+    /// <summary>ARCH033 on demand: changed files (default), given files, or `--all` (old dead code, for the owner to decide).</summary>
+    private static int DeadCode(string[] args, string baseRef)
+    {
+        var paths = args.Where(a => !a.StartsWith("--", StringComparison.Ordinal) && a != baseRef).Select(Relative).ToList();
+        var found = args.Contains("--all") ? DeadCodeScan.CheckAll(_root)
+            : DeadCodeScan.Check(_root, paths.Count > 0 ? paths : ChangedFiles(baseRef, out _) ?? new List<string>());
+        if (found.Count == 0)
+        {
+            Console.WriteLine("deadcode OK");
+            return 0;
+        }
+        Console.WriteLine(ArchitectureScanner.Format(found));
+        return 1;
+    }
+
     private static int Check(string[] args, string baseRef)
     {
         var explicitPaths = args.Where(a => !a.StartsWith("--", StringComparison.Ordinal) && a != baseRef).ToList();
@@ -639,6 +658,14 @@ internal static class Program
             scope = changed == null ? "whole project" : changed.Count + " changed file(s)";
         }
 
+        // ARCH033 judges declarations of the files in question only (never `--all`: old dead code is listed by `deadcode --all`).
+        if (!args.Contains("--all"))
+        {
+            var judged = args.Contains("--staged") ? TestGate.AgentControl.GitChanges.Staged(_root)
+                : explicitPaths.Count > 0 ? explicitPaths.Select(Relative).ToList()
+                : ChangedFiles(baseRef, out _) ?? new List<string>();
+            violations.AddRange(DeadCodeScan.Check(_root, judged));
+        }
         if (violations.Count == 0)
         {
             Console.WriteLine("check OK (" + scope + ")");
