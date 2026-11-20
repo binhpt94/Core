@@ -21,6 +21,7 @@ namespace TestGate.AgentControl
         public const string TaskScopeRequested = "TASK_SCOPE_REQUESTED";
         public const string TaskApproved = "TASK_APPROVED";
         public const string TaskClosed = "TASK_CLOSED";
+        public const string TaskTestSummary = "TASK_TEST_SUMMARY";   // at task close: what the tests it added/changed check
         public const string AgentSpawned = "AGENT_SPAWNED";
         public const string AgentStopped = "AGENT_STOPPED";
         public const string ToolUsed = "TOOL_USED";

@@ -139,6 +139,14 @@ namespace TestGate.AgentControl
                         return 0;
                     }
                     var lastGate = EventLog.For(root).ReadAll().LastOrDefault(e => e.Type == EventTypes.GateFinished);
+                    var summary = TestSummary.ForTask(root, task);
+                    if (summary.Count > 0)
+                    {
+                        Console.WriteLine("Tests this task added or changed (what they check):");
+                        foreach (var l in summary)
+                            Console.WriteLine("  " + l);
+                        Recorder.Emit(Recorder.New(EventTypes.TaskTestSummary, "task-cli").With("id", task.Id).With("summary", string.Join("\n", summary)));
+                    }
                     task.Status = AgentTask.Closed;
                     TaskStore.Save(root, task);
                     TaskRegistry.Remove(root, task.Id);
@@ -210,15 +218,24 @@ namespace TestGate.AgentControl
             return 0;
         }
 
-        /// <summary>Can this role work these requirements now? impl needs live seals (no open dispute); arbiter needs something to rule on.</summary>
+        /// <summary>Can this role work these requirements now? Roles exist only for [critical] requirements; impl needs live seals (no open dispute); arbiter needs something to rule on.</summary>
         private static string RoleError(string root, string role, List<string> reqs)
         {
             if (role == null)
-                return null;
+            {
+                var critical = reqs.Where(id => TestSeal.IsCritical(Game.Architecture.Rules.PlanParser.Load(root), id)).ToList();
+                return critical.Count == 0 ? null
+                    : string.Join(", ", critical) + ": [critical], so its tests and its code come from separate sessions: start with --role tests (roadmap next prints the command)";
+            }
             if (!TestRoles.All.Contains(role))
                 return "--role is one of: " + string.Join(", ", TestRoles.All);
             if (reqs.Count == 0)
                 return "--role " + role + " needs the requirements it works on (--req R-ID ...)";
+            var plan = Game.Architecture.Rules.PlanParser.Load(root);
+            var plain = reqs.Where(id => !TestSeal.IsCritical(plan, id)).ToList();
+            if (plain.Count > 0)
+                return string.Join(", ", plain) + ": not [critical], so no --role: write the tests and the code in one task " +
+                       "(task start \"<what>\" --req " + string.Join(" --req ", plain) + "). Roles are for [critical] requirements only.";
             var seals = SealStore.Load(root);
             foreach (var id in reqs)
             {

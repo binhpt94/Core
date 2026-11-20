@@ -38,7 +38,9 @@ deps: hard F-QUIZ-CORE · contract F-ADS (IAdsService) · soft F-ARENA
 
 - Feature tags: `[P0]`…`[P3]` (default P2), `[modules: A, B]`, `[rush]`, `[deferred]`, `[dropped]`.
 - Requirement tags: `[manual]` (verified by a human with `roadmap accept`, e.g. look and feel), `[story]` (an experience goal
-  of the story, checked by design-lint tests over content), `[art]`, `[feasibility]` (manual: "can art deliver this?").
+  of the story, checked by design-lint tests over content), `[art]`, `[feasibility]` (manual: "can art deliver this?"),
+  `[critical]` (high risk: simulation rules, money, saved data; its tests go through separation of duties, see below. Not part
+  of the requirement's hash: tagging it makes nothing STALE).
 - Art (see "Story · Gameplay · Art" below): `[slots: F.Name, ...]` the art slots the feature shows, `[art: graybox|candidate|approved|final]`
   the art level it needs to be DONE, `[art-risk]` gameplay requirements wait until the `[feasibility]` ones are accepted.
 - Dependencies:
@@ -62,9 +64,9 @@ Requirement:
 | UNVERIFIED | code changed after the last test run | agent |
 | STALE | the human reworded it after it was verified, and no covering test changed since (re-running old tests doesn't count) | agent / human |
 | NEEDS_REVIEW | `[manual]`, waiting for a human | human |
-| UNSEALED | tests exist but no independent session sealed them (or the wording changed since, or red first is pending on Unity) | agent (role tests) |
-| TAMPERED | sealed tests changed after sealing | agent (role tests/arbiter) |
-| DISPUTED | the impl session says a sealed test is wrong: an arbiter rules; escalated (`ask`, or the 3rd dispute) it is the owner's | agent (arbiter) / human |
+| UNSEALED | `[critical]` only: tests exist but no independent session sealed them (or the wording changed since, or red first is pending on Unity) | agent (role tests) |
+| TAMPERED | `[critical]` only: sealed tests changed after sealing | agent (role tests/arbiter) |
+| DISPUTED | `[critical]` only: the impl session says a sealed test is wrong: an arbiter rules; escalated (`ask`, or the 3rd dispute) it is the owner's | agent (arbiter) / human |
 
 Feature: **DONE** = every requirement VERIFIED/ACCEPTED, every hard and contract dependency DONE, no debt.
 Otherwise IN_PROGRESS / PLANNED / BLOCKED (a hard dependency not done and nothing started) / DEFERRED / DROPPED.
@@ -73,9 +75,19 @@ Progress is shown as "5/7 requirement đã kiểm chứng": never a guessed perc
 Other gaps: `DEBT` (rush integration still owed), `NO_REQUIREMENTS`, `UNPLANNED_CODE` (a feature folder changed that no
 active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human).
 
-## Separation of duties: who writes the tests
+## Separation of duties: who writes the tests (`[critical]` only)
 
-Code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestLint.cs`. Three roles, each a separate session
+**Default: no seal.** A requirement without `[critical]` is written and implemented in one task (`task start … --req R-…`, no
+`--role`) and is VERIFIED when its covering tests pass. Its old seals, disputes and re-checks are ignored; `--role`, `tests seal`,
+`dispute` and `rule` refuse it. What still guards it: TestGuard at Stop (fewer tests/asserts, new Ignore/Assume/#if) and the
+**test summary** printed at `task close` (each test the task added or changed, as words + shortened asserts, also logged as
+`TASK_TEST_SUMMARY`; any time: `tests summary [R-ID|F-ID]`). The trade-off is explicit: a plain requirement is not protected
+against an AI grading its own work; mark it `[critical]` when that matters.
+
+A requirement that becomes `[critical]` while a task without `--role` works on it makes that task STALE ("task close, then 3
+roles"); a task without `--role` cannot start on a `[critical]` one. The other way round, its seal stops mattering.
+
+For `[critical]` requirements, code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestLint.cs`. Three roles, each a separate session
 (`task start --role …`; PreToolUse refuses a session that sealed the tests to write their code, or one that wrote or disputed them to rule):
 
 | Role | Writes | Ends with |

@@ -44,8 +44,18 @@ namespace Game.Architecture.Rules
         /// <summary>"Can art deliver this?" accepted by a human BEFORE deep gameplay work on an [art-risk] feature.</summary>
         public bool IsFeasibility => Tags.Contains("feasibility");
 
-        /// <summary>Content hash: any change to the text or tags makes earlier verification STALE.</summary>
-        public string Hash => PlanText.Hash(Id + "|" + Text + "|" + string.Join(",", Tags.OrderBy(t => t, StringComparer.Ordinal)));
+        /// <summary>
+        /// High-risk behaviour (simulation rules, money, saved data): its tests go through separation of duties (seal by a
+        /// tests session, code by an impl session, disputes by an arbiter). Other requirements count when their tests pass.
+        /// </summary>
+        public bool IsCritical => Tags.Contains(CriticalTag);
+        public const string CriticalTag = "critical";
+
+        /// <summary>
+        /// Content hash: any change to the text or tags makes earlier verification STALE. [critical] is left out: it changes
+        /// the process, not the behaviour, so tagging a requirement neither makes it STALE nor voids its seal.
+        /// </summary>
+        public string Hash => PlanText.Hash(Id + "|" + Text + "|" + string.Join(",", Tags.Where(t => t != CriticalTag).OrderBy(t => t, StringComparer.Ordinal)));
     }
 
     public sealed class PlanFeature
@@ -97,7 +107,7 @@ namespace Game.Architecture.Rules
     ///   - R-TIMER-3  3 giây cuối hiển thị khẩn cấp  [manual]
     ///   deps: hard F-QUIZ-CORE · contract F-BEST-SCORE (IBestScoreService) · soft F-ARENA
     ///
-    /// Feature tags: [P0..P3] [modules: A, B] [rush] [deferred] [dropped]. Requirement tags: [manual].
+    /// Feature tags: [P0..P3] [modules: A, B] [rush] [deferred] [dropped]. Requirement tags: [manual] [story] [art] [feasibility] [critical].
     /// There are NO tasks here: tasks are derived from gaps when work starts (nothing to forget, nothing to go stale).
     /// </summary>
     public static class PlanParser
@@ -111,7 +121,7 @@ namespace Game.Architecture.Rules
         private static readonly Regex TagAtEnd = new Regex(@"\s*\[(?<tag>[^\[\]]+)\]\s*$");
         private static readonly Regex DepItem = new Regex(@"^(?<kind>hard|contract|soft)\s+(?<id>F-[A-Z0-9][A-Z0-9-]*)(\s*\((?<iface>[A-Za-z_][A-Za-z0-9_.]*)\))?$");
         private static readonly HashSet<string> FeatureTags = new HashSet<string> { "rush", "deferred", "dropped", "art-risk" };
-        private static readonly HashSet<string> RequirementTags = new HashSet<string> { "manual", "story", "art", "feasibility" };
+        private static readonly HashSet<string> RequirementTags = new HashSet<string> { "manual", "story", "art", "feasibility", "critical" };
         public static readonly string[] ArtLevels = { "graybox", "candidate", "approved", "final" };
 
         public static Plan Load(string repoRoot)
@@ -203,7 +213,7 @@ namespace Game.Architecture.Rules
                         if (RequirementTags.Contains(tag))
                             r.Tags.Add(tag);
                         else
-                            plan.Errors.Add("line " + n + ": unknown requirement tag [" + tag + "] (allowed: manual, story, art, feasibility)");
+                            plan.Errors.Add("line " + n + ": unknown requirement tag [" + tag + "] (allowed: manual, story, art, feasibility, critical)");
                     if (r.Text.Length == 0)
                         plan.Errors.Add("line " + n + ": requirement " + r.Id + " has no text");
                     if (!ids.Add(r.Id))

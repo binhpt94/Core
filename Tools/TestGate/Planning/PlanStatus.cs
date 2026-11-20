@@ -19,7 +19,7 @@ namespace TestGate.Planning
         public const string Unverified = "UNVERIFIED";      // code of its modules changed after the last test run
         public const string Stale = "STALE";                // its wording changed after it was verified
         public const string NeedsReview = "NEEDS_REVIEW";   // [manual], waiting for a human
-        public const string Unsealed = "UNSEALED";          // tests exist but no independent session sealed them (TestRoles)
+        public const string Unsealed = "UNSEALED";          // [critical]: tests exist but no independent session sealed them (TestRoles)
         public const string Tampered = "TAMPERED";          // sealed tests changed after sealing
         public const string Disputed = "DISPUTED";          // the impl session says a sealed test is wrong: an arbiter (or the owner) decides
         public const string Deferred = "DEFERRED";
@@ -65,7 +65,7 @@ namespace TestGate.Planning
         public string Hash { get; set; }
         public List<string> Tests { get; set; } = new List<string>();
         public bool OwnerDecides { get; set; }           // a dispute escalated to the owner (reword the requirement)
-        public string Role { get; set; }                 // who works this gap: tests | impl | arbiter (TestRoles)
+        public string Role { get; set; }                 // who works this gap: tests | impl | arbiter (TestRoles; [critical] only), null = one task without --role
     }
 
     public sealed class DependencyState
@@ -325,13 +325,14 @@ namespace TestGate.Planning
             if (covers.Count == 0)
             {
                 s.Status = ReqStatus.NoTest;
-                s.Role = TestRoles.Tests;
+                s.Role = r.IsCritical ? TestRoles.Tests : null;
                 s.Detail = "no test has [Covers(\"" + r.Id + "\")]";
                 return s;
             }
-            if (SealProblem(input, r, s))
+            // Separation of duties only for [critical]: other requirements count when their tests pass (one task, no --role).
+            if (r.IsCritical && SealProblem(input, r, s))
                 return s;
-            s.Role = TestRoles.Impl;
+            s.Role = r.IsCritical ? TestRoles.Impl : null;
             var outcomes = covers.Select(c => (c, input.Results.Find(c.TestKey))).ToList();
             var missing = outcomes.Where(o => o.Item2.Count == 0).Select(o => o.c.TestKey).ToList();
             var failed = outcomes.SelectMany(o => o.Item2).Where(o => !o.Passed).Select(o => o.Key).Distinct().ToList();
@@ -349,7 +350,7 @@ namespace TestGate.Planning
             }
             if (input.Ledger.TryGetValue(r.Id, out var e) && e.RequirementHash != r.Hash)
             {
-                s.Role = TestRoles.Tests;
+                s.Role = r.IsCritical ? TestRoles.Tests : null;
                 s.Status = ReqStatus.Stale;
                 s.Detail = e.TestsHash == input.TestsHash(r.Id)
                     ? "wording changed after verification and no covering test was updated (update the tests, or run `roadmap accept` alone: the owner answers yes/no)"
@@ -369,7 +370,7 @@ namespace TestGate.Planning
             return s;
         }
 
-        /// <summary>Separation of duties: a requirement counts only with tests sealed by another session, unchanged since, and undisputed.</summary>
+        /// <summary>Separation of duties ([critical] only): it counts only with tests sealed by another session, unchanged since, and undisputed.</summary>
         private static bool SealProblem(PlanInputs input, PlanRequirement r, RequirementState s)
         {
             input.Seals.TryGetValue(r.Id, out var seal);

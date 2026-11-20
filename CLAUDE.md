@@ -156,7 +156,10 @@ thread and checks the lifetime.
 - Start planned work with `--req`: the task's scope comes from the feature's `[modules]`; blocked items are refused
   (hard dependency not DONE, contract not frozen, or not `[rush]`). Rush prints the integration debt it creates.
 - New tests that implement a requirement get `[Covers("R-ID")]` (`using Game.TestSupport;`). Unknown ids fail ARCH111.
-- **Separation of duties (requirement tests):** the session that writes a requirement's tests never writes its code. `roadmap next`
+- **Plain requirements (default):** one task (`task start … --req R-…`, no `--role`) writes the tests and the code; VERIFIED when
+  the tests pass. `task close` prints what the tests you added/changed check (`tests summary [R-ID|F-ID]` any time): keep test
+  names and asserts readable, that summary is what the owner reads.
+- **Separation of duties (`[critical]` requirements only):** the session that writes their tests never writes their code. `roadmap next`
   gives three lanes, each with its exact command:
   - `--role tests`: write tests in `Features/<F>/Tests/` plus a skeleton (new members with `=> default` bodies, never `throw`), commit,
     then `./Tools/test-gate.sh tests seal R-…` (lint: real asserts; red first: they must FAIL ON AN ASSERTION, twice the same).
@@ -198,8 +201,8 @@ thread and checks the lifetime.
 for replay/dispose/stale-result tests, assert `Logger.Errors` empty in `TearDown`. C# 9 + NUnit 3.5 APIs only.
 
 ## 12. Workflow
-1. Restate the task; `roadmap next` → `task start ... --role tests|impl|arbiter --req R-...` (or `--feature F` for unplanned maintenance).
-2. `test-gate.sh plan` → role tests: failing test first, commit, `tests seal`; role impl: implement until the sealed tests pass → `dotnet test Tools/LogicTests`.
+1. Restate the task; `roadmap next` → `task start ... --req R-...` (`[critical]`: `--role tests|impl|arbiter`; `--feature F` for unplanned maintenance).
+2. `test-gate.sh plan` → failing test first, then the code (`[critical]`: role tests commits and runs `tests seal`; role impl implements until the sealed tests pass) → `dotnet test Tools/LogicTests`.
 3. Unity-side changes are batched; `test-gate.sh run` once at the end.
 4. Update the feature README if API/lifetimes/invariants changed.
 5. Report: what changed, which gates ran / didn't, anything you couldn't follow and why.

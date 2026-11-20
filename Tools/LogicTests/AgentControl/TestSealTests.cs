@@ -55,7 +55,7 @@ namespace LogicTests.AgentControl
     /// <summary>Seal / dispute / rule on a throw-away repo, with a fake test runner.</summary>
     public sealed class TestSealTests
     {
-        private const string Plan = "# Plan: T\n\n## F-A  Feature A  [modules: A]\n- R-A-ONE  Một\n- R-A-TWO  Hai\n- R-A-THREE  Ba\n";
+        private const string Plan = "# Plan: T\n\n## F-A  Feature A  [modules: A]\n- R-A-ONE  Một  [critical]\n- R-A-TWO  Hai  [critical]\n- R-A-THREE  Ba  [critical]\n";
         private const string TestFile = "UnityProject/Assets/_Game/Features/A/Tests/ATests.cs";
         private string _root;
         private List<TestRun> _runs;
