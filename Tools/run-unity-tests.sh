@@ -8,7 +8,9 @@
 #   Linux:   ~/Unity/Hub/Editor/2022.3.50f1/Editor/Unity
 set -euo pipefail
 PLATFORM="${1:-EditMode}"
-CATEGORY="${2:-}"
+# No category: everything a headless (-nographics) run can do. ArtShots render pictures: run them in the Editor (same list
+# as HeadlessExcluded in Tools/TestGate/Program.cs).
+CATEGORY="${2:-!ArtShots}"
 PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
 if [ -z "${UNITY_PATH:-}" ]; then
   # Not set: use the Unity Hub install of the project's own editor version (ProjectSettings/ProjectVersion.txt).
@@ -32,4 +34,17 @@ CODE=$?
 set -e
 
 echo "Results: $RESULTS (exit code $CODE; 0 = passed, 2 = test failures, other = Unity error, see log)"
+# Failed tests (name, message, first stack lines) on stdout, like `dotnet test` prints them: nobody has to open the XML.
+if [ "$CODE" -ne 0 ] && [ -f "$RESULTS" ]; then
+  awk '
+    /<test-case / && /result="Failed"/ { match($0, /fullname="[^"]*"/); name = substr($0, RSTART + 10, RLENGTH - 11)
+                                         gsub(/&quot;/, "\"", name); print "FAILED " name; inside = 1; stack = 0; next }
+    inside && /<\/test-case>/          { inside = 0; print ""; next }
+    inside && /<stack-trace>/          { stack = 1 }
+    inside && /<!\[CDATA\[|^[ \t]*[^< \t]/ { line = $0; gsub(/^[ \t]*(<(message|stack-trace)>)?(<!\[CDATA\[)?/, "", line)
+                                         gsub(/(\]\]>)?(<\/(message|stack-trace)>)?[ \t]*$/, "", line)
+                                         if (line != "" && (!stack || shown++ < 6)) print "  " line }
+    inside && /<\/stack-trace>/        { stack = 0; shown = 0 }
+  ' "$RESULTS"
+fi
 exit $CODE

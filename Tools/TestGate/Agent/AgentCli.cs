@@ -121,7 +121,7 @@ namespace TestGate.AgentControl
                         .With("features", string.Join(",", task.RequestedFeatures)).With("paths", string.Join(",", task.RequestedPaths))
                         .With("tests", task.RequestedTestChanges ? "true" : "false")
                         .With("core", task.RequestedCoreMaintenance ? "true" : null).With("reason", text));
-                    Console.WriteLine("Requested. Current scope stays " + task.ScopeText + ". Ask the human to run: ./Tools/test-gate.sh task approve");
+                    Console.WriteLine("Requested. Current scope stays " + task.ScopeText + ". Run ./Tools/test-gate.sh task approve alone: the owner answers yes/no (or approves in a terminal).");
                     return 0;
 
                 case "approve":
@@ -286,6 +286,8 @@ namespace TestGate.AgentControl
                     s.Attention.Approvals.Add(new Approval { Kind = "requirement", Id = g.Requirement, What = g.Requirement + ": tự kiểm tra rồi chấp nhận (" + g.Feature + ")", Command = "./Tools/test-gate.sh roadmap accept " + g.Requirement });
                 foreach (var sl in roadmap.Slots.Where(x => x.Level == "CANDIDATE" || x.Level == "STALE"))
                     s.Attention.Approvals.Add(new Approval { Kind = "art", Id = sl.Id, What = sl.Id + ": " + (sl.Level == "STALE" ? "art đã đổi sau khi duyệt, cần xem lại" : "art ứng viên chờ duyệt") + " (" + sl.BoundFile + ")", Command = "./Tools/test-gate.sh art accept " + sl.Id });
+                foreach (var c in ApiBaseline.PendingAll(root))
+                    s.Attention.Approvals.Add(new Approval { Kind = "api", Id = c.Group, What = "API công khai của " + c.Group + " đã đổi (+" + c.Added.Count + " / -" + c.Removed.Count + (c.Breaking ? ", CÓ PHÁ VỠ" : ", chỉ thêm") + "): bảo AI chạy lệnh rồi bấm Yes/No", Command = "./Tools/test-gate.sh api accept " + c.Group });
                 foreach (var p in roadmap.Proposals)
                     s.Attention.Approvals.Add(new Approval { Kind = "proposal", Id = p, What = "Agent đề xuất đổi plan", Command = "xem Docs/Plan/Inbox/" + p + ", sửa Docs/Plan/features.md nếu đồng ý, rồi xóa đề xuất" });
             }

@@ -95,13 +95,13 @@ namespace Game.Architecture.Tests
 
                 var exp = new HashSet<string>(expected.Split('\n'));
                 var act = new HashSet<string>(actual.Split('\n'));
-                problems.Add("ARCH023 " + g.Value + " differs from the compiled API of " + g.Key + " (new version: Dashboard/Data/api/" + g.Key + ".received.txt)");
+                problems.Add("ARCH023 " + g.Value + " differs from the compiled API of " + g.Key + " (intended? run ./Tools/test-gate.sh api accept " + g.Key + " alone: the owner answers yes/no)");
                 problems.AddRange(exp.Except(act).Where(l => l.Length > 0).Take(10).Select(l => "  - " + l));
                 problems.AddRange(act.Except(exp).Where(l => l.Length > 0).Take(10).Select(l => "  + " + l));
             }
 
             Assert.That(problems, Is.Empty,
-                string.Join("\n", problems) + "\nIf the change is intended, a code owner updates the baseline (agents may not).");
+                string.Join("\n", problems) + "\nIf the change is intended, the owner accepts it (yes/no) via api accept; otherwise restore the API (prefer adding over removing).");
         }
 
         // ---------- API description (stable, sorted, one line per member) ----------

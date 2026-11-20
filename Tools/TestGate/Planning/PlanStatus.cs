@@ -352,7 +352,7 @@ namespace TestGate.Planning
                 s.Role = TestRoles.Tests;
                 s.Status = ReqStatus.Stale;
                 s.Detail = e.TestsHash == input.TestsHash(r.Id)
-                    ? "wording changed after verification and no covering test was updated (update the tests, or a human runs `roadmap accept`)"
+                    ? "wording changed after verification and no covering test was updated (update the tests, or run `roadmap accept` alone: the owner answers yes/no)"
                     : "wording changed; tests were updated: run the gate to verify again";
                 return s;
             }

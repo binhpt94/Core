@@ -133,20 +133,22 @@ thread and checks the lifetime.
 - At Stop: every changed file must be in scope, tests must not be weakened (fewer asserts/tests, new Ignore/Assume/#if), then the gate.
 - **MCP (Unity, Blender):** read tools (get/list/find/screenshot/run_tests) are free. Tools that change things need a task and
   are observed like Bash: every file they change is yours (scope, rules, Stop), including a prefab Unity saves later. Tools that
-  run arbitrary code (`execute_blender_code`, `execute_menu_item`, ...) are blocked: use the specific tool, or ask the human
-  (`Tools/mcp-policy.txt` is theirs). Save scenes/prefabs in the editor before you finish: the gate only sees the disk.
+  run arbitrary code (`execute_blender_code`, `execute_menu_item`, ...) are blocked: use the specific tool; if none can do it,
+  `mcp allow exec <tool>` (an owner command, below; `Tools/mcp-policy.txt` is theirs). Save scenes/prefabs in the editor before you finish: the gate only sees the disk.
 - **Red because of a HUMAN** (their plan typo, misplaced file, inspector/gameplay tweak, removed assert: the event log proves
   you didn't write it): Stop lets you finish and lists it as "waiting for a HUMAN". It is **not yours**: don't fix it, don't work
   around it, just mention it in your final message. The human gets the commands in their terminal and on the dashboard.
 - **Owner commands** (`task approve`, `roadmap accept R`, `art accept S`, `cr decide CR-n approve|reject "why"`, `tests unseal R "why"`,
-  `tests grandfather`, `GOLDEN_WRITE=1 …`, `LAYOUT_WRITE=1 …`): only when the owner asked for it or a gate tells you to. Run the
+  `tests grandfather`, `api accept <Game.Core|Game.F.Contracts>` (ARCH023 baseline), `policy vendor add k=v… | update <id>`
+  (ARCH093/094), `mcp allow read|write|exec <tool|'prefix*'>`, `GOLDEN_WRITE=1 …`, `LAYOUT_WRITE=1 …`): only when the owner asked for it or a gate tells you to. Run the
   command **alone** (no `;`, `&&`, `|`, `$(…)`, `bash -c`); the hook shows the owner what the gate computed and they answer
   yes/no. One yes = one run of exactly those args (`OwnerAsk`). Chained/wrapped forms stay blocked; a "no" is final: don't retry.
   The dialog text (plain Vietnamese: what, content, status, Yes/No, what to check, undo) is `OwnerAskText`; show it to the owner
   beforehand with `./Tools/test-gate.sh owner-preview <args>` (`golden`, `layout …` for baselines); it asks and grants nothing.
 - `.agent/` (event log, task) is written only by the gate. Your final message is recorded as a CLAIM and shown next to the evidence.
 - Useful: `task show` · `events tail 20` · `roadmap next` · `task close` when done. Ask these commands (short, computed answers);
-  never read `Dashboard/Data/` or `.agent/`: the dashboard is for the human, and reading it costs tokens for nothing.
+  never read `.agent/`. `Dashboard/Data/` is the human's: prefer the commands; when you need the raw output (e.g. which Unity
+  test failed in `EditMode.xml`), Grep/Read exactly that file: the owner is asked yes/no, one yes = one read (no `cat` via Bash).
 
 ## 9. Roadmap: what to build (Docs/Plan/features.md, owned by the human)
 - **Don't plan from memory.** `./Tools/test-gate.sh roadmap next` says what can be done now (parallel lanes, the exact
@@ -207,7 +209,7 @@ for replay/dispose/stale-result tests, assert `Logger.Errors` empty in `TearDown
   `Tools/ArchitecturePolicy.txt`, `Docs/Architecture/`, `Assets/ThirdParty/`, `Assets/Plugins/`, `.claude/`, `.github/`, `ProjectSettings/`,
   `Assets/_Game/Core/Editor/`, `**/Tests/Replays/`, `**/Tests/Layout/`, `Docs/Plan/accepted.txt`, `Docs/Plan/art-accepted.txt`;
   `Docs/Plan/features.md` and `Docs/Plan/Core.md` only via Edit/Write after the owner's yes, see §9):
-  they are denied to you and CODEOWNERS-reviewed. Need a new vendor or exception? Ask the human.
+  they are denied to you and CODEOWNERS-reviewed. New vendor: `policy vendor add …` (owner yes/no). Exception: ask the human.
   Core maintenance (changing the rules or tools themselves): `task request --core "<why>"`; only after the human approves it
   may that task edit protected files (never `.agent/`). It ends with `task close`.
 - Bypass a gate: `--no-verify`, changing `core.hooksPath`, `[Ignore]`, weakening a test, disabling the Play Mode gate.

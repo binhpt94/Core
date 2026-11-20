@@ -15,7 +15,7 @@ namespace TestGate.AgentControl
     {
         public const string GrantNote = "(Dòng cuối là lệnh sẽ chạy. Đoạn GAME_OWNER_GRANT=… là mã dùng một lần do gate gắn vào để chứng minh bạn đã bấm Yes: không cần đọc.)";
 
-        private sealed class Card
+        internal sealed class Card
         {
             public string Question, What, Content, Now, Yes, Check, Undo;
             public string No = "Không có gì thay đổi. (AI được dặn không hỏi lại cùng việc này.)";
@@ -195,6 +195,22 @@ namespace TestGate.AgentControl
                 Grant = false
             }.ToString();
         }
+
+        // ------------------------------------------------------------------ reading the gate's output (OwnerRead)
+
+        public static string ReadOnce(string rel, string described, string grepPattern) => new Card
+        {
+            Question = "Cho AI đọc MỘT LẦN kết quả của gate [" + rel + "]?",
+            What = "Thư mục Dashboard/Data là dữ liệu gate ghi ra cho bạn xem (kết quả test, log). AI mặc định không được đọc; "
+                   + "nó xin đọc để tìm xem test nào fail và vì sao.",
+            Content = described + (string.IsNullOrEmpty(grepPattern) ? "" : "\nChỉ tìm các dòng khớp: " + grepPattern),
+            Now = "Đọc không sửa gì trên đĩa; nội dung đi vào ngữ cảnh của AI (tốn token).",
+            Yes = "AI đọc đúng lần này. Lần đọc sau (kể cả cùng file) sẽ hỏi bạn lại: quyền không được giữ.",
+            No = "AI không đọc; nó sẽ báo là chưa biết test nào fail (\"Unity tests pending\").",
+            Check = "Có phải bạn vừa chạy test và muốn AI tự bắt lỗi không? Nếu chọn được, hãy cho AI tìm (Grep) trước thay vì đọc cả file.",
+            Undo = "Không cần: đọc không thay đổi gì.",
+            Grant = false
+        }.ToString();
 
         /// <summary>Files of this kind changed since the last commit (git), so the owner sees whether a rewrite is plausible.</summary>
         private static string Changed(string root, Func<string, bool> kind, string label)

@@ -28,6 +28,8 @@
 //   files [orphans|clean|unused|du]  loose/orphan/junk files (derived from git + event log), unused assets (GUID graph), disk use
 //   tests seal|dispute|rule|status   requirement tests by roles: a tests session seals (lint + red first), impl codes, arbiter rules
 //   art status|accept             art slots: computed level (graybox/candidate/approved/final), human approval by content hash
+//   api status|accept             PublicApi.txt baselines (ARCH023): what differs, owner accepts the new API (yes/no)
+//   policy vendor add|update · mcp allow   owner files (ArchitecturePolicy.txt, mcp-policy.txt): one line per owner yes/no
 //   events verify|tail · reconcile · dash · serve   tamper-evident event log → deterministic dashboard (Agent/)
 //   hook-pre                      PreToolUse: scope guard blocks writes BEFORE they happen; snapshot before Bash
 //   hook-post                     PostToolUse: record tool/file events (Bash edits via git snapshot diff) + per-file rules
@@ -59,10 +61,10 @@ internal static class Program
     {
         if (rest.Length == 0)
         {
-            Console.Error.WriteLine("Usage: owner-preview roadmap accept R-ID | task approve | art accept SLOT | cr decide CR-n approve|reject \"why\" | tests unseal R-ID \"why\" | tests grandfather | golden | layout [EditMode \"View:F.V\"]");
+            Console.Error.WriteLine("Usage: owner-preview roadmap accept R-ID | task approve | art accept SLOT | cr decide CR-n approve|reject \"why\" | tests unseal R-ID \"why\" | tests grandfather | api accept GROUP | policy vendor add|update … | mcp allow read|write|exec TOOL | golden | layout [EditMode \"View:F.V\"]");
             return 64;
         }
-        string Quote(string a) => a.IndexOf(' ') >= 0 || a.IndexOf(';') >= 0 ? "\"" + a + "\"" : a;
+        string Quote(string a) => a.IndexOfAny(new[] { ' ', ';', '*' }) >= 0 ? "\"" + a + "\"" : a;
         string tail = string.Join(" ", rest.Skip(1).Select(Quote));
         string cmd = rest[0] == "golden" ? "GOLDEN_WRITE=1 dotnet test Tools/LogicTests"
             : rest[0] == "layout" ? ("LAYOUT_WRITE=1 ./Tools/run-unity-tests.sh " + tail).TrimEnd()
@@ -141,6 +143,11 @@ internal static class Program
                     return TestGate.Files.FilesCli.Run(_root, args);
                 case "art":
                     return TestGate.Planning.ArtCli.Run(_root, args);
+                case "api":
+                    return ApiBaseline.Cli(_root, args);
+                case "policy":
+                case "mcp":
+                    return PolicyCli.Cli(_root, args);
                 case "roadmap":
                     return TestGate.Planning.RoadmapCli.Run(_root, args);
                 case "dash":
@@ -152,7 +159,7 @@ internal static class Program
                     Console.WriteLine("Unity retry budget reset.");
                     return 0;
                 default:
-                    Console.Error.WriteLine("Usage: TestGate plan|run|reset|check|refs|graph|vendor-hash|new-feature|new-view|roadmap|art|files|task|cr|tests|events|reconcile|dash|serve|hook-pre|hook-post|hook-stop|hook-session|hook-subagent-stop");
+                    Console.Error.WriteLine("Usage: TestGate plan|run|reset|check|refs|graph|vendor-hash|new-feature|new-view|roadmap|art|api|policy|mcp|files|task|cr|tests|events|reconcile|dash|serve|hook-pre|hook-post|hook-stop|hook-session|hook-subagent-stop");
                     return 64;
             }
         }
@@ -395,6 +402,18 @@ internal static class Program
             return 0;
         }
 
+        // An editor open on this project holds Temp/UnityLockfile: batchmode would fail ("another Unity instance"), which is not a test
+        // failure. Report it as pending and keep the retry budget.
+        if (UnityEditorOpen())
+        {
+            _unityPending = true;
+            RecordTests("Unity", "pending", 0, 0, 0, null, "Unity Editor is open on this project");
+            Console.WriteLine("UNITY GATE NOT RUN: the Unity Editor has this project open (batchmode can't open it twice). " + (plan.DotnetTests ? "G0+G1 passed." : "G0 passed (G1 not needed).")
+                              + (plan.Views.Count > 0 ? " Pending layout gate: " + Join(plan.Views) + "." : "") + (plan.Slots.Count > 0 ? " Pending art gate: " + Join(plan.Slots) + "." : ""));
+            Console.WriteLine("Close the editor and run ./Tools/test-gate.sh run again (or run the tests in the editor's Test Runner). Report this as 'Unity tests pending'.");
+            return 0;
+        }
+
         bool ok = true;
         if (plan.Views.Count > 0 || plan.Slots.Count > 0)
             ok &= RunUnityTests(unity, "EditMode", new List<string> { LayoutGateAssembly }, ViewCategories(plan), "Layout+Art");
@@ -406,6 +425,30 @@ internal static class Program
         WriteUnityFailures(ok ? 0 : failures + 1);
         Console.WriteLine(ok ? "GATE PASSED." : "GATE FAILED (Unity). Attempts left: " + (MaxUnityFailures - failures - 1));
         return ok ? 0 : 2;
+    }
+
+    /// <summary>
+    /// Is an editor holding UnityProject/Temp/UnityLockfile? Unity locks it exclusively while the project is open (Windows share lock,
+    /// flock on macOS/Linux, which .NET's FileShare.None also takes), so a failed exclusive open = open. A stale file after a crash opens fine.
+    /// </summary>
+    private static bool UnityEditorOpen()
+    {
+        string lockFile = Path.Combine(_root, "UnityProject", "Temp", "UnityLockfile");
+        if (!File.Exists(lockFile))
+            return false;
+        try
+        {
+            using (new FileStream(lockFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
 
     private static bool RunDotnetTests()
@@ -484,6 +527,9 @@ internal static class Program
         return false;
     }
 
+    /// <summary>Categories a headless (-nographics) run can't execute; same list as Tools/run-unity-tests.sh.</summary>
+    public const string HeadlessExcluded = "!ArtShots";
+
     private static bool RunUnityTests(string unity, string platform, List<string> assemblies, string categories = null, string label = null)
     {
         string dir = Path.Combine(_root, "Dashboard", "Data");
@@ -494,6 +540,9 @@ internal static class Program
         if (File.Exists(results))
             File.Delete(results);
 
+        // Batchmode runs with -nographics: tests that render pictures (ArtShots) can't run here. They run in the Editor (Test Runner /
+        // MCP run_tests), so an unfiltered run excludes them instead of failing on the missing graphics device.
+        categories ??= HeadlessExcluded;
         Console.WriteLine("Running Unity " + name + ": " + string.Join(";", assemblies) + (categories != null ? " [" + categories + "]" : ""));
         var (code, _) = Exec(unity,
             "-batchmode -nographics -projectPath \"" + Path.Combine(_root, "UnityProject") + "\" -runTests -testPlatform " + platform +

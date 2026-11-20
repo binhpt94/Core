@@ -59,14 +59,17 @@ namespace Game.Architecture.Rules
 
         public static ArchitecturePolicy Load(string repoRoot)
         {
-            var policy = new ArchitecturePolicy();
             string path = Path.Combine(repoRoot, FileName);
             if (!File.Exists(path))
-                return policy;
+                return new ArchitecturePolicy();
+            return Parse(File.ReadAllLines(path));
+        }
 
-            policy.Exists = true;
-            var lines = File.ReadAllLines(path);
-            for (int i = 0; i < lines.Length; i++)
+        /// <summary>The policy in these lines (the file's text); also how a proposed line is checked before it is written.</summary>
+        public static ArchitecturePolicy Parse(IReadOnlyList<string> lines)
+        {
+            var policy = new ArchitecturePolicy { Exists = true };
+            for (int i = 0; i < lines.Count; i++)
             {
                 string line = lines[i].Trim();
                 if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal))

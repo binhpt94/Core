@@ -38,7 +38,7 @@ namespace Game.Architecture.Rules
                     var v = policy.VendorOf(r);
                     if (v == null)
                     {
-                        yield return new RuleViolation("ARCH094", a.Path, 0, a.Name + " references unregistered third-party '" + r + "'; a code owner must add it to " + ArchitecturePolicy.FileName);
+                        yield return new RuleViolation("ARCH094", a.Path, 0, a.Name + " references unregistered third-party '" + r + "'; register it (owner yes/no): ./Tools/test-gate.sh policy vendor add id=<id> tier=<foundation|presentation|sdk> assemblies=" + r + " (package=<upm> version=<v> | source=Assets/ThirdParty/<X>) [adapter=<Game.F.Unity>]");
                         continue;
                     }
                     if (v.Tier == VendorTier.Presentation && a.IsPure)
@@ -75,9 +75,9 @@ namespace Game.Architecture.Rules
                     {
                         string actual = HashFolderCached(root, dir);
                         if (string.IsNullOrEmpty(v.Sha256))
-                            yield return new RuleViolation("ARCH093", ArchitecturePolicy.FileName, v.Line, "vendor '" + v.Id + "': no sha256; owner records: sha256=" + actual);
+                            yield return new RuleViolation("ARCH093", ArchitecturePolicy.FileName, v.Line, "vendor '" + v.Id + "': no sha256; pin it (owner yes/no): ./Tools/test-gate.sh policy vendor update " + v.Id);
                         else if (!string.Equals(v.Sha256, actual, StringComparison.OrdinalIgnoreCase))
-                            yield return new RuleViolation("ARCH093", v.Source, 0, "vendor '" + v.Id + "' files changed (sha256 " + actual.Substring(0, 12) + "… ≠ registered). Never edit vendor code; upgrades are re-approved by an owner");
+                            yield return new RuleViolation("ARCH093", v.Source, 0, "vendor '" + v.Id + "' files changed (sha256 " + actual.Substring(0, 12) + "… ≠ registered). Never edit vendor code; an intended upgrade is re-pinned (owner yes/no): ./Tools/test-gate.sh policy vendor update " + v.Id);
                     }
                 }
                 else if (!string.IsNullOrEmpty(v.Package))

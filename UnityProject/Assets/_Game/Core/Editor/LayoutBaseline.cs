@@ -42,7 +42,7 @@ namespace Game.Core.EditorTools
                 return new List<string>();
             }
             if (!File.Exists(path))
-                return new List<string> { "UNKNOWN: no baseline " + cases.BaselinePath + " (an owner runs the layout gate once with " + WriteVariable + "=1 and commits it)" };
+                return new List<string> { "UNKNOWN: no baseline " + cases.BaselinePath + " (run the layout gate once with " + WriteVariable + "=1, alone: the owner answers yes/no; then commit it)" };
             return LayoutSnapshot.Diff(File.ReadAllText(path), actual).Select(d => cases.ViewId + " " + d).ToList();
         }
     }

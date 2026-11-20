@@ -20,6 +20,8 @@ namespace TestGate.AgentControl
         /// <summary>The gate arguments exactly as the CLI will receive them (owner CLI commands), null for a baseline rewrite.</summary>
         public string[] Args { get; set; }
         public bool Baseline { get; set; }
+        /// <summary>Hash of exactly what the dialog showed (API lines, policy line); the CLI refuses if what it would write differs.</summary>
+        public string Bind { get; set; }
         public static OwnerAskDecision Denied(string why) => new OwnerAskDecision { Kind = Deny, Reason = why };
     }
 
@@ -28,11 +30,14 @@ namespace TestGate.AgentControl
     {
         public bool Human { get; set; }
         public string ToolUseId { get; set; }
+        /// <summary>The Bind of the grant the owner said yes to (null for a human terminal).</summary>
+        public string Bound { get; set; }
         public string Source => Human ? "human-terminal" : OwnerAsk.Source;
     }
 
     /// <summary>
-    /// Owner commands (task approve, roadmap accept, art accept, cr decide CR-n, tests unseal|grandfather) and baseline rewrites
+    /// Owner commands (task approve, roadmap accept, art accept, cr decide CR-n, tests unseal|grandfather, api accept, policy vendor,
+    /// mcp allow) and baseline rewrites
     /// (GOLDEN_WRITE=1 / LAYOUT_WRITE=1) run in an agent's shell only after the owner's yes in Claude Code:
     ///   PreToolUse   only the plain form (one command, no chaining/expansion) is asked; the dialog text is computed by the gate
     ///                (what exactly is decided). An invalid target is blocked, the owner is not asked. Anything else stays blocked.
@@ -67,6 +72,7 @@ namespace TestGate.AgentControl
         {
             new[] { "task", "approve" }, new[] { "roadmap", "accept" }, new[] { "art", "accept" }, new[] { "cr", "decide" },
             new[] { "tests", "unseal" }, new[] { "tests", "grandfather" },
+            new[] { "api", "accept" }, new[] { "policy", "vendor" }, new[] { "mcp", "allow" },
         };
 
         // ------------------------------------------------------------------ PreToolUse
@@ -93,7 +99,7 @@ namespace TestGate.AgentControl
             var (_, error) = Describe(root, args);
             if (error != null)
                 return OwnerAskDecision.Denied(error + " (the owner is not asked)");
-            return new OwnerAskDecision { Kind = OwnerAskDecision.Ask, Args = args, Reason = Explain(root, args) };
+            return new OwnerAskDecision { Kind = OwnerAskDecision.Ask, Args = args, Reason = Explain(root, args), Bind = BindOf(root, args) };
         }
 
         private static OwnerAskDecision DecideBaseline(string root, List<string> t)
@@ -126,8 +132,30 @@ namespace TestGate.AgentControl
                     return args.Length == 4 ? TestSeal.DescribeUnseal(root, A(2), A(3)) : (null, "usage: tests unseal R-ID \"<why>\"");
                 case "tests grandfather":
                     return args.Length == 2 ? TestSeal.DescribeGrandfather(root) : (null, "usage: tests grandfather");
+                case "api accept":
+                    return args.Length == 3 ? ApiBaseline.Describe(root, A(2)) : (null, "usage: api accept <Game.Core|Game.<Feature>.Contracts>");
+                case "policy vendor":
+                case "mcp allow":
+                    var (plan, error) = PlanOf(root, args);
+                    return plan == null ? (null, error) : (plan.Text, null);
             }
             return (null, "not an owner command");
+        }
+
+        private static (PolicyCli.Plan plan, string error) PlanOf(string root, string[] args) =>
+            args[0] == "policy" ? PolicyCli.PlanVendor(root, args.Skip(2).ToArray())
+            : args.Length == 4 ? PolicyCli.PlanMcp(root, args[2], args[3]) : (null, "usage: mcp allow read|write|exec <tool|'prefix*'>");
+
+        /// <summary>What the grant is bound to: the exact content the dialog showed (null = the args say it all).</summary>
+        private static string BindOf(string root, string[] args)
+        {
+            switch (args[0] + " " + args[1])
+            {
+                case "api accept": return ApiBaseline.Pending(root, args[2]).change?.Hash;
+                case "policy vendor":
+                case "mcp allow": return PlanOf(root, args).plan?.Bind;
+            }
+            return null;
         }
 
         /// <summary>The owner's dialog text (plain Vietnamese, OwnerAskText) for a command Describe found valid.</summary>
@@ -204,7 +232,7 @@ namespace TestGate.AgentControl
             string grant = Sha(nonce);
             long expires = new DateTimeOffset(Clock()).ToUnixTimeSeconds() + (long)Ttl.TotalSeconds;
             Recorder.Emit(Recorder.New(AskedEvent, "hook").With("kind", "cli").With("toolUseId", h.ToolUseId).With("grant", grant)
-                .With("key", Key(d.Args)).With("expires", expires.ToString(CultureInfo.InvariantCulture)).With("what", AgentHooks.Trim(d.Reason, 600)));
+                .With("key", Key(d.Args)).With("bind", d.Bind).With("expires", expires.ToString(CultureInfo.InvariantCulture)).With("what", AgentHooks.Trim(d.Reason, 600)));
             AddPending(root, grant);
             return AskJson(d.Reason, UpdatedInput(h, Commented(d.Reason, GrantVariable + "=" + nonce + " " + h.Input("command").Trim()), Question(d.Reason)));
         }
@@ -319,7 +347,7 @@ namespace TestGate.AgentControl
             {
                 why = null;
                 Recorder.Emit(Recorder.New(GrantUsedEvent, Source).With("grant", grant).With("toolUseId", asked.Get("toolUseId")).With("key", asked.Get("key")));
-                return new OwnerAuth { Human = false, ToolUseId = asked.Get("toolUseId") };
+                return new OwnerAuth { Human = false, ToolUseId = asked.Get("toolUseId"), Bound = asked.Get("bind") };
             }
             return null;
         }
@@ -330,7 +358,7 @@ namespace TestGate.AgentControl
 
         public static string Key(IEnumerable<string> args) => string.Join("\u001f", args);
 
-        private static string Sha(string s) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s))).ToLowerInvariant();
+        public static string Sha(string s) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s))).ToLowerInvariant();
 
         // ------------------------------------------------------------------ PostToolUse
 
@@ -351,7 +379,8 @@ namespace TestGate.AgentControl
         public static bool IsBaseline(string rel) => rel != null && (rel.Contains("/Tests/Replays/") || rel.Contains("/Tests/Layout/"));
 
         /// <summary>Owner-only records an owner CLI command writes (seal and CR logs prove their own writes: SealStore/CrStore).</summary>
-        public static bool IsOwnerRecord(string rel) => rel == "Docs/Plan/accepted.txt" || rel == "Docs/Plan/art-accepted.txt";
+        public static bool IsOwnerRecord(string rel) => rel == "Docs/Plan/accepted.txt" || rel == "Docs/Plan/art-accepted.txt"
+            || rel == "Tools/ArchitecturePolicy.txt" || rel == McpPolicy.File_ || (rel != null && rel.StartsWith("UnityProject/Assets/_Game/", StringComparison.Ordinal) && rel.EndsWith("/PublicApi.txt", StringComparison.Ordinal));
 
         /// <summary>Is this content (snapshot hash) of an owner file one that an owner-approved command (yes/no) produced?</summary>
         public static bool IsApprovedBaseline(string root, string rel, string state) =>
