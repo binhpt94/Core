@@ -20,6 +20,8 @@ namespace TestGate.AgentControl
         public string Source { get; private set; }
         public string LastMessage { get; private set; }
         public Dictionary<string, string> ToolInput { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+        /// <summary>tool_input as received (to hand Claude Code back a whole updatedInput).</summary>
+        public string ToolInputJson { get; private set; }
 
         public static HookInput Parse(string json)
         {
@@ -41,8 +43,11 @@ namespace TestGate.AgentControl
                     h.Source = S("source");
                     h.LastMessage = S("last_assistant_message");
                     if (r.TryGetProperty("tool_input", out var ti) && ti.ValueKind == JsonValueKind.Object)
+                    {
+                        h.ToolInputJson = ti.GetRawText();
                         foreach (var p in ti.EnumerateObject())
                             h.ToolInput[p.Name] = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : p.Value.GetRawText();
+                    }
                 }
             }
             catch (JsonException)
@@ -113,6 +118,7 @@ namespace TestGate.AgentControl
             Recorder.Use(h);
             var task = TaskStore.Load(root);
             RememberSession(root, h);
+            OwnerAsk.RevokeStale(root, h);   // a grant the owner said no to dies before this call runs
 
             // Separation of duties: the session that wrote/sealed (or disputed) a requirement's tests can't write its code or rule on it.
             if (task != null && task.IsActive && (task.Role == TestRoles.Impl || task.Role == TestRoles.Arbiter) &&
@@ -143,7 +149,16 @@ namespace TestGate.AgentControl
             if (h.ToolName == "Bash")
             {
                 string cmd = h.Input("command") ?? "";
-                string why = ForbiddenCommand(cmd);
+                var owner = OwnerAsk.Decide(root, cmd);
+                if (owner != null && owner.Kind == OwnerAskDecision.Ask)
+                {
+                    // The owner answers yes/no in Claude Code; the snapshot lets Post see what the command wrote.
+                    Directory.CreateDirectory(Path.Combine(root, ".agent"));
+                    File.WriteAllText(PrePath(root, h), WorkSnapshot.ToJson(WorkSnapshot.Take(root)));
+                    Console.WriteLine(owner.Baseline ? OwnerAsk.AskBaseline(h, owner) : OwnerAsk.AskCli(root, h, owner));
+                    return 0;
+                }
+                string why = owner != null ? owner.Reason : ForbiddenCommand(cmd);
                 if (why != null)
                 {
                     Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "hook").With("tool", "Bash").With("target", Trim(cmd, 200)).With("reason", why));
@@ -290,14 +305,20 @@ namespace TestGate.AgentControl
         /// </summary>
         private static readonly (Regex rx, string why)[] OwnerCommands = new[]
         {
-            (@"art\s+accept", "approving art is a human decision (./Tools/test-gate.sh art accept in a terminal)"),
-            (@"roadmap\s+accept", "accepting a requirement is a human decision (./Tools/test-gate.sh roadmap accept in a terminal)"),
-            (@"task\s+approve", "approving a task's scope is for a human in a terminal (./Tools/test-gate.sh task approve)"),
-            (@"cr\s+decide", "deciding change requests is the owner's (./Tools/test-gate.sh cr decide in a terminal)"),
-            (@"tests\s+(?:unseal|grandfather)", "unsealing / grandfathering tests is the owner's last resort (a human at a terminal)"),
+            (@"art\s+accept", "approving art is a human decision (a terminal, or ./Tools/test-gate.sh art accept SLOT alone: the owner is asked yes/no)"),
+            (@"roadmap\s+accept", "accepting a requirement is a human decision (a terminal, or ./Tools/test-gate.sh roadmap accept R-ID alone: the owner is asked yes/no)"),
+            (@"task\s+approve", "approving a task's scope is the owner's (a terminal, or ./Tools/test-gate.sh task approve alone: the owner is asked yes/no)"),
+            (@"cr\s+decide", "deciding change requests is the owner's (a terminal, or ./Tools/test-gate.sh cr decide CR-n approve|reject \"why\" alone: the owner is asked yes/no)"),
+            (@"tests\s+(?:unseal|grandfather)", "unsealing / grandfathering tests is the owner's last resort (a terminal, or the command alone: the owner is asked yes/no)"),
         }.Select(x => (new Regex(@"(?:test-gate\.sh|TestGate(?:\.dll|\.exe)?|Tools[/\\]TestGate)[""']?\s+(?:-\S*\s+)*" + x.Item1 + @"\b"), x.Item2)).ToArray();
 
-        /// <summary>Commands no agent may run: touching the event store/task by hand, approving its own scope.</summary>
+        /// <summary>Does this command really invoke an owner-only gate subcommand (not just mention one)?</summary>
+        public static bool IsOwnerCommand(string cmd) => OwnerCommands.Any(x => x.rx.IsMatch(cmd ?? ""));
+
+        /// <summary>
+        /// Commands no agent may run without the owner: touching the event store/task by hand, owner commands. The plain form of an
+        /// owner command is asked yes/no instead (OwnerAsk, checked first in Pre); this is what remains blocked.
+        /// </summary>
         public static string ForbiddenCommand(string cmd)
         {
             string c = cmd.Trim();
@@ -338,6 +359,8 @@ namespace TestGate.AgentControl
                 bool mcp = h.ToolName != "Bash";
                 string cmd = mcp ? h.ToolName + " " + string.Join(" ", h.ToolInput.Select(kv => kv.Key + "=" + kv.Value)) : h.Input("command") ?? "";
                 var changes = before == null ? new List<(string, string, string)>() : WorkSnapshot.Diff(before, WorkSnapshot.Take(root));
+                if (!mcp)
+                    OwnerAsk.AfterRun(root, h, changes);   // the tool ran = the owner said yes (owner commands, baseline rewrites)
                 Recorder.Emit(Recorder.New(mcp ? EventTypes.ToolUsed : EventTypes.CommandRun, "hook").With("tool", h.ToolName).With("command", Trim(cmd, 300)).With("changedFiles", changes.Count.ToString())
                     .With("observer", before == null ? "no pre-snapshot (not observed)" : "git snapshot before/after").With("mcpWrite", mcp ? "true" : null));
                 foreach (var (path, b, a) in changes)
@@ -372,6 +395,7 @@ namespace TestGate.AgentControl
             bool restored = state == WorkSnapshot.Clean || (task != null && task.Baseline.TryGetValue(rel, out var bh) && bh == state);
             var d = restored ? ScopeDecision.Allow("restored to its original content")
                 : PlanEditGate.IsApproved(root, rel, state) ? ScopeDecision.Allow("plan change the owner approved (yes/no)")
+                : OwnerAsk.IsApprovedBaseline(root, rel, state) ? ScopeDecision.Allow("baseline rewrite the owner approved (yes/no)")
                 : SealStore.IsGateWrite(root, rel, state) ? ScopeDecision.Allow("seal log written by the gate (tests …)")
                 : CrStore.IsGateWrite(root, rel, state) ? ScopeDecision.Allow("CR log written by the gate (task need / cr …)")
                 : ScopePolicy.Check(task, rel);
@@ -505,6 +529,7 @@ namespace TestGate.AgentControl
                     continue; // already like this before the task/session: not this agent's change
                 // Scope judges what the agent was SEEN doing; a change no observer saw (human in the IDE) is UNOBSERVED, not a scope breach.
                 var d = PlanEditGate.IsApproved(root, kv.Key, kv.Value) ? ScopeDecision.Allow("plan change the owner approved (yes/no)")
+                    : OwnerAsk.IsApprovedBaseline(root, kv.Key, kv.Value) ? ScopeDecision.Allow("baseline rewrite the owner approved (yes/no)")
                     : SealStore.IsGateWrite(root, kv.Key, kv.Value) ? ScopeDecision.Allow("seal log written by the gate (tests …)")
                     : CrStore.IsGateWrite(root, kv.Key, kv.Value) ? ScopeDecision.Allow("CR log written by the gate (task need / cr …)")
                     : ScopePolicy.Check(task, kv.Key);

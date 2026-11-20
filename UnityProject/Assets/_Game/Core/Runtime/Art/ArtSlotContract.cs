@@ -29,8 +29,15 @@ namespace Game.Core
         public int MaxSpeedPercent { get; }
         /// <summary>false: a static asset without this clip is fine; if the clip exists, its timing is still checked.</summary>
         public bool Required { get; }
+        /// <summary>Suggested frame count for the brief / AI prompt (0 = no suggestion). Not checked by the art gate.</summary>
+        public int Frames { get; }
 
         public ArtAction(string clip, string marker, int minTick, int maxTick, int minSpeedPercent = 100, int maxSpeedPercent = 100, bool required = true)
+            : this(clip, marker, minTick, maxTick, minSpeedPercent, maxSpeedPercent, required, 0)
+        {
+        }
+
+        public ArtAction(string clip, string marker, int minTick, int maxTick, int minSpeedPercent, int maxSpeedPercent, bool required, int frames)
         {
             Clip = clip;
             Marker = marker;
@@ -39,6 +46,7 @@ namespace Game.Core
             MinSpeedPercent = minSpeedPercent;
             MaxSpeedPercent = maxSpeedPercent;
             Required = required;
+            Frames = frames;
         }
     }
 
@@ -60,9 +68,18 @@ namespace Game.Core
         public int PivotTolerancePercent { get; }
         public int TickRate { get; }
         public IReadOnlyList<ArtAction> Actions { get; }
+        /// <summary>One line of design intent (what the art is for, how it reads in play). Feeds the generated brief / AI
+        /// prompt; style and mood live in the feature's <c>Assets/Private/Art/*.style.md</c>, not here. "" = none.</summary>
+        public string Intent { get; }
 
         public ArtSlotContract(string id, ArtSlotKind kind, int minWidth, int maxWidth, int minHeight, int maxHeight,
             int pivotXPercent, int pivotYPercent, int pivotTolerancePercent, int tickRate, IReadOnlyList<ArtAction> actions)
+            : this(id, kind, minWidth, maxWidth, minHeight, maxHeight, pivotXPercent, pivotYPercent, pivotTolerancePercent, tickRate, actions, "")
+        {
+        }
+
+        public ArtSlotContract(string id, ArtSlotKind kind, int minWidth, int maxWidth, int minHeight, int maxHeight,
+            int pivotXPercent, int pivotYPercent, int pivotTolerancePercent, int tickRate, IReadOnlyList<ArtAction> actions, string intent)
         {
             Id = id;
             Kind = kind;
@@ -75,6 +92,7 @@ namespace Game.Core
             PivotTolerancePercent = pivotTolerancePercent;
             TickRate = tickRate;
             Actions = actions ?? new ArtAction[0];
+            Intent = intent ?? "";
         }
 
         /// <summary>Self-consistency (a contract nobody can meet is a design bug, not an art bug).</summary>
@@ -92,6 +110,9 @@ namespace Game.Core
             foreach (var a in Actions)
                 if (string.IsNullOrEmpty(a.Clip) || string.IsNullOrEmpty(a.Marker) || a.MinTick < 0 || a.MaxTick < a.MinTick || a.MinSpeedPercent < 1 || a.MaxSpeedPercent < a.MinSpeedPercent)
                     p.Add("action " + a.Clip + ": needs clip, marker, 0 <= minTick <= maxTick, 1 <= minSpeed <= maxSpeed");
+            foreach (var a in Actions)
+                if (a.Frames < 0)
+                    p.Add("action " + a.Clip + ": frames must be >= 0 (0 = no suggestion)");
             if (Actions.Select(a => a.Clip).Distinct(StringComparer.Ordinal).Count() != Actions.Count)
                 p.Add("duplicate action clips");
             return p;

@@ -3,22 +3,22 @@
 == edge-longest-feedback@phone-16x9 canvas=1080x1920 safe=0,0 1080x1920
 Background D 0,0 1080x1920
 Background/Header C 60,128 960x183
-Background/Header/Progress T 60,128 497x183
-Background/Header/Score T 557,128 463x183
+Background/Header/Progress T 60,128 498x183
+Background/Header/Score T 558,128 462x183
 Background/ArenaLane D 60,351 960x140
 Background/ArenaLane/Base D 60,351 29x140
-Background/ArenaLane/Slime1 D 108,378 52x85
-Background/ArenaLane/Slime2 D 182,378 52x85
-Background/ArenaLane/Slime3 D 256,378 52x85
-Background/ArenaLane/Slime4 D 329,378 52x85
-Background/ArenaLane/Slime5 D 403,378 52x85
-Background/ArenaLane/Slime6 D 477,378 52x85
-Background/ArenaLane/Slime7 D 551,378 52x85
-Background/ArenaLane/Slime8 D 625,378 52x85
-Background/ArenaLane/Slime9 D 699,378 52x85
-Background/ArenaLane/Slime10 D 772,378 52x85
-Background/ArenaLane/Slime11 D 846,378 52x85
-Background/ArenaLane/Slime12 D 920,378 52x85
+Background/ArenaLane/Slime1 A pivot=134,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=208,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime3 A pivot=282,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime4 A pivot=355,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime5 A pivot=429,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime6 A pivot=503,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime7 A pivot=577,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime8 A pivot=651,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime9 A pivot=725,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime10 A pivot=798,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime11 A pivot=872,421 art:MathQuiz.Slime
+Background/ArenaLane/Slime12 A pivot=946,421 art:MathQuiz.Slime
 Background/Lives T 60,531 960x70
 Background/Question T 60,641 960x400
 Background/Options C 60,1081 960x343
@@ -34,22 +34,22 @@ Background/Next/Label T 60,1644 960x180
 == edge-longest-feedback@phone-20x9 canvas=966x2147 safe=0,86 966x2061
 Background D 0,0 966x2147
 Background/Header C 60,128 846x296
-Background/Header/Progress T 60,128 440x296
-Background/Header/Score T 500,128 406x296
+Background/Header/Progress T 60,128 442x296
+Background/Header/Score T 502,128 404x296
 Background/ArenaLane D 60,464 846x140
 Background/ArenaLane/Base D 60,464 25x140
-Background/ArenaLane/Slime1 D 99,492 52x85
-Background/ArenaLane/Slime2 D 164,492 52x85
-Background/ArenaLane/Slime3 D 229,492 52x85
-Background/ArenaLane/Slime4 D 294,492 52x85
-Background/ArenaLane/Slime5 D 359,492 52x85
-Background/ArenaLane/Slime6 D 424,492 52x85
-Background/ArenaLane/Slime7 D 490,492 52x85
-Background/ArenaLane/Slime8 D 555,492 52x85
-Background/ArenaLane/Slime9 D 620,492 52x85
-Background/ArenaLane/Slime10 D 685,492 52x85
-Background/ArenaLane/Slime11 D 750,492 52x85
-Background/ArenaLane/Slime12 D 815,492 52x85
+Background/ArenaLane/Slime1 A pivot=125,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=190,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime3 A pivot=255,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime4 A pivot=320,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime5 A pivot=385,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime6 A pivot=450,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime7 A pivot=516,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime8 A pivot=581,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime9 A pivot=646,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime10 A pivot=711,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime11 A pivot=776,534 art:MathQuiz.Slime
+Background/ArenaLane/Slime12 A pivot=841,534 art:MathQuiz.Slime
 Background/Lives T 60,644 846x70
 Background/Question T 60,754 846x400
 Background/Options C 60,1194 846x456
@@ -65,22 +65,22 @@ Background/Next/Label T 60,1871 846x180
 == edge-longest-feedback@phone-notch canvas=979x2118 safe=0,118 979x1915
 Background D 0,0 979x2118
 Background/Header C 60,128 859x282
-Background/Header/Progress T 60,128 446x282
-Background/Header/Score T 506,128 412x282
+Background/Header/Progress T 60,128 448x282
+Background/Header/Score T 508,128 411x282
 Background/ArenaLane D 60,450 859x140
 Background/ArenaLane/Base D 60,450 26x140
-Background/ArenaLane/Slime1 D 100,478 52x85
-Background/ArenaLane/Slime2 D 166,478 52x85
-Background/ArenaLane/Slime3 D 232,478 52x85
-Background/ArenaLane/Slime4 D 298,478 52x85
-Background/ArenaLane/Slime5 D 364,478 52x85
-Background/ArenaLane/Slime6 D 430,478 52x85
-Background/ArenaLane/Slime7 D 497,478 52x85
-Background/ArenaLane/Slime8 D 563,478 52x85
-Background/ArenaLane/Slime9 D 629,478 52x85
-Background/ArenaLane/Slime10 D 695,478 52x85
-Background/ArenaLane/Slime11 D 761,478 52x85
-Background/ArenaLane/Slime12 D 827,478 52x85
+Background/ArenaLane/Slime1 A pivot=126,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=192,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime3 A pivot=258,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime4 A pivot=324,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime5 A pivot=390,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime6 A pivot=456,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime7 A pivot=523,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime8 A pivot=589,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime9 A pivot=655,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime10 A pivot=721,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime11 A pivot=787,520 art:MathQuiz.Slime
+Background/ArenaLane/Slime12 A pivot=853,520 art:MathQuiz.Slime
 Background/Lives T 60,630 859x70
 Background/Question T 60,740 859x400
 Background/Options C 60,1180 859x442
@@ -96,22 +96,22 @@ Background/Next/Label T 60,1842 859x180
 == edge-longest-feedback@tablet-4x3 canvas=1247x1663 safe=0,0 1247x1663
 Background D 0,0 1247x1663
 Background/Header C 60,128 1127x98
-Background/Header/Progress T 60,128 580x98
-Background/Header/Score T 640,128 546x98
+Background/Header/Progress T 60,128 582x98
+Background/Header/Score T 642,128 545x98
 Background/ArenaLane D 60,266 1127x133
 Background/ArenaLane/Base D 60,266 34x133
-Background/ArenaLane/Slime1 D 121,290 52x85
-Background/ArenaLane/Slime2 D 207,290 52x85
-Background/ArenaLane/Slime3 D 294,290 52x85
-Background/ArenaLane/Slime4 D 381,290 52x85
-Background/ArenaLane/Slime5 D 467,290 52x85
-Background/ArenaLane/Slime6 D 554,290 52x85
-Background/ArenaLane/Slime7 D 641,290 52x85
-Background/ArenaLane/Slime8 D 728,290 52x85
-Background/ArenaLane/Slime9 D 814,290 52x85
-Background/ArenaLane/Slime10 D 901,290 52x85
-Background/ArenaLane/Slime11 D 988,290 52x85
-Background/ArenaLane/Slime12 D 1074,290 52x85
+Background/ArenaLane/Slime1 A pivot=147,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=233,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime3 A pivot=320,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime4 A pivot=407,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime5 A pivot=493,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime6 A pivot=580,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime7 A pivot=667,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime8 A pivot=754,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime9 A pivot=840,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime10 A pivot=927,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime11 A pivot=1014,332 art:MathQuiz.Slime
+Background/ArenaLane/Slime12 A pivot=1100,332 art:MathQuiz.Slime
 Background/Lives T 60,439 1127x70
 Background/Question T 60,549 1127x353
 Background/Options C 60,942 1127x246
@@ -127,8 +127,8 @@ Background/Next/Label T 60,1396 1127x171
 == edge-longest-question@phone-16x9 canvas=1080x1920 safe=0,0 1080x1920
 Background D 0,0 1080x1920
 Background/Header C 60,128 960x228
-Background/Header/Progress T 60,128 497x228
-Background/Header/Score T 557,128 463x228
+Background/Header/Progress T 60,128 498x228
+Background/Header/Score T 558,128 462x228
 Background/Timer D 60,396 960x90
 Background/Timer/Fill D 60,396 960x90
 Background/Timer/Label T 60,396 960x90
@@ -147,8 +147,8 @@ Background/Feedback T 60,1684 960x140
 == edge-longest-question@phone-20x9 canvas=966x2147 safe=0,86 966x2061
 Background D 0,0 966x2147
 Background/Header C 60,128 846x342
-Background/Header/Progress T 60,128 440x342
-Background/Header/Score T 500,128 406x342
+Background/Header/Progress T 60,128 442x342
+Background/Header/Score T 502,128 404x342
 Background/Timer D 60,510 846x90
 Background/Timer/Fill D 60,510 846x90
 Background/Timer/Label T 60,510 846x90
@@ -167,8 +167,8 @@ Background/Feedback T 60,1911 846x140
 == edge-longest-question@phone-notch canvas=979x2118 safe=0,118 979x1915
 Background D 0,0 979x2118
 Background/Header C 60,128 859x327
-Background/Header/Progress T 60,128 446x327
-Background/Header/Score T 506,128 412x327
+Background/Header/Progress T 60,128 448x327
+Background/Header/Score T 508,128 411x327
 Background/Timer D 60,495 859x90
 Background/Timer/Fill D 60,495 859x90
 Background/Timer/Label T 60,495 859x90
@@ -187,8 +187,8 @@ Background/Feedback T 60,1882 859x140
 == edge-longest-question@tablet-4x3 canvas=1247x1663 safe=0,0 1247x1663
 Background D 0,0 1247x1663
 Background/Header C 60,128 1127x100
-Background/Header/Progress T 60,128 580x100
-Background/Header/Score T 640,128 546x100
+Background/Header/Progress T 60,128 582x100
+Background/Header/Score T 642,128 545x100
 Background/Timer D 60,268 1127x90
 Background/Timer/Fill D 60,268 1127x90
 Background/Timer/Label T 60,268 1127x90
@@ -207,8 +207,8 @@ Background/Feedback T 60,1427 1127x140
 == edge-longest-summary@phone-16x9 canvas=1080x1920 safe=0,0 1080x1920
 Background D 0,0 1080x1920
 Background/Header C 60,128 960x293
-Background/Header/Progress T 60,128 497x293
-Background/Header/Score T 557,128 463x293
+Background/Header/Progress T 60,128 498x293
+Background/Header/Score T 558,128 462x293
 Background/ArenaLane D 60,461 960x140
 Background/ArenaLane/Base D 60,461 29x140
 Background/Lives T 60,641 960x70
@@ -229,8 +229,8 @@ Summary/Restart/Label T 80,1150 920x200
 == edge-longest-summary@phone-20x9 canvas=966x2147 safe=0,86 966x2061
 Background D 0,0 966x2147
 Background/Header C 60,128 846x406
-Background/Header/Progress T 60,128 440x406
-Background/Header/Score T 500,128 406x406
+Background/Header/Progress T 60,128 442x406
+Background/Header/Score T 502,128 404x406
 Background/ArenaLane D 60,574 846x140
 Background/ArenaLane/Base D 60,574 25x140
 Background/Lives T 60,754 846x70
@@ -251,8 +251,8 @@ Summary/Restart/Label T 80,1264 806x200
 == edge-longest-summary@phone-notch canvas=979x2118 safe=0,118 979x1915
 Background D 0,0 979x2118
 Background/Header C 60,128 859x392
-Background/Header/Progress T 60,128 446x392
-Background/Header/Score T 506,128 412x392
+Background/Header/Progress T 60,128 448x392
+Background/Header/Score T 508,128 411x392
 Background/ArenaLane D 60,560 859x140
 Background/ArenaLane/Base D 60,560 26x140
 Background/Lives T 60,740 859x70
@@ -273,8 +273,8 @@ Summary/Restart/Label T 80,1249 819x200
 == edge-longest-summary@tablet-4x3 canvas=1247x1663 safe=0,0 1247x1663
 Background D 0,0 1247x1663
 Background/Header C 60,128 1127x164
-Background/Header/Progress T 60,128 580x164
-Background/Header/Score T 640,128 546x164
+Background/Header/Progress T 60,128 582x164
+Background/Header/Score T 642,128 545x164
 Background/ArenaLane D 60,332 1127x140
 Background/ArenaLane/Base D 60,332 34x140
 Background/Lives T 60,512 1127x70
@@ -295,15 +295,15 @@ Summary/Restart/Label T 80,1022 1087x200
 == smoke@phone-16x9 canvas=1080x1920 safe=0,0 1080x1920
 Background D 0,0 1080x1920
 Background/Header C 60,128 960x228
-Background/Header/Progress T 60,128 497x228
-Background/Header/Score T 557,128 463x228
+Background/Header/Progress T 60,128 498x228
+Background/Header/Score T 558,128 462x228
 Background/Timer D 60,396 960x90
 Background/Timer/Fill D 60,396 960x90
 Background/Timer/Label T 60,396 960x90
 Background/ArenaLane D 60,526 960x140
 Background/ArenaLane/Base D 60,526 29x140
-Background/ArenaLane/Slime1 D 354,554 52x85
-Background/ArenaLane/Slime2 D 674,554 52x85
+Background/ArenaLane/Slime1 A pivot=380,596 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=700,596 art:MathQuiz.Slime
 Background/Lives T 60,706 960x70
 Background/Question T 60,816 960x400
 Background/Options C 60,1256 960x388
@@ -317,15 +317,15 @@ Background/Feedback T 60,1684 960x140
 == smoke@phone-20x9 canvas=966x2147 safe=0,86 966x2061
 Background D 0,0 966x2147
 Background/Header C 60,128 846x342
-Background/Header/Progress T 60,128 440x342
-Background/Header/Score T 500,128 406x342
+Background/Header/Progress T 60,128 442x342
+Background/Header/Score T 502,128 404x342
 Background/Timer D 60,510 846x90
 Background/Timer/Fill D 60,510 846x90
 Background/Timer/Label T 60,510 846x90
 Background/ArenaLane D 60,640 846x140
 Background/ArenaLane/Base D 60,640 25x140
-Background/ArenaLane/Slime1 D 316,667 52x85
-Background/ArenaLane/Slime2 D 598,667 52x85
+Background/ArenaLane/Slime1 A pivot=342,710 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=624,710 art:MathQuiz.Slime
 Background/Lives T 60,820 846x70
 Background/Question T 60,930 846x400
 Background/Options C 60,1370 846x502
@@ -339,15 +339,15 @@ Background/Feedback T 60,1911 846x140
 == smoke@phone-notch canvas=979x2118 safe=0,118 979x1915
 Background D 0,0 979x2118
 Background/Header C 60,128 859x327
-Background/Header/Progress T 60,128 446x327
-Background/Header/Score T 506,128 412x327
+Background/Header/Progress T 60,128 448x327
+Background/Header/Score T 508,128 411x327
 Background/Timer D 60,495 859x90
 Background/Timer/Fill D 60,495 859x90
 Background/Timer/Label T 60,495 859x90
 Background/ArenaLane D 60,625 859x140
 Background/ArenaLane/Base D 60,625 26x140
-Background/ArenaLane/Slime1 D 320,652 52x85
-Background/ArenaLane/Slime2 D 607,652 52x85
+Background/ArenaLane/Slime1 A pivot=346,695 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=633,695 art:MathQuiz.Slime
 Background/Lives T 60,805 859x70
 Background/Question T 60,915 859x400
 Background/Options C 60,1355 859x487
@@ -361,15 +361,15 @@ Background/Feedback T 60,1882 859x140
 == smoke@tablet-4x3 canvas=1247x1663 safe=0,0 1247x1663
 Background D 0,0 1247x1663
 Background/Header C 60,128 1127x100
-Background/Header/Progress T 60,128 580x100
-Background/Header/Score T 640,128 546x100
+Background/Header/Progress T 60,128 582x100
+Background/Header/Score T 642,128 545x100
 Background/Timer D 60,268 1127x90
 Background/Timer/Fill D 60,268 1127x90
 Background/Timer/Label T 60,268 1127x90
 Background/ArenaLane D 60,398 1127x140
 Background/ArenaLane/Base D 60,398 34x140
-Background/ArenaLane/Slime1 D 410,425 52x85
-Background/ArenaLane/Slime2 D 785,425 52x85
+Background/ArenaLane/Slime1 A pivot=436,468 art:MathQuiz.Slime
+Background/ArenaLane/Slime2 A pivot=811,468 art:MathQuiz.Slime
 Background/Lives T 60,578 1127x70
 Background/Question T 60,688 1127x399
 Background/Options C 60,1127 1127x260

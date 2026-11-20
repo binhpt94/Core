@@ -239,6 +239,12 @@ namespace {ns}.EditorTools
 
         protected override IReadOnlyList<ViewFixture<{iface}>> Fixtures() => {view}Fixtures.All();
 
+        // Art slots this view shows (pictures to judge art in the game; the L3 snapshot records them by pivot only), e.g.
+        // public override IReadOnlyList<ArtPlacement> ArtPlacements => new[]
+        // {{
+        //     new ArtPlacement(""{feature}.Hero"", ""smoke"", r => r.GetComponentsInChildren<RectTransform>(false).Where(t => t.name.StartsWith(""Hero""))),
+        // }};
+
         protected override {iface} CreateView(Transform parent, out GameObject root)
         {{
             var v = {view}Layout.Create(parent);
@@ -260,7 +266,7 @@ namespace {ns}.EditorTools
         EnsureIvt(dir, "DevTools/AssemblyInfo.cs", "Game." + feature + ".Editor", "Game." + feature + ".Tests");
 
         Console.WriteLine("Created view " + feature + "/" + view + ". Next: write a presenter + its tests (pure), add scenario fixtures,");
-        Console.WriteLine("then `test-gate.sh run`. The layout gate needs a baseline: an owner runs it once with LAYOUT_WRITE=1.");
+        Console.WriteLine("then `test-gate.sh run`. The layout gate needs a baseline: run it once with LAYOUT_WRITE=1, alone (the owner answers yes/no).");
         return 0;
     }
 

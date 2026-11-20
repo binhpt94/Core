@@ -96,7 +96,7 @@ Code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestL
   gets their other seals re-checked (DISPUTED) before impl runs into them.
 - **Parallel:** tasks conflict only if they share modules AND write the same folders: a `tests` and an `impl` task of one feature run
   side by side, two `impl` tasks of one module don't. `roadmap next` gives one item per (feature, role).
-- **Owner's last resorts** (terminal, denied to agents): `tests unseal R-… "<why>"`, and once when adopting this: `tests grandfather`
+- **Owner's last resorts** (terminal, or the owner's yes/no in Claude Code): `tests unseal R-… "<why>"`, and once when adopting this: `tests grandfather`
   (today's covering tests count as sealed, `author=legacy`).
 
 ## Change requests between modules (CR)
@@ -117,7 +117,7 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
 |---|---|---|
 | `additive` | only new types in B's `Contracts/` | the gate at once; the asking task may write B's Contracts: exactly those PublicApi lines + a skeleton |
 | `breaking` | removes/changes a line, or adds a member to an existing type (breaks implementers and fakes) | an arbiter: another session, `cr rule CR-n keep \| reject \| ask` |
-| `meaning` | no `--api`: B's behaviour/requirement | the owner, batched: `cr decide` (terminal only) |
+| `meaning` | no `--api`: B's behaviour/requirement | the owner: `cr decide` (terminal loop) or `cr decide CR-n approve\|reject "why"` (yes/no) |
 | `core-additive` | new types in Core/Runtime | an arbiter |
 | `core-breaking`, `core-meaning` | | the owner; done in a core task of its own, closed with `cr deliver` |
 
@@ -134,13 +134,15 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
   that nothing asked for). `SendMessage` is logged (`AGENT_MESSAGE` with the sender's task) and answered with a hint to file a CR.
 - Dashboard (tab 1): "Cần bạn quyết" lists every owner gap, the open CRs, and `MESSAGE_THEN_EDIT` pairs: a message, then within 2 h
   another session editing a feature in a task without requirement (event logs of every worktree with an open task; evidence, not a block).
-- Owner-only commands (`task approve`, `roadmap accept`, `art accept`, `tests unseal|grandfather`, `cr decide`) are refused when the
-  gate is really invoked with them (also via `bash -c`, pipes, `dotnet run --project Tools/TestGate`); quoting them in a commit
-  message or a grep is not running them.
+- Owner commands (`task approve`, `roadmap accept`, `art accept`, `tests unseal|grandfather`, `cr decide CR-n …`, `GOLDEN_WRITE=1`,
+  `LAYOUT_WRITE=1`) run in an agent's shell only after the owner's yes in Claude Code (`Tools/TestGate/Agent/OwnerAsk.cs`): the
+  plain form (one command, literal args) is asked with a text the gate computes; the CLI needs a one-shot grant for exactly those
+  args (hash-chained log, 30 min, revoked at the next tool call when the owner said no). Every other form (`bash -c`, pipes, chains,
+  `dotnet run --project Tools/TestGate`) stays refused; quoting them in a commit message or a grep is not running them.
 
 ```bash
 ./Tools/test-gate.sh task need Progress "ICoins để cộng xu" --api "interface Game.Progress.Contracts.ICoins"
-./Tools/test-gate.sh cr list | cr show CR-3 | cr rule CR-3 keep "…" | cr decide (HUMAN ONLY)
+./Tools/test-gate.sh cr list | cr show CR-3 | cr rule CR-3 keep "…" | cr decide [CR-3 approve "…"] (OWNER)
 ```
 
 ## Working with it
@@ -151,7 +153,7 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
 ./Tools/test-gate.sh roadmap next            # parallel lanes (modules don't overlap) + the exact task command
 ./Tools/test-gate.sh task start "F-TIMER: ..." --req R-TIMER-DEADLINE --req R-TIMER-STOP
 ./Tools/test-gate.sh roadmap propose "Cần lưu trạng thái quảng cáo đã xem" --feature F-AD-CONTINUE
-./Tools/test-gate.sh roadmap accept R-ARENA-FEEL     # HUMAN ONLY (terminal)
+./Tools/test-gate.sh roadmap accept R-ARENA-FEEL     # OWNER (terminal, or yes/no in Claude Code)
 ```
 
 - **Changing the plan with an AI** (`Tools/TestGate/Agent/PlanEditGate.cs`): the agent drafts the whole file in
@@ -195,11 +197,52 @@ Three branches that move at different speeds. The rules that keep them from bloc
 6. **Plan:** `[slots: F.Name]` + `[art: approved]` on a feature → missing level is **ART_DEBT** (actor: art, shown in the
    art lane, never assigned to agents); the feature can't be DONE with art debt. `[art-risk]` + a `[feasibility]`
    requirement → gameplay work is blocked until a human accepts feasibility (decide wolf/tiger *before* coding 3 skills).
+7. **Nobody writes art tickets.** The brief (human, `.md`) and the image-model prompt (`.prompt.txt`) are GENERATED per slot
+   from the contract (`intent`, envelope, pivot, actions with `frames`) plus the feature's style lock:
+   `Features/<F>/Assets/Private/Art/_feature.style.md` (shared) and `<Name>.style.md` (one slot). Looks are judged by eye,
+   not measured: when a version is rejected, `art note SLOT "why"` appends the reason to the slot's style file, and every
+   later brief/prompt carries it under "Avoid", so the same feedback is never given twice. Contracts reach TestGate through
+   a pure export (`ArtSlotExport` in LogicTests → `Dashboard/Data/art/slots.txt`), re-run automatically when a contract changes.
+   Pictures to judge by: *Tools > Game > Art > Snapshot* (Editor open) or `art shots` (Editor closed, batchmode with a GPU) renders every UiImage slot alone
+   at each level (pivot at the centre, max envelope × 5/2) and every view on every device (`smoke` fixture) into
+   `Dashboard/Data/art/shots/`; the brief embeds them and `<slot>.compare.html` shows the levels side by side with the
+   contract drawn over them, plus a note box per picture that builds the `art note` command.
 
 ```bash
+./Tools/test-gate.sh art brief [SLOT|--all]     # brief + prompt + compare page → Dashboard/Data/art/briefs/ (--print: stdout, for agents)
+./Tools/test-gate.sh art note MathQuiz.Slime "too dark on the lane"   # rejection reason → Slime.style.md → next prompt
 ./Tools/test-gate.sh art status                 # every slot: level, bound file, art gate, measurement
-./Tools/test-gate.sh art accept MathQuiz.Slime  # HUMAN ONLY: approve this exact content
+./Tools/test-gate.sh art accept MathQuiz.Slime  # OWNER (terminal or yes/no): approve this exact content
 ./Tools/test-gate.sh roadmap next               # ...includes the art lane (artists / reviewers)
+```
+
+### Standard art process (every feature, every game made from this template)
+
+Who: **Claude** draws every candidate (SVG → PNG), **Codex CLI** paints the final from an approved candidate, the **owner**
+judges by eye and approves. Nobody writes tickets, nobody wires art by hand, every attempt is kept as a version.
+
+| Step | Who | What |
+|---|---|---|
+| 1. Slot | code | `Logic/Domain/<F>ArtSlots.cs`: envelope, pivot, actions (`frames`), one-line `intent`. Shown in a view via its Cases' `ArtPlacements` (fixture + how to find it). `new-feature` / `new-view` scaffold both. |
+| 2. Style | owner | `Assets/Private/Art/_feature.style.md` (look, palette, readability), once per feature. |
+| 3. Brief | tool | `art brief SLOT [--print]`: brief, image prompt and compare page, all generated from 1 + 2 + earlier rejections. |
+| 4. Candidate | Claude | Draws an SVG from the brief (`viewBox` = delivery size, 2× contract units; tight to the subject; pivot where the contract says) → `art add SLOT draft.svg --tier candidate --by claude` → new version `vNNN` (SVG kept, PNG rendered by Inkscape). |
+| 5. Bind | Unity | `ArtImport` (on import, or *Tools > Game > Art > Sync*) turns the version each tier **uses** into `<Name>.<tier>.prefab` (size = PNG / 2, pivot = contract) behind one binding asset `<Name>.art.asset`. Features reference that asset once. |
+| 6. Check | tests + tool | EditMode `Art:<slot>` (size/pivot/timing vs contract; in the gate). Pictures are a tool, not a test: `art shots` (Editor closed) or *Tools > Game > Art > Snapshot* (Editor open); they need a GPU. |
+| 7. Judge | owner | `art compare SLOT` → page with every version (contract drawn over it), the bound levels and the slot in the game on each device. A one-line note per picture → `art note` (kept in `Art/<Name>/<Name>.style.md`, carried by every later prompt). Back to 4 until it reads right. |
+| 8. Final | Codex | Only when the owner asks (costs money): `art codex SLOT [--from vNNN]` → Codex `image_gen` keeps the reference design → new final version. Same checks and page. |
+| 9. Approve | owner | `art accept SLOT` (yes/no). Approval is per content hash: switching back to an approved version is approved again; editing makes it STALE. |
+
+Versions live in `Assets/Private/Art/<Name>/`: `vNNN.png` (+ `vNNN.svg`), never rewritten, and `versions.txt` (history +
+`use candidate vNNN` / `use final vNNN`, written only by the tools). `art versions SLOT` lists them; `art use SLOT vNNN [--as TIER]`
+switches or rolls back. The layout baseline (L3) records art slot nodes by **pivot only**, so changing art never needs a new
+layout baseline; their size is the art gate's job.
+
+```bash
+./Tools/test-gate.sh art add MathQuiz.Slime .scratch/slime.svg --tier candidate --by claude --note "rounder, bigger eyes"
+./Tools/test-gate.sh art versions MathQuiz.Slime
+./Tools/test-gate.sh art use MathQuiz.Slime v002          # switch / roll back (refresh Unity → rebinds)
+./Tools/test-gate.sh art codex MathQuiz.Slime --from v002 # FINAL via Codex, only on the owner's request (--dry-run shows it)
 ```
 
 **Limits.** A `[Covers]` link proves a test is *meant* to check a requirement, not that it checks it well: review tests like

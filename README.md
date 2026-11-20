@@ -156,7 +156,7 @@ Phân loại chính xác vì **kiến trúc làm cho nó chính xác**, không p
 ```bash
 ./Tools/test-gate.sh roadmap status            # bảng feature (hoặc: roadmap status F-TIMER)
 ./Tools/test-gate.sh roadmap next              # việc làm được ngay, theo làn song song
-./Tools/test-gate.sh roadmap accept R-ARENA-FEEL   # CHỈ NGƯỜI: duyệt requirement [manual]
+./Tools/test-gate.sh roadmap accept R-ARENA-FEEL   # CHỈ NGƯỜI (terminal hoặc yes/no): duyệt requirement [manual]
 ```
 Chi tiết: `Docs/PLANNING.md`. Dashboard có thêm tab **Tính năng** và **Plan DAG**.
 
@@ -166,7 +166,7 @@ Agent quyết định **làm gì**. Chương trình quyết định **có đư�
 
 | Vấn đề | Cách chặn |
 |---|---|
-| Sửa file ngoài phạm vi | **Task = đơn vị quyền**, phạm vi lấy theo feature. AI tự mở task cho 1 feature; rộng hơn thì `task request`, rồi **người** chạy `task approve` (cần terminal; shell của agent bị từ chối). Hook PreToolUse chặn **trước khi ghi**. |
+| Sửa file ngoài phạm vi | **Task = đơn vị quyền**, phạm vi lấy theo feature. AI tự mở task cho 1 feature; rộng hơn thì `task request`, rồi **người** duyệt: `task approve` trong terminal, hoặc agent chạy riêng lệnh đó và người trả lời yes/no trong Claude Code. Hook PreToolUse chặn **trước khi ghi**. |
 | Lách qua Bash (`sed`…) | Chụp snapshot git trước và sau mỗi lệnh Bash, rồi xét phạm vi và luật như với Edit. Hoàn tác thì luôn được phép. |
 | Fake fix test | Diff guard: bớt assert, bớt test, thêm `Ignore`/`Assume`/`#if`, xóa file test thì Stop bị chặn, trừ khi người đã duyệt `--tests`. |
 | Quên quy trình, mất memory | Stop hook chạy phạm vi + test guard + gate. SessionStart nạp task, gate gần nhất và trạng thái chuỗi hash. |
@@ -178,7 +178,7 @@ Agent quyết định **làm gì**. Chương trình quyết định **có đư�
 ./Tools/test-gate.sh dash          # ghi dữ liệu Dashboard/Data/; mở Dashboard/index.html (--bundle: 1 file để gửi)
 ./tools/test-gate.sh serve         # http://localhost:8765, tự cập nhật
 ./Tools/test-gate.sh events verify # chuỗi hash còn nguyên?
-./Tools/test-gate.sh task approve  # CHỈ NGƯỜI, trong terminal
+./Tools/test-gate.sh task approve  # CHỈ NGƯỜI: terminal, hoặc yes/no trong Claude Code
 ```
 
 ## Cấu trúc

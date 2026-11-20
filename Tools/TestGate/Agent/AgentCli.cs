@@ -17,7 +17,7 @@ namespace TestGate.AgentControl
     ///   task request --core "&lt;why&gt;"                                          core maintenance: owner-only files writable (human approves)
     ///   task need &lt;F-ID|Module|Core&gt; "&lt;what&gt;" [--api L]… [--patch P]  another module must change: a CR, never a chat message (CrCli)
     ///   task start … --from CR-n                                             work on an approved CR (= --req CR-n)
-    ///   task approve                                                         HUMAN ONLY: needs a terminal, refused inside Claude Code
+    ///   task approve                                                         OWNER: a terminal, or the owner's yes/no in Claude Code (OwnerAsk)
     ///   task show | task close
     ///   events verify | events tail [n] | reconcile
     ///   dash [--out file.html]      self-contained dashboard (open offline)
@@ -125,7 +125,7 @@ namespace TestGate.AgentControl
                     return 0;
 
                 case "approve":
-                    return Approve(root, task, now);
+                    return Approve(root, task, now, args);
 
                 case "need":
                     return CrCli.Need(root, task, args.Length > 2 && !args[2].StartsWith("--", StringComparison.Ordinal) ? args[2] : null,
@@ -162,37 +162,50 @@ namespace TestGate.AgentControl
             }
         }
 
-        private static int Approve(string root, AgentTask task, string now)
+        /// <summary>What `task approve` would grant (shown in the terminal and in the owner's yes/no dialog).</summary>
+        public static (string text, string error) DescribeApprove(AgentTask task)
         {
             if (task == null || (task.Status != AgentTask.PendingApproval && !task.HasPendingRequest))
+                return (null, "nothing to approve");
+            var lines = new List<string>
+            {
+                "Task " + task.Id + " \"" + task.Title + "\"",
+                "  current scope : " + task.ScopeText + (task.Status == AgentTask.PendingApproval ? " (not active yet)" : "")
+            };
+            if (task.HasPendingRequest)
+                lines.Add("  requested     : " + string.Join(", ", task.RequestedFeatures.Select(f => "Features/" + f).Concat(task.RequestedPaths)) +
+                          (task.RequestedTestChanges ? " + permission to change test expectations" : "") +
+                          (task.RequestedCoreMaintenance ? " + CORE MAINTENANCE (owner-only files: Tools/, rules, .claude/, .github/, docs, PublicApi...)" : "") + "  (" + task.RequestReason + ")");
+            return (string.Join("\n", lines), null);
+        }
+
+        private static int Approve(string root, AgentTask task, string now, string[] args)
+        {
+            var (text, nothing) = DescribeApprove(task);
+            if (nothing != null)
             {
                 Console.WriteLine("Nothing to approve.");
                 return 0;
             }
-            // Human only: Claude Code sets CLAUDECODE=1 in its shells and gives them no terminal. (Also denied in settings.)
-            if (!AgentShell.IsHumanTerminal)
-            {
-                Console.Error.WriteLine("Refused: approval needs a human at a terminal (not an agent shell, not piped input).");
-                Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "task-cli").With("target", "task approve").With("reason", "not an interactive human terminal"));
+            // Owner only: a human at a terminal, or the owner's yes in Claude Code (OwnerAsk grant). Claude Code shells carry CLAUDECODE=1.
+            var auth = OwnerAsk.Authorize(root, args, "task-cli", "approving a task's scope is the owner's.");
+            if (auth == null)
                 return 3;
-            }
-            Console.WriteLine("Task " + task.Id + " \"" + task.Title + "\"");
-            Console.WriteLine("  current scope : " + task.ScopeText + (task.Status == AgentTask.PendingApproval ? " (not active yet)" : ""));
-            if (task.HasPendingRequest)
-                Console.WriteLine("  requested     : " + string.Join(", ", task.RequestedFeatures.Select(f => "Features/" + f).Concat(task.RequestedPaths)) +
-                                  (task.RequestedTestChanges ? " + permission to change test expectations" : "") +
-                                  (task.RequestedCoreMaintenance ? " + CORE MAINTENANCE (owner-only files: Tools/, rules, .claude/, .github/, docs, PublicApi...)" : "") + "  (" + task.RequestReason + ")");
-            Console.Write("Type the task id to approve: ");
-            if ((Console.ReadLine() ?? "").Trim() != task.Id)
+            Console.WriteLine(text);
+            if (auth.Human)
             {
-                Console.WriteLine("Not approved.");
-                return 1;
+                Console.Write("Type the task id to approve: ");
+                if ((Console.ReadLine() ?? "").Trim() != task.Id)
+                {
+                    Console.WriteLine("Not approved.");
+                    return 1;
+                }
             }
             ScopePolicy.Approve(task, now);
             TaskStore.Save(root, task);
             TaskRegistry.Upsert(root, task, task.Requirements.Keys);
             Recorder.Session = "human";
-            Recorder.Emit(Recorder.New(EventTypes.TaskApproved, "human-terminal").With("id", task.Id).With("scope", task.ScopeText));
+            Recorder.Emit(Recorder.New(EventTypes.TaskApproved, auth.Source).With("id", task.Id).With("scope", task.ScopeText).With("toolUseId", auth.ToolUseId));
             Console.WriteLine("Approved: " + task.ScopeText);
             return 0;
         }

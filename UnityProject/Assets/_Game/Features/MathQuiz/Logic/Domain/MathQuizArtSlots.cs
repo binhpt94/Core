@@ -19,18 +19,21 @@ namespace Game.MathQuiz.Domain
             minWidth: 32, maxWidth: 72, minHeight: 60, maxHeight: 110, pivotXPercent: 50, pivotYPercent: 50, pivotTolerancePercent: 10,
             tickRate: ArenaConfig.TickRate,
             // Optional: a static image is fine; IF the art animates a hop, it must land inside the hop window.
-            actions: new[] { new ArtAction("Hop", marker: "land", minTick: 2, maxTick: 6, minSpeedPercent: 80, maxSpeedPercent: 125, required: false) });
+            actions: new[] { new ArtAction("Hop", marker: "land", minTick: 2, maxTick: 6, minSpeedPercent: 80, maxSpeedPercent: 125, required: false, frames: 6) },
+            intent: "Enemy walking along a lane toward the player's base; must read at a glance against the lane, one per lane band.");
 
         public static ArtSlotContract Bat { get; } = new ArtSlotContract(BatId, ArtSlotKind.UiImage,
             minWidth: 40, maxWidth: 96, minHeight: 40, maxHeight: 90, pivotXPercent: 50, pivotYPercent: 50, pivotTolerancePercent: 10,
-            tickRate: ArenaConfig.TickRate, actions: new ArtAction[0]);
+            tickRate: ArenaConfig.TickRate, actions: new ArtAction[0],
+            intent: "Second enemy type sharing the lanes with the slime; must be told apart from the slime instantly by silhouette.");
 
         /// <summary>Coin flying into the coin total on the round summary (F-COINS): small, round, centred; if it animates,
         /// it must arrive within 0.5–1.5 s so the summary keeps its pace. A static coin is fine (approved by the owner 2026-11-20).</summary>
         public static ArtSlotContract CoinFx { get; } = new ArtSlotContract(CoinFxId, ArtSlotKind.UiImage,
             minWidth: 24, maxWidth: 64, minHeight: 24, maxHeight: 64, pivotXPercent: 50, pivotYPercent: 50, pivotTolerancePercent: 10,
             tickRate: ArenaConfig.TickRate,
-            actions: new[] { new ArtAction("Fly", marker: "arrive", minTick: 10, maxTick: 30, minSpeedPercent: 80, maxSpeedPercent: 125, required: false) });
+            actions: new[] { new ArtAction("Fly", marker: "arrive", minTick: 10, maxTick: 30, minSpeedPercent: 80, maxSpeedPercent: 125, required: false, frames: 8) },
+            intent: "Coin flying into the coin total on the round summary: small, round, rewarding.");
 
         public IReadOnlyList<ArtSlotContract> Slots => new[] { Slime, Bat, CoinFx };
     }

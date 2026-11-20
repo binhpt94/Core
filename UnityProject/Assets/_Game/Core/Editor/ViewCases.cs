@@ -30,6 +30,9 @@ namespace Game.Core.EditorTools
         object Create(Transform parent, out GameObject root);
 
         void Apply(object view, string fixture);
+
+        /// <summary>Art slots this view shows, where to find them and in which fixture (pictures for judging art by eye).</summary>
+        IReadOnlyList<ArtPlacement> ArtPlacements { get; }
     }
 
     /// <summary>Typed base: a feature only says how to create its view and which fixtures exist.</summary>
@@ -48,6 +51,7 @@ namespace Game.Core.EditorTools
         public IReadOnlyList<string> SnapshotFixtureNames => Fixtures().Where(f => !f.Has(FixtureTags.Scenario)).Select(f => f.Name).ToList();
         public virtual IReadOnlyList<DeviceProfile> Devices => DeviceProfile.Standard();
         public virtual LayoutLimits Limits => new LayoutLimits();
+        public virtual IReadOnlyList<ArtPlacement> ArtPlacements => new ArtPlacement[0];
 
         public object Create(Transform parent, out GameObject root) => CreateView(parent, out root);
 

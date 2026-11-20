@@ -343,20 +343,47 @@ namespace TestGate.AgentControl
         }
 
         /// <summary>Once, by the owner: today's covering tests count as sealed (author=legacy), so verified requirements don't all drop.</summary>
-        public static SealOutcome Grandfather(string root, string now)
+        /// <summary>What `tests unseal` would do (the owner's yes/no dialog).</summary>
+        public static (string text, string error) DescribeUnseal(string root, string id, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                return (null, "usage: tests unseal R-ID \"<why>\" (the why is required)");
+            if (id == null || !SealStore.Load(root).TryGetValue(id, out var s) || s.Void)
+                return (null, id + ": not sealed");
+            return ("Unseal " + id + " (author=" + s.Author + ", red=" + s.Red + (s.DisputeCount > 0 ? ", disputes=" + s.DisputeCount : "") + "): its tests stop counting until sealed again.\n  why: " + reason.Trim(), null);
+        }
+
+        /// <summary>What `tests grandfather` would seal (the owner's yes/no dialog).</summary>
+        public static (string text, string error) DescribeGrandfather(string root)
+        {
+            var o = Grandfather(root, null, write: false);
+            if (!o.Ok)
+                return (null, string.Join("; ", o.Messages));
+            if (o.Messages.Count == 0)
+                return (null, "nothing to grandfather (every covered requirement is sealed)");
+            return ("Grandfather " + o.Messages.Count + " requirement(s): today's covering tests count as sealed (author=legacy):\n  " +
+                    string.Join("\n  ", o.Messages.Take(30)) + (o.Messages.Count > 30 ? "\n  … +" + (o.Messages.Count - 30) : ""), null);
+        }
+
+        public static SealOutcome Grandfather(string root, string now, bool write = true)
         {
             var plan = PlanParser.Load(root);
             if (plan == null)
                 return SealOutcome.Fail("no plan");
             var covers = PlanRules.Covers(root);
             var seals = SealStore.Load(root);
-            string head = AgentGit.Run(root, "rev-parse HEAD").output.Trim();
+            string head = write ? AgentGit.Run(root, "rev-parse HEAD").output.Trim() : null;
             var outcome = new SealOutcome { Ok = true };
             foreach (var r in plan.AllRequirements.Where(x => !x.IsManual))
             {
                 var mine = covers.Where(c => c.Requirement == r.Id).ToList();
                 if (mine.Count == 0 || seals.TryGetValue(r.Id, out var s) && !s.Void)
                     continue;
+                if (!write)
+                {
+                    outcome.Messages.Add(r.Id + " (" + mine.Count + " test(s))");
+                    continue;
+                }
                 SealStore.Append(root, r.Feature, "seal " + r.Id + " tests=" + SealStore.TestsHash(root, mine) + " req=" + r.Hash + " author=legacy red=legacy commit=" + head + " ts=" + now);
                 outcome.Messages.Add(r.Id + ": grandfathered");
             }
@@ -380,12 +407,8 @@ namespace TestGate.AgentControl
                 case "rule": o = Rule(root, task, Arg(2), Arg(3), session, Arg(4), now); break;
                 case "unseal":
                 case "grandfather":
-                    if (!AgentShell.IsHumanTerminal)
-                    {
-                        Console.Error.WriteLine("Refused: tests " + sub + " is the owner's last resort (a human at a terminal).");
-                        Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "tests-cli").With("target", "tests " + sub).With("reason", "not an interactive human terminal"));
+                    if (OwnerAsk.Authorize(root, args, "tests-cli", "tests " + sub + " is the owner's last resort.") == null)
                         return 3;
-                    }
                     o = sub == "unseal" ? Unseal(root, Arg(2), Arg(3), now) : Grandfather(root, now);
                     break;
                 case "status":

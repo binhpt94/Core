@@ -308,7 +308,7 @@ No AI checks AI; no node of the graph comes from what an agent says.
 
 | Concern | Mechanism | Where |
 |---|---|---|
-| Edits outside the task | **Task = permission unit**, scope derived from the architecture (feature folders), not a hand-written file list. One feature: the agent starts it itself. Wider (more features, Core, Bootstrap, paths, test expectations): `task request` → a human `task approve` (needs a terminal; refused when `CLAUDECODE=1` or stdin is piped; also denied in settings) | `AgentTask.cs`, PreToolUse |
+| Edits outside the task | **Task = permission unit**, scope derived from the architecture (feature folders), not a hand-written file list. One feature: the agent starts it itself. Wider (more features, Core, Bootstrap, paths, test expectations): `task request` → the owner's `task approve` (in a terminal, or the agent runs it alone and the owner answers Claude Code's yes/no: `OwnerAsk`, one-shot grant for those exact args; refused otherwise) | `AgentTask.cs`, PreToolUse |
 | Edits via Bash | git snapshot before/after every Bash call → FILE_MODIFIED (source `git-observer`), same scope + per-file rules as Edit; reverts are always allowed | `WorkSnapshot.cs`, PostToolUse |
 | Edits via MCP (Unity, Blender) | PreToolUse matches `mcp__.*`: the tool is classified (`McpPolicy`: name heuristic + owner lines in `Tools/mcp-policy.txt`). Read: free. Write: needs a task, a named target path must be in scope, then a git snapshot before/after like Bash (FILE_MODIFIED via the tool). Exec (arbitrary code: it can write outside the repo): blocked unless the owner allows it. A Unity-serialized file that appears later in a session that used MCP (the editor saved it after the call) is judged as the agent's | `McpPolicy.cs`, `AgentHooks.PreMcp` |
 | Changes no one saw | reconcile disk vs log at SessionStart/Stop → UNOBSERVED_CHANGE (shown, not hidden; often a human in the IDE) | `WorkSnapshot.Unexplained` |
@@ -350,11 +350,14 @@ log shorter than the checkpoint is reported (tail truncation). Read/Grep/Glob ar
 file or truncate its tail together with the checkpoint (anchor the head hash, e.g. in CI or a commit trailer; run the recorder as another user for stronger
 guarantees). CI re-running the gate is the final authority. Hook input fields (agent ids, transcript format) are not a stable contract:
 missing fields degrade to "main"/no claim, never to a crash. Commands run outside Claude Code's tools are only seen by the
-reconcile step. Codex: `.codex/config.toml` marks its shells (`GAME_AGENT_SHELL`), so human-only commands refuse there, and
+reconcile step. Codex: `.codex/config.toml` marks its shells (`GAME_AGENT_SHELL`), so owner commands refuse there (no ask dialog), and
 pre-commit/CI check its work; its hooks (PreToolUse/PostToolUse/Stop) are not wired to `claude-hook.sh` yet (field names to be
-verified against a real Codex). Human-only commands refuse in any shell carrying an agent marker (`CLAUDECODE`, `CLAUDE_CODE_*`,
-`CODEX_*`, `GAME_AGENT_SHELL`, ...) or without a terminal; an agent that scrubs its whole environment *and* fakes a terminal is
-still stopped by the PreToolUse command check and the settings deny list, not by this test.
+verified against a real Codex). Owner commands refuse in any shell carrying an agent marker (`CLAUDECODE`, `CLAUDE_CODE_*`,
+`CODEX_*`, `GAME_AGENT_SHELL`, ...) or without a terminal, unless the command carries a live owner grant: PreToolUse asks the
+owner (plain form only, text computed by the gate), logs the grant (sha256 of a nonce + exact args + expiry) and prefixes the
+command it runs with `GAME_OWNER_GRANT` (`updatedInput`); the CLI consumes it once. A grant not used before the next tool call
+(the owner said no) is revoked. An agent that scrubs its whole environment *and* fakes a terminal is still stopped by the
+PreToolUse command check and the settings ask list, not by this test.
 
 ## 16. Roadmap: plan as data, status as evidence
 
@@ -395,8 +398,13 @@ gameplay waits for art. The fix keeps each branch's truth where it can be checke
 - Graybox = generated from the contract → always conforms → gameplay never waits for art.
 - Art level (GRAYBOX/CANDIDATE/APPROVED/FINAL, STALE after edits) and ART_DEBT are computed; `[art-risk]` + `[feasibility]` puts the
   art question *before* deep gameplay work. Dashboard: Story/Gameplay/Art columns, an *Art* tab with slots and the art lane.
-- Limits: the art gate's measuring runs only in the Unity Editor (here: compiled against stubs; pure checks tested). 3D rig
-  compatibility is out of scope (contracts cover size, pivot and timing). "Looks good" stays a human `art accept`.
+- Art production is a fixed pipeline (Docs/PLANNING.md, "Standard art process"): the brief and image prompt are generated from
+  the contract + a style lock; Claude draws candidates as SVG, Codex paints finals; every attempt is an immutable version
+  (`Art/<Name>/vNNN`, `versions.txt` says which version each tier uses); Unity's `ArtImport` builds the prefab + binding from it.
+  Looks are judged by eye on a generated compare page (versions, bound levels, the slot in the game per device); rejection
+  reasons accumulate in the slot's style file and feed every later prompt. The L3 layout baseline records art slots by pivot only.
+- Limits: measuring runs only in Unity (EditMode art gate; pictures need a GPU). 3D rig compatibility is out of scope
+  (contracts cover size, pivot and timing; the import pipeline handles UiImage slots). "Looks good" stays a human `art accept`.
 
 ## 18. Files: no registry, nothing to reconcile
 

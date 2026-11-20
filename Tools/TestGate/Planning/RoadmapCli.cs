@@ -14,7 +14,7 @@ namespace TestGate.Planning
     ///   roadmap gaps              everything missing, most severe first (agent work vs human decisions)
     ///   roadmap next              what to do now, in parallel lanes, with the exact `task start` command
     ///   roadmap propose "text" [--feature F-ID]   agent → Docs/Plan/Inbox/ (the human decides)
-    ///   roadmap accept R-ID       HUMAN ONLY: accept a [manual] requirement / a reworded one
+    ///   roadmap accept R-ID       OWNER (terminal, or yes/no in Claude Code): accept a [manual] requirement / a reworded one
     ///   roadmap draft &lt;file&gt;      check a proposed features.md and list its feature/requirement changes
     /// </summary>
     public static class RoadmapCli
@@ -36,7 +36,7 @@ namespace TestGate.Planning
                 case "gaps": return Gaps(root);
                 case "next": return Next(root);
                 case "propose": return Propose(root, args);
-                case "accept": return Accept(root, args.Length > 2 ? args[2] : null);
+                case "accept": return Accept(root, args.Length > 2 ? args[2] : null, args);
                 default: return Status(root, args.Length > 2 ? args[2] : null);
             }
         }
@@ -184,7 +184,17 @@ namespace TestGate.Planning
             return 0;
         }
 
-        private static int Accept(string root, string id)
+        /// <summary>What `roadmap accept` would record (terminal and the owner's yes/no dialog).</summary>
+        public static (string text, string error) DescribeAccept(string root, string id)
+        {
+            var plan = PlanParser.Load(root);
+            var req = id == null || plan == null ? null : plan.Requirement(id);
+            if (req == null)
+                return (null, "unknown requirement '" + id + "'");
+            return ("Accept " + req.Id + (req.IsManual ? " [manual]" : "") + " (checked it yourself?)\n  " + req.Text, null);
+        }
+
+        private static int Accept(string root, string id, string[] args)
         {
             var plan = PlanParser.Load(root);
             var req = id == null ? null : plan.Requirement(id);
@@ -193,18 +203,18 @@ namespace TestGate.Planning
                 Console.Error.WriteLine("Usage: roadmap accept R-ID (unknown requirement '" + id + "')");
                 return 64;
             }
-            if (!AgentShell.IsHumanTerminal)
-            {
-                Console.Error.WriteLine("Refused: accepting a requirement is a human decision (needs a terminal, not an agent shell).");
-                Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "roadmap-cli").With("target", "roadmap accept " + id).With("reason", "not an interactive human terminal"));
+            var auth = OwnerAsk.Authorize(root, args, "roadmap-cli", "accepting a requirement is the owner's decision.");
+            if (auth == null)
                 return 3;
-            }
             Console.WriteLine(req.Id + "  " + req.Text + (req.IsManual ? "  [manual]" : ""));
-            Console.Write("Checked it yourself? Type the id to accept: ");
-            if ((Console.ReadLine() ?? "").Trim() != req.Id)
+            if (auth.Human)
             {
-                Console.WriteLine("Not accepted.");
-                return 1;
+                Console.Write("Checked it yourself? Type the id to accept: ");
+                if ((Console.ReadLine() ?? "").Trim() != req.Id)
+                {
+                    Console.WriteLine("Not accepted.");
+                    return 1;
+                }
             }
             var covers = PlanRules.Covers(root);
             PlanLedger.RecordHuman(root, req, covers);
@@ -216,7 +226,7 @@ namespace TestGate.Planning
                 File.WriteAllLines(p, lines);
             }
             Recorder.Session = "human";
-            Recorder.Emit(Recorder.New(EventTypes.RequirementAccepted, "human-terminal").With("requirement", req.Id).With("hash", req.Hash));
+            Recorder.Emit(Recorder.New(EventTypes.RequirementAccepted, auth.Source).With("requirement", req.Id).With("hash", req.Hash).With("toolUseId", auth.ToolUseId));
             Console.WriteLine("Accepted " + req.Id + ".");
             return 0;
         }

@@ -14,8 +14,17 @@ namespace Game.Core.DevTools
         public LayoutRect SafeArea { get; }
         public LayoutNode Root { get; }
 
-        public LayoutCase(string fixture, string device, LayoutRect canvas, LayoutRect safeArea, LayoutNode root)
+        /// <summary>
+        /// Nodes that are art slots (declared by the view's ArtPlacements) → their snapshot text ("pivot=x,y art:Feature.Name").
+        /// Their size and insides are art, not layout: the art gate checks them against the slot contract, so swapping art
+        /// versions does not change the L3 baseline. L2 constraints still see them as ordinary nodes.
+        /// </summary>
+        public IReadOnlyDictionary<LayoutNode, string> ArtSlots { get; }
+
+        public LayoutCase(string fixture, string device, LayoutRect canvas, LayoutRect safeArea, LayoutNode root,
+            IReadOnlyDictionary<LayoutNode, string> artSlots = null)
         {
+            ArtSlots = artSlots ?? new Dictionary<LayoutNode, string>();
             Fixture = fixture;
             Device = device;
             Canvas = canvas;
@@ -44,8 +53,15 @@ namespace Game.Core.DevTools
             {
                 sb.Append("== ").Append(c.Key).Append(" canvas=").Append(c.Canvas.W).Append('x').Append(c.Canvas.H)
                   .Append(" safe=").Append(c.SafeArea).Append('\n');
-                foreach (var n in c.Root.Descendants())
-                    sb.Append(n.Path).Append(' ').Append(KindCode(n.Kind)).Append(' ').Append(n.Rect).Append('\n');
+                foreach (var n in c.Root.Descendants().Where(n => !InsideArt(c, n)))
+                {
+                    sb.Append(n.Path).Append(' ');
+                    if (c.ArtSlots.TryGetValue(n, out var art))
+                        sb.Append("A ").Append(art);
+                    else
+                        sb.Append(KindCode(n.Kind)).Append(' ').Append(n.Rect);
+                    sb.Append('\n');
+                }
             }
             return sb.ToString();
         }
@@ -98,6 +114,14 @@ namespace Game.Core.DevTools
                 map[section + " " + line.Substring(0, k)] = line.Substring(k + 1);
             }
             return map;
+        }
+
+        private static bool InsideArt(LayoutCase c, LayoutNode n)
+        {
+            for (var p = n.Parent; p != null; p = p.Parent)
+                if (c.ArtSlots.ContainsKey(p))
+                    return true;
+            return false;
         }
 
         private static char KindCode(LayoutNodeKind kind)

@@ -3,7 +3,9 @@ sealed class Game.Core.AllowStaticAttribute
   System.String Reason { get; }
 sealed class Game.Core.ArtAction
   .ctor(System.String clip, System.String marker, System.Int32 minTick, System.Int32 maxTick, System.Int32 minSpeedPercent, System.Int32 maxSpeedPercent, System.Boolean required)
+  .ctor(System.String clip, System.String marker, System.Int32 minTick, System.Int32 maxTick, System.Int32 minSpeedPercent, System.Int32 maxSpeedPercent, System.Boolean required, System.Int32 frames)
   System.Boolean Required { get; }
+  System.Int32 Frames { get; }
   System.Int32 MaxSpeedPercent { get; }
   System.Int32 MaxTick { get; }
   System.Int32 MinSpeedPercent { get; }
@@ -27,6 +29,7 @@ sealed class Game.Core.ArtMeasurement
   System.Int32 Width { get; set; }
 sealed class Game.Core.ArtSlotContract
   .ctor(System.String id, Game.Core.ArtSlotKind kind, System.Int32 minWidth, System.Int32 maxWidth, System.Int32 minHeight, System.Int32 maxHeight, System.Int32 pivotXPercent, System.Int32 pivotYPercent, System.Int32 pivotTolerancePercent, System.Int32 tickRate, System.Collections.Generic.IReadOnlyList<Game.Core.ArtAction> actions)
+  .ctor(System.String id, Game.Core.ArtSlotKind kind, System.Int32 minWidth, System.Int32 maxWidth, System.Int32 minHeight, System.Int32 maxHeight, System.Int32 pivotXPercent, System.Int32 pivotYPercent, System.Int32 pivotTolerancePercent, System.Int32 tickRate, System.Collections.Generic.IReadOnlyList<Game.Core.ArtAction> actions, System.String intent)
   Game.Core.ArtSlotKind Kind { get; }
   System.Collections.Generic.IReadOnlyList<Game.Core.ArtAction> Actions { get; }
   System.Collections.Generic.IReadOnlyList<System.String> Problems()
@@ -39,6 +42,7 @@ sealed class Game.Core.ArtSlotContract
   System.Int32 PivotYPercent { get; }
   System.Int32 TickRate { get; }
   System.String Id { get; }
+  System.String Intent { get; }
 enum Game.Core.ArtSlotKind
   Model3D
   Sprite2D

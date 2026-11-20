@@ -55,7 +55,9 @@ namespace Game.Core.EditorTools
                 cases.Apply(view, fixture);
                 ForceLayout(rt);
 
-                var layout = new LayoutCase(fixture, device.Name, size, device.SafeArea(refW, refH, match), LayoutProbe.Capture(rt));
+                var art = ArtSlotLabels(cases, root, rt);
+                var tree = LayoutProbe.Capture(rt, art, out var artNodes);
+                var layout = new LayoutCase(fixture, device.Name, size, device.SafeArea(refW, refH, match), tree, artNodes);
                 return new ViewStage(host, root, layout);
             }
             catch
@@ -63,6 +65,20 @@ namespace Game.Core.EditorTools
                 UnityEngine.Object.DestroyImmediate(host);
                 throw;
             }
+        }
+
+        /// <summary>The view's declared art slot objects → "pivot=x,y art:&lt;slot&gt;" (canvas units, y down).</summary>
+        private static Dictionary<RectTransform, string> ArtSlotLabels(IViewCases cases, GameObject root, RectTransform canvas)
+        {
+            var labels = new Dictionary<RectTransform, string>();
+            foreach (var p in cases.ArtPlacements)
+                foreach (var t in p.Find(root))
+                {
+                    Vector3 at = canvas.InverseTransformPoint(t.position);
+                    var c = canvas.rect;
+                    labels[t] = "pivot=" + Mathf.RoundToInt(at.x - c.xMin) + "," + Mathf.RoundToInt(c.yMax - at.y) + " art:" + p.SlotId;
+                }
+            return labels;
         }
 
         private static void ForceLayout(RectTransform root)
@@ -87,14 +103,20 @@ namespace Game.Core.EditorTools
     /// <summary>RectTransform tree → engine-free <see cref="LayoutNode"/> tree (active objects only, canvas units, y down).</summary>
     public static class LayoutProbe
     {
-        public static LayoutNode Capture(RectTransform canvas)
+        public static LayoutNode Capture(RectTransform canvas) =>
+            Capture(canvas, new Dictionary<RectTransform, string>(), out _);
+
+        /// <summary>Also maps the given art slot objects to their nodes (labels for the snapshot).</summary>
+        public static LayoutNode Capture(RectTransform canvas, IReadOnlyDictionary<RectTransform, string> art, out Dictionary<LayoutNode, string> artNodes)
         {
             var root = new LayoutNode("Canvas", LayoutNodeKind.Container, new LayoutRect(0, 0, Mathf.RoundToInt(canvas.rect.width), Mathf.RoundToInt(canvas.rect.height)));
-            AddChildren(canvas, canvas, root);
+            artNodes = new Dictionary<LayoutNode, string>();
+            AddChildren(canvas, canvas, root, art, artNodes);
             return root;
         }
 
-        private static void AddChildren(RectTransform canvas, Transform parent, LayoutNode into)
+        private static void AddChildren(RectTransform canvas, Transform parent, LayoutNode into,
+            IReadOnlyDictionary<RectTransform, string> art, Dictionary<LayoutNode, string> artNodes)
         {
             var seen = new Dictionary<string, int>();
             foreach (Transform child in parent)
@@ -120,7 +142,9 @@ namespace Game.Core.EditorTools
                     node = new LayoutNode(name, LayoutNodeKind.Container, rect);
 
                 into.Add(node);
-                AddChildren(canvas, child, node);
+                if (art.TryGetValue(rt, out var label))
+                    artNodes[node] = label;
+                AddChildren(canvas, child, node, art, artNodes);
             }
         }
 

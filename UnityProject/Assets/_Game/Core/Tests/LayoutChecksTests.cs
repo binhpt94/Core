@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Game.Core.DevTools;
 using NUnit.Framework;
@@ -170,5 +171,23 @@ namespace Game.Core.Tests
             Assert.Throws<System.ArgumentException>(() => new ViewFixture<object>("has space", _ => { }));
             Assert.That(new ViewFixture<object>("smoke", _ => { }, FixtureTags.Smoke).Has(FixtureTags.Smoke), Is.True);
         }
-    }
+    
+        [Test]
+        public void Snapshot_RecordsArtSlotsByPivotOnly_AndNotTheirInsides()
+        {
+            var root = new LayoutNode("Canvas", LayoutNodeKind.Container, new LayoutRect(0, 0, 1080, 1920));
+            var lane = new LayoutNode("Lane", LayoutNodeKind.Decoration, new LayoutRect(0, 400, 1080, 120));
+            var slime = new LayoutNode("Slime1", LayoutNodeKind.Decoration, new LayoutRect(100, 418, 52, 85));
+            var eye = new LayoutNode("Eye", LayoutNodeKind.Decoration, new LayoutRect(110, 430, 8, 8));
+            root.Add(lane);
+            lane.Add(slime);
+            slime.Add(eye);
+            var art = new Dictionary<LayoutNode, string> { [slime] = "pivot=126,460 art:A.Slime" };
+            string text = LayoutSnapshot.Render("A/V", new[] { new LayoutCase("smoke", "phone", new LayoutRect(0, 0, 1080, 1920), new LayoutRect(0, 0, 1080, 1920), root, art) });
+            Assert.That(text, Does.Contain("Lane/Slime1 A pivot=126,460 art:A.Slime\n"));
+            Assert.That(text, Does.Not.Contain("52x85"), "art size is the art gate's business, not the layout baseline's");
+            Assert.That(text, Does.Not.Contain("Eye"), "the art's insides are not layout");
+            Assert.That(text, Does.Contain("Lane D "), "ordinary nodes keep their rect");
+        }
+}
 }

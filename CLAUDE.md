@@ -104,7 +104,7 @@ thread and checks the lifetime.
 - Every state that influences the future goes into `StateHash()` (fixed order, collections by id).
 - Bugs: a replay (`.replay.txt`, from the error dump or *Tools > Game > Debug > Save Replay*) dropped into the feature's
   `Tests/Replays/` becomes a regression test. A golden replay failing means gameplay changed: if intended, **ask the owner**
-  to regenerate (`GOLDEN_WRITE=1`, denied to you) and review the diff. Changing rules on purpose? Bump `SimVersion`.
+  to regenerate (`GOLDEN_WRITE=1 dotnet test Tools/LogicTests`, run alone: the owner answers yes/no) and review the diff. Changing rules on purpose? Bump `SimVersion`.
 
 ## 7. UI: views, popups, components
 - New view: `test-gate.sh new-view <F> <V>`. A view only renders view models and raises events.
@@ -112,19 +112,20 @@ thread and checks the lifetime.
   (`DevTools/Fixtures`, hand-made view models). Never a `CheatX()` that sets fields. Preview: *Tools > Game > UI > View Preview*.
 - What runs is decided by file role (`test-gate.sh plan` shows it): a layout change runs only that view's layout gate
   (Unity EditMode, `-testCategory View:F.V`: L2 constraints on every fixture × device, L3 text snapshot).
-- L3 snapshot differs after an intended layout change → **ask the owner** to regenerate (`LAYOUT_WRITE=1`, denied to you)
+- L3 snapshot differs after an intended layout change → **ask the owner** to regenerate (`LAYOUT_WRITE=1 ./Tools/run-unity-tests.sh …`, run alone: the owner answers yes/no)
   and show them the diff lines. L2 violation (`L-SAFE`, `L-OVERLAP`, `L-TEXT`, `L-TOUCH`) → fix the recipe/prefab, never the check.
 
 ## 8. Tasks, scope and the flight recorder
 - **Before editing anything:** `./Tools/test-gate.sh task start "<what>" --feature <Feature>` (one feature = active at once).
   Without an active task, or outside its scope, writes are **blocked before they happen** (PreToolUse).
 - Need another feature, a path outside features, or to change what a test expects? `task request --feature G | --path P | --tests "<why>"`
-  and tell the human; only they can run `task approve` (needs a terminal; refused in your shell). Keep working inside the current scope.
+  and tell the human; only they approve: `task approve` in their terminal, or you run `./Tools/test-gate.sh task approve` alone and
+  they answer yes/no in Claude Code (see Owner commands below). Keep working inside the current scope.
 - **Need another module to change? Never ask its session by message** (SendMessage is logged; a request that way approves nothing).
   `task need <F-ID|Module|Core> "<what, why>" [--api "<PublicApi line>"]…` files `CR-n`; keep working against a fake in your own
   feature (it owes CR-n until delivered). New types only: the gate approves at once and your task may write B's Contracts (exactly
   those PublicApi lines + a skeleton). Breaking: another session rules (`cr rule CR-n keep|reject|ask "<why>"`). No API (meaning) or
-  breaking Core: the owner (`cr decide`, theirs). An approved CR is a requirement of B: `task start … --from CR-n` (roles as usual).
+  breaking Core: the owner (`cr decide` loop in their terminal, or `cr decide CR-n approve|reject "<why>"` → their yes/no). An approved CR is a requirement of B: `task start … --from CR-n` (roles as usual).
   A CR filed in another worktree is visible here at once; starting on it copies its lines into your branch: commit them.
 - A task without `--req`/`--from` is maintenance: changing a feature's `Contracts/` or `Logic/Domain/` there, or turning one of its
   `[Covers]` tests from red to green, is `UNTRACED_CHANGE` at Stop.
@@ -137,6 +138,12 @@ thread and checks the lifetime.
 - **Red because of a HUMAN** (their plan typo, misplaced file, inspector/gameplay tweak, removed assert: the event log proves
   you didn't write it): Stop lets you finish and lists it as "waiting for a HUMAN". It is **not yours**: don't fix it, don't work
   around it, just mention it in your final message. The human gets the commands in their terminal and on the dashboard.
+- **Owner commands** (`task approve`, `roadmap accept R`, `art accept S`, `cr decide CR-n approve|reject "why"`, `tests unseal R "why"`,
+  `tests grandfather`, `GOLDEN_WRITE=1 …`, `LAYOUT_WRITE=1 …`): only when the owner asked for it or a gate tells you to. Run the
+  command **alone** (no `;`, `&&`, `|`, `$(…)`, `bash -c`); the hook shows the owner what the gate computed and they answer
+  yes/no. One yes = one run of exactly those args (`OwnerAsk`). Chained/wrapped forms stay blocked; a "no" is final: don't retry.
+  The dialog text (plain Vietnamese: what, content, status, Yes/No, what to check, undo) is `OwnerAskText`; show it to the owner
+  beforehand with `./Tools/test-gate.sh owner-preview <args>` (`golden`, `layout …` for baselines); it asks and grants nothing.
 - `.agent/` (event log, task) is written only by the gate. Your final message is recorded as a CLAIM and shown next to the evidence.
 - Useful: `task show` · `events tail 20` · `roadmap next` · `task close` when done. Ask these commands (short, computed answers);
   never read `Dashboard/Data/` or `.agent/`: the dashboard is for the human, and reading it costs tokens for nothing.
@@ -156,7 +163,7 @@ thread and checks the lifetime.
   - `--role arbiter` (a third session): `tests rule R-… keep|fix|ask "<why>"`. fix = correct the test and seal again; ask = the
     requirement is ambiguous: propose the new wording to the owner (features.md yes/no). The 3rd dispute of one R- becomes ask.
   - A requirement counts (VERIFIED) only with live, unchanged, undisputed sealed tests. Sealed tests that are red because the code
-    isn't written yet are reported by the gate, not a failure. `tests unseal` / `tests grandfather` are the owner's (denied to you).
+    isn't written yet are reported by the gate, not a failure. `tests unseal` / `tests grandfather` are the owner's (yes/no only).
 - **Adding or changing features/requirements (only when the owner asks):** write the whole proposed file to
   `.scratch/features.draft.md`, run `./Tools/test-gate.sh roadmap draft .scratch/features.draft.md` and show the owner its list
   of changes (`+ R-…`, `~ R-…`, `- R-…` with their text). Adjust with the owner until agreed, then write `Docs/Plan/features.md`
@@ -164,14 +171,14 @@ thread and checks the lifetime.
   skip the draft. `Docs/Plan/Core.md` (core idea) works the same way: show the owner the proposed text, then Edit/Write → yes/no
   with the changed lines. `Docs/Plan/Notes.md` (owner's notes) is written freely on request. Never write features.md or Core.md
   through Bash/scripts (always a breach). Unsure? `roadmap propose "<what and why>"`.
-  `Docs/Plan/accepted.txt` stays denied, `roadmap accept` stays human only.
+  `Docs/Plan/accepted.txt` stays denied (written only by `roadmap accept`, the owner's yes/no).
 - If Stop says **STALE task**: the human changed a requirement you were working on. Re-read it, adapt code and tests,
   `task close`, start again from `roadmap next`.
 - Syntax and statuses: `Docs/PLANNING.md`.
 - **Story · Gameplay · Art:** story goals are `[story]` requirements checked by design-lint tests over content data
   (archetypes in `Logic/Domain`), not hard-coded content. Art goes through **slots** (`<F>ArtSlots.cs` contracts; graybox is
   generated from them): never reference art prefabs from gameplay, never resize/retime gameplay to fit art (change the
-  contract → ask the human). Art debt is for artists; `art accept` is human-only.
+  contract → ask the human). Art debt is for artists; `art accept` is the owner's (yes/no).
 
 ## 10. Files: where things go, what is junk
 - **Scratch work goes to `.scratch/`** (gitignored, outside Assets/, never imported): throwaway scenes, dumps, notes.

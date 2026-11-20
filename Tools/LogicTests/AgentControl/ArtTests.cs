@@ -59,6 +59,18 @@ namespace LogicTests.AgentControl
         }
 
         [Test]
+        public void GoingBackToApprovedContent_IsApprovedAgain_EveryApprovalIsKept()
+        {
+            ArtStatus.Accept(_root, Hero());
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Private/hero.png", "PNG-2");
+            Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Stale));
+            ArtStatus.Accept(_root, Hero()); // the new version is approved too
+            Write("UnityProject/Assets/_Game/Features/A/Assets/Private/hero.png", "PNG-1"); // roll back to the first one
+            Assert.That(Hero().Level, Is.EqualTo(ArtLevels.Approved), "an approval is for content, not for the latest accept");
+            Assert.That(ArtStatus.LoadAccepted(_root)["A.Hero"].Count, Is.EqualTo(2));
+        }
+
+        [Test]
         public void Final_NeedsApproval_FinalBinding_AndAPassingArtGate()
         {
             Bind("final");

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Game.Core.DevTools;
 using Game.Core.EditorTools;
 using Game.MathQuiz.Domain;
@@ -21,6 +22,13 @@ namespace Game.MathQuiz.EditorTools
         protected override string View => "QuizView";
 
         protected override IReadOnlyList<ViewFixture<IQuizView>> Fixtures() => QuizViewFixtures.All(ShippedConfig());
+
+        /// <summary>The slimes walking the lane (QuizView names each spawned marker "Slime&lt;id&gt;"; the inactive template is skipped).</summary>
+        public override IReadOnlyList<ArtPlacement> ArtPlacements => new[]
+        {
+            new ArtPlacement(MathQuizArtSlots.SlimeId, "smoke", root => root.GetComponentsInChildren<RectTransform>(false)
+                .Where(t => t.name.StartsWith("Slime", System.StringComparison.Ordinal) && t.name != "SlimeTemplate"))
+        };
 
         protected override IQuizView CreateView(Transform parent, out GameObject root)
         {

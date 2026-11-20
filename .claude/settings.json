@@ -1,6 +1,7 @@
 {
   "env": {
-    "GAME_AGENT_SHELL": "claude"
+    "GAME_AGENT_SHELL": "claude",
+    "DOTNET_ROLL_FORWARD": "Major"
   },
   "hooks": {
     "SessionStart": [
@@ -72,6 +73,22 @@
       "Bash(git diff:*)",
       "Bash(git log:*)"
     ],
+    "ask": [
+      "Bash(GOLDEN_WRITE=1 dotnet test:*)",
+      "Bash(LAYOUT_WRITE=1:*)",
+      "Bash(./Tools/test-gate.sh task approve:*)",
+      "Bash(Tools/test-gate.sh task approve:*)",
+      "Bash(./Tools/test-gate.sh roadmap accept:*)",
+      "Bash(Tools/test-gate.sh roadmap accept:*)",
+      "Bash(./Tools/test-gate.sh art accept:*)",
+      "Bash(Tools/test-gate.sh art accept:*)",
+      "Bash(./Tools/test-gate.sh cr decide:*)",
+      "Bash(Tools/test-gate.sh cr decide:*)",
+      "Bash(./Tools/test-gate.sh tests unseal:*)",
+      "Bash(Tools/test-gate.sh tests unseal:*)",
+      "Bash(./Tools/test-gate.sh tests grandfather:*)",
+      "Bash(Tools/test-gate.sh tests grandfather:*)"
+    ],
     "deny": [
       "Edit(**/*.unity)",
       "Write(**/*.unity)",
@@ -81,8 +98,6 @@
       "Bash(git commit -n:*)",
       "Bash(git config core.hooksPath:*)",
       "Bash(git push --force:*)",
-      "Bash(GOLDEN_WRITE=1 dotnet test:*)",
-      "Bash(LAYOUT_WRITE=1:*)",
       "Bash(export LAYOUT_WRITE:*)",
       "Edit(**/Tests/Replays/**)",
       "Write(**/Tests/Replays/**)",
@@ -90,14 +105,6 @@
       "Write(**/Tests/Layout/**)",
       "Edit(.agent/**)",
       "Write(.agent/**)",
-      "Bash(./Tools/test-gate.sh task approve:*)",
-      "Bash(Tools/test-gate.sh task approve:*)",
-      "Bash(./Tools/test-gate.sh roadmap accept:*)",
-      "Bash(Tools/test-gate.sh roadmap accept:*)",
-      "Bash(./Tools/test-gate.sh art accept:*)",
-      "Bash(Tools/test-gate.sh art accept:*)",
-      "Bash(./Tools/test-gate.sh cr decide:*)",
-      "Bash(Tools/test-gate.sh cr decide:*)",
       "Bash(./Tools/test-gate.sh files clean --regenerable --library:*)",
       "Read(Dashboard/Data/**)",
       "Read(.agent/**)"

@@ -1,0 +1,5 @@
+seal R-ARENA-ZAP tests=25b1aca91918 req=fd1d07731a93 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-ARENA-RAGE tests=853706bee34c req=52cafc5137d6 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-ARENA-DEFEAT tests=b3cb362913c5 req=749a0ba4a355 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-ARENA-BREATHER tests=02dca1f98b05 req=cf81f7eba8d3 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-ARENA-READABLE tests=a382074f379e req=58e79625c89d author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
