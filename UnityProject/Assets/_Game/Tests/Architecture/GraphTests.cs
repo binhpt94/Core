@@ -209,12 +209,14 @@ namespace Game.Architecture.Tests
             {
                 string dir = Path.Combine(_tmp, "UnityProject", "Assets", "ThirdParty", "V");
                 Write("UnityProject/Assets/ThirdParty/V/lib.so", "AAAA");
+                var file = Path.Combine(dir, "lib.so");
+                // Mono (Unity) sets file times with microsecond precision: start from a whole second so restoring it is exact.
+                var time = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                File.SetLastWriteTimeUtc(file, time);
                 string first = ThirdPartyRules.HashFolderCached(_tmp, dir);
                 Assert.That(File.Exists(Path.Combine(_tmp, ThirdPartyRules.CacheFile)), Is.True);
 
                 // Same size + same mtime: cache hit (this is why CI never uses the cache)
-                var file = Path.Combine(dir, "lib.so");
-                var time = File.GetLastWriteTimeUtc(file);
                 File.WriteAllText(file, "BBBB");
                 File.SetLastWriteTimeUtc(file, time);
                 Assert.That(ThirdPartyRules.HashFolderCached(_tmp, dir), Is.EqualTo(first));
