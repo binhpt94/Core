@@ -1,0 +1,3 @@
+# Art versions of MathQuiz.Slime: written by `art add` / `art use`, never by hand. Files: vNNN.png (+ vNNN.svg).
+v001 2026-11-20 candidate claude - "first draft: green jelly, big eyes, thick outline"
+use candidate v001

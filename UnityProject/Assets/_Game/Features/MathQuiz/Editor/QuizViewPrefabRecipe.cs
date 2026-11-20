@@ -1,3 +1,5 @@
+using Game.Core.EditorTools;
+using Game.MathQuiz.Domain;
 using Game.MathQuiz.Presentation;
 using UnityEditor;
 using UnityEngine;
@@ -27,9 +29,36 @@ namespace Game.MathQuiz.EditorTools
             {
                 Debug.Log("[Recipe] " + GeneratedPrefabPath + " already exists. Use 'Force Rebuild' after changing the recipe.");
                 EnsureAssetsEntry();
+                EnsureArtBindings();
                 return;
             }
             Build();
+        }
+
+        /// <summary>
+        /// Points the view at its art slot binding (Slime.art.asset, created empty = graybox if missing). Done once: versions are
+        /// switched behind that asset by `art add` / `art use` + ArtImport, so the prefab never needs rewiring.
+        /// </summary>
+        [MenuItem("Tools/Game/Prefabs/MathQuiz: Wire Art Bindings")]
+        public static void EnsureArtBindings()
+        {
+            var binding = ArtImport.EnsureBinding(MathQuizArtSlots.SlimeId);
+            var root = PrefabUtility.LoadPrefabContents(GeneratedPrefabPath);
+            try
+            {
+                var so = new SerializedObject(root.GetComponent<QuizView>());
+                var field = so.FindProperty("slimeArt");
+                if (field.objectReferenceValue == binding)
+                    return;
+                field.objectReferenceValue = binding;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, GeneratedPrefabPath);
+                Debug.Log("[Recipe] QuizView.slimeArt → " + AssetDatabase.GetAssetPath(binding));
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>
@@ -59,6 +88,7 @@ namespace Game.MathQuiz.EditorTools
             {
                 Object.DestroyImmediate(view.gameObject);
             }
+            EnsureArtBindings();
         }
 
         private static void EnsureAssetsEntry(QuizView generated = null)

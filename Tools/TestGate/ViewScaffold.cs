@@ -258,7 +258,7 @@ namespace {ns}.EditorTools
         EnsureAsmdef(dir, "DevTools/Game." + feature + ".DevTools.asmdef", "Game." + feature + ".DevTools",
             new[] { "Game.Core", "Game.Core.DevTools", "Game." + feature }, pure: true, editorOnly: false, devTools: true);
         EnsureAsmdef(dir, "Editor/Game." + feature + ".Editor.asmdef", "Game." + feature + ".Editor",
-            new[] { "Game.Core", "Game.Core.DevTools", "Game.Core.Editor", "Game." + feature, "Game." + feature + ".DevTools", "Game." + feature + ".Unity", "UnityEngine.UI" },
+            new[] { "Game.Core", "Game.Core.DevTools", "Game.Core.Editor", "Game.Core.Unity", "Game." + feature, "Game." + feature + ".DevTools", "Game." + feature + ".Unity", "UnityEngine.UI" },
             pure: false, editorOnly: true, devTools: false);
         EnsureReferences(Path.Combine(dir, "Unity", "Game." + feature + ".Unity.asmdef"), new[] { "UnityEngine.UI" });
         EnsureIvt(dir, "Logic/AssemblyInfo.cs", "Game." + feature + ".Editor", "Game." + feature + ".DevTools");

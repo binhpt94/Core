@@ -5,6 +5,7 @@
         "Game.Core",
         "Game.Core.DevTools",
         "Game.Core.Editor",
+        "Game.Core.Unity",
         "Game.MathQuiz",
         "Game.MathQuiz.DevTools",
         "Game.MathQuiz.Unity",

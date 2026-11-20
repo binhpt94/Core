@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33725ac2a51fc484b870dd9e01fcb37d, type: 3}
+  m_Name: Slime.art
+  m_EditorClassIdentifier: Game.Core.Unity::Game.Core.Presentation.ArtSlotAsset
+  slotId: MathQuiz.Slime
+  candidate: {fileID: 6518493189457726094, guid: 6d9e82db4f9bd6215b78fe4c0a103bf3, type: 3}
+  final: {fileID: 0}
