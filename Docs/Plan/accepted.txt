@@ -1,0 +1,2 @@
+# Requirements accepted by a human: <id> <requirement hash> <date>. Written by `roadmap accept`.
+R-COIN-FX 8c8b22b8f8bb 2026-11-20

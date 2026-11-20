@@ -1,0 +1,3 @@
+seal R-REPLAY-BITS tests=cdafa02f155e req=fc9ec0e9b1f4 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-REPLAY-DIVERGE tests=4fe5108520c7 req=9052eac92304 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-REPLAY-GOLDEN tests=12c638b4bb47 req=22f18503c99d author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z

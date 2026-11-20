@@ -14,7 +14,8 @@ namespace TestGate.AgentControl
     ///   cr rule CR-n keep|reject|ask "&lt;why&gt;"      arbiter: a session other than the asker (breaking / core-additive CRs)
     ///   cr withdraw CR-n "&lt;why&gt;"                  the asker no longer needs it (not once approved)
     ///   cr deliver CR-n "&lt;what&gt;"                  a core-maintenance task did a Core CR
-    ///   cr decide                                   HUMAN ONLY: the owner answers every CR waiting for them in one pass
+    ///   cr decide                                   OWNER, terminal: answers every CR waiting for them in one pass
+    ///   cr decide CR-n approve|reject "&lt;why&gt;"       OWNER: one CR (terminal, or the owner's yes/no in Claude Code: OwnerAsk)
     /// </summary>
     public static class CrCli
     {
@@ -78,7 +79,7 @@ namespace TestGate.AgentControl
             else if (route == CrClassifier.ArbiterRoute)
                 Console.WriteLine("Waits for an arbiter (another session): ./Tools/test-gate.sh cr rule " + id + " keep|reject|ask \"<why>\"");
             else
-                Console.WriteLine("Waits for the owner (batched): they run ./Tools/test-gate.sh cr decide in a terminal.");
+                Console.WriteLine("Waits for the owner (batched): they run ./Tools/test-gate.sh cr decide (terminal) or answer yes/no to cr decide CR-n approve|reject.");
             Console.WriteLine("Don't wait: keep working against a fake in your own Tests/ or DevTools/. Your feature owes " + id + " until " + to + " delivers it.");
             return 0;
         }
@@ -117,7 +118,7 @@ namespace TestGate.AgentControl
                 case "deliver":
                     return Deliver(root, crs, Arg(2), Arg(3));
                 case "decide":
-                    return Decide(root, crs);
+                    return Arg(2) == null ? Decide(root, crs) : DecideOne(root, crs, args);
                 default:
                     return Fail("usage: cr list [--all] | show CR-n | rule CR-n keep|reject|ask \"why\" | withdraw CR-n \"why\" | deliver CR-n \"what\" | (owner) decide", 2);
             }
@@ -170,39 +171,80 @@ namespace TestGate.AgentControl
             return 0;
         }
 
-        /// <summary>The owner's pass over everything waiting for them: y = approve, n = reject, Enter = later.</summary>
+        private static List<CrEntry> Waiting(Dictionary<string, CrEntry> crs) =>
+            crs.Values.Where(c => (c.Status == CrLog.Open || c.Status == CrLog.Asked) && WhoDecides(c) == CrClassifier.Owner).OrderBy(c => Num(c.Id)).ToList();
+
+        private static string Describe(CrEntry c) =>
+            c.Id + "  " + c.Kind + "  " + c.From + " → " + c.To + (c.Reason != null ? "  (arbiter: " + c.Reason + ")" : "") + "\n  " + c.Text +
+            string.Concat(c.Api.Select(a => "\n  api: " + a));
+
+        /// <summary>What `cr decide CR-n approve|reject` would record (the owner's yes/no dialog).</summary>
+        public static (string text, string error) DescribeDecide(string root, string id, string verdict, string why)
+        {
+            if (verdict != "approve" && verdict != "reject")
+                return (null, "usage: cr decide CR-n approve|reject \"<why>\"");
+            var crs = CrStore.Load(root);
+            if (id == null || !crs.TryGetValue(id, out var cr))
+                return (null, "unknown CR '" + id + "'");
+            if (!Waiting(crs).Contains(cr))
+                return (null, id + " is " + cr.Status + " and decided by " + WhoDecides(cr) + ": not waiting for the owner");
+            return ((verdict == "approve" ? "APPROVE " : "REJECT ") + Describe(cr) + (string.IsNullOrWhiteSpace(why) ? "" : "\n  why: " + why.Trim()), null);
+        }
+
+        /// <summary>One CR: a human at a terminal or the owner's yes in Claude Code (grant for these exact args).</summary>
+        private static int DecideOne(string root, Dictionary<string, CrEntry> crs, string[] args)
+        {
+            string id = args[2], verdict = args.Length > 3 ? args[3] : null, why = args.Length > 4 ? args[4] : null;
+            var (text, error) = DescribeDecide(root, id, verdict, why);
+            if (error != null)
+                return Fail(error, error.StartsWith("usage", StringComparison.Ordinal) ? 64 : 1);
+            var auth = OwnerAsk.Authorize(root, args, "cr-cli", "deciding change requests is the owner's.");
+            if (auth == null)
+                return 3;
+            Console.WriteLine(text);
+            Recorder.Session = "human";
+            Apply(root, crs[id], verdict == "approve", why, auth);
+            return 0;
+        }
+
+        private static void Apply(string root, CrEntry c, bool approve, string why, OwnerAuth auth)
+        {
+            string reason = string.IsNullOrWhiteSpace(why) ? "owner" : why.Trim();
+            CrStore.Append(root, c.To, (approve ? "approve " : "reject ") + c.Id + " by=owner ts=" + Now +
+                                       (auth.Human ? "" : " via=" + OwnerAsk.Source) + " reason=" + reason);
+            if (approve)
+                CrStore.GrantToAsker(root, CrStore.Load(root)[c.Id]);
+            if (approve && c.Kind.EndsWith(CrClassifier.Meaning, StringComparison.Ordinal) && c.To != CrLog.CoreTarget)
+                Console.WriteLine("  → " + c.Id + " is now a requirement of " + c.To + ". To reword the plan itself, add the R- line to features.md.");
+            Console.WriteLine(c.Id + (approve ? " approved." : " rejected."));
+        }
+
+        /// <summary>The owner's pass over everything waiting for them: y = approve, n = reject, Enter = later. Terminal only.</summary>
         private static int Decide(string root, Dictionary<string, CrEntry> crs)
         {
             if (!AgentShell.IsHumanTerminal)
             {
                 Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "cr-cli").With("target", "cr decide").With("reason", "not an interactive human terminal"));
-                return Fail("Refused: cr decide is the owner's (needs a terminal, not an agent shell).", 3);
+                return Fail("Refused: the cr decide loop needs a terminal. In Claude Code decide one CR: ./Tools/test-gate.sh cr decide CR-n approve|reject \"<why>\" (the owner is asked yes/no).", 3);
             }
-            var waiting = crs.Values.Where(c => (c.Status == CrLog.Open || c.Status == CrLog.Asked) && WhoDecides(c) == CrClassifier.Owner).OrderBy(c => Num(c.Id)).ToList();
+            var waiting = Waiting(crs);
             if (waiting.Count == 0)
             {
                 Console.WriteLine("Nothing waits for you.");
                 return 0;
             }
             Recorder.Session = "human";
+            var human = new OwnerAuth { Human = true };
             foreach (var c in waiting)
             {
                 Console.WriteLine();
-                Console.WriteLine(c.Id + "  " + c.Kind + "  " + c.From + " → " + c.To + (c.Reason != null ? "  (arbiter: " + c.Reason + ")" : ""));
-                Console.WriteLine("  " + c.Text);
-                foreach (var a in c.Api)
-                    Console.WriteLine("  api: " + a);
+                Console.WriteLine(Describe(c));
                 Console.Write("Approve? [y]es / [n]o / Enter = later: ");
                 string answer = (Console.ReadLine() ?? "").Trim().ToLowerInvariant();
                 if (answer != "y" && answer != "n")
                     continue;
                 Console.Write("Why (optional): ");
-                string why = (Console.ReadLine() ?? "").Trim();
-                CrStore.Append(root, c.To, (answer == "y" ? "approve " : "reject ") + c.Id + " by=owner ts=" + Now + " reason=" + (why.Length > 0 ? why : "owner"));
-                if (answer == "y")
-                    CrStore.GrantToAsker(root, CrStore.Load(root)[c.Id]);
-                if (answer == "y" && c.Kind.EndsWith(CrClassifier.Meaning, StringComparison.Ordinal) && c.To != CrLog.CoreTarget)
-                    Console.WriteLine("  → " + c.Id + " is now a requirement of " + c.To + ". To reword the plan itself, add the R- line to features.md.");
+                Apply(root, c, answer == "y", (Console.ReadLine() ?? "").Trim(), human);
             }
             return 0;
         }

@@ -96,7 +96,7 @@ Code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestL
   gets their other seals re-checked (DISPUTED) before impl runs into them.
 - **Parallel:** tasks conflict only if they share modules AND write the same folders: a `tests` and an `impl` task of one feature run
   side by side, two `impl` tasks of one module don't. `roadmap next` gives one item per (feature, role).
-- **Owner's last resorts** (terminal, denied to agents): `tests unseal R-… "<why>"`, and once when adopting this: `tests grandfather`
+- **Owner's last resorts** (terminal, or the owner's yes/no in Claude Code): `tests unseal R-… "<why>"`, and once when adopting this: `tests grandfather`
   (today's covering tests count as sealed, `author=legacy`).
 
 ## Change requests between modules (CR)
@@ -117,7 +117,7 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
 |---|---|---|
 | `additive` | only new types in B's `Contracts/` | the gate at once; the asking task may write B's Contracts: exactly those PublicApi lines + a skeleton |
 | `breaking` | removes/changes a line, or adds a member to an existing type (breaks implementers and fakes) | an arbiter: another session, `cr rule CR-n keep \| reject \| ask` |
-| `meaning` | no `--api`: B's behaviour/requirement | the owner, batched: `cr decide` (terminal only) |
+| `meaning` | no `--api`: B's behaviour/requirement | the owner: `cr decide` (terminal loop) or `cr decide CR-n approve\|reject "why"` (yes/no) |
 | `core-additive` | new types in Core/Runtime | an arbiter |
 | `core-breaking`, `core-meaning` | | the owner; done in a core task of its own, closed with `cr deliver` |
 
@@ -134,13 +134,15 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
   that nothing asked for). `SendMessage` is logged (`AGENT_MESSAGE` with the sender's task) and answered with a hint to file a CR.
 - Dashboard (tab 1): "Cần bạn quyết" lists every owner gap, the open CRs, and `MESSAGE_THEN_EDIT` pairs: a message, then within 2 h
   another session editing a feature in a task without requirement (event logs of every worktree with an open task; evidence, not a block).
-- Owner-only commands (`task approve`, `roadmap accept`, `art accept`, `tests unseal|grandfather`, `cr decide`) are refused when the
-  gate is really invoked with them (also via `bash -c`, pipes, `dotnet run --project Tools/TestGate`); quoting them in a commit
-  message or a grep is not running them.
+- Owner commands (`task approve`, `roadmap accept`, `art accept`, `tests unseal|grandfather`, `cr decide CR-n …`, `GOLDEN_WRITE=1`,
+  `LAYOUT_WRITE=1`) run in an agent's shell only after the owner's yes in Claude Code (`Tools/TestGate/Agent/OwnerAsk.cs`): the
+  plain form (one command, literal args) is asked with a text the gate computes; the CLI needs a one-shot grant for exactly those
+  args (hash-chained log, 30 min, revoked at the next tool call when the owner said no). Every other form (`bash -c`, pipes, chains,
+  `dotnet run --project Tools/TestGate`) stays refused; quoting them in a commit message or a grep is not running them.
 
 ```bash
 ./Tools/test-gate.sh task need Progress "ICoins để cộng xu" --api "interface Game.Progress.Contracts.ICoins"
-./Tools/test-gate.sh cr list | cr show CR-3 | cr rule CR-3 keep "…" | cr decide (HUMAN ONLY)
+./Tools/test-gate.sh cr list | cr show CR-3 | cr rule CR-3 keep "…" | cr decide [CR-3 approve "…"] (OWNER)
 ```
 
 ## Working with it
@@ -151,7 +153,7 @@ for B's folder, so the gate saw nothing wrong. Now every change traces to an app
 ./Tools/test-gate.sh roadmap next            # parallel lanes (modules don't overlap) + the exact task command
 ./Tools/test-gate.sh task start "F-TIMER: ..." --req R-TIMER-DEADLINE --req R-TIMER-STOP
 ./Tools/test-gate.sh roadmap propose "Cần lưu trạng thái quảng cáo đã xem" --feature F-AD-CONTINUE
-./Tools/test-gate.sh roadmap accept R-ARENA-FEEL     # HUMAN ONLY (terminal)
+./Tools/test-gate.sh roadmap accept R-ARENA-FEEL     # OWNER (terminal, or yes/no in Claude Code)
 ```
 
 - **Changing the plan with an AI** (`Tools/TestGate/Agent/PlanEditGate.cs`): the agent drafts the whole file in
@@ -198,7 +200,7 @@ Three branches that move at different speeds. The rules that keep them from bloc
 
 ```bash
 ./Tools/test-gate.sh art status                 # every slot: level, bound file, art gate, measurement
-./Tools/test-gate.sh art accept MathQuiz.Slime  # HUMAN ONLY: approve this exact content
+./Tools/test-gate.sh art accept MathQuiz.Slime  # OWNER (terminal or yes/no): approve this exact content
 ./Tools/test-gate.sh roadmap next               # ...includes the art lane (artists / reviewers)
 ```
 

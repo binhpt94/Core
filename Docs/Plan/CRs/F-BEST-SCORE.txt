@@ -1,0 +1,2 @@
+file CR-1 from=F-ARENA to=F-BEST-SCORE module=Progress kind=meaning task=T1120-030903 session=4353eb38-fdb6-4711-af7b-84a480a724ba ts=2026-11-20T04:04:59Z reason=Demo CR để thử hộp thoại cr decide: hiển thị kỷ lục kèm ngày đạt được
+reject CR-1 by=owner ts=2026-11-20T04:12:07Z via=owner-ask reason=Demo: chỉ để thử hộp thoại

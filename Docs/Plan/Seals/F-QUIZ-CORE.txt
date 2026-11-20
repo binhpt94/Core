@@ -1,0 +1,5 @@
+seal R-QUIZ-OPTIONS tests=2697963dc91c req=1c6e7d31db52 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-QUIZ-SHUFFLE tests=f71ab7bd47aa req=0600ae7bcfbe author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-QUIZ-SCORE-ONCE tests=9e44a6fbb130 req=75f40906cc44 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-QUIZ-ROUND tests=3aa5daa14e2b req=8fc1c000fd27 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+unseal R-QUIZ-OPTIONS by=owner ts=2026-11-20T04:12:59Z reason=Demo: thử hộp thoại gỡ niêm phong

@@ -1,0 +1,4 @@
+seal R-TIMER-DEADLINE tests=1e3e2246f241 req=a28f46fc3850 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-TIMER-STOP tests=66bf28259361 req=d5ed6d7e7c1b author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-TIMER-URGENT tests=600382788ac9 req=93bc72fb4c85 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z
+seal R-TIMER-FPS tests=3c843e3ddb82 req=37f329cda5b9 author=legacy red=legacy commit=3cc55538b91114bd360e43a6c1a6e53302180d1a ts=2026-11-20T04:12:37Z

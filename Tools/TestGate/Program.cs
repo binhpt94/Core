@@ -54,6 +54,34 @@ internal static class Program
 
     private static string _root;
 
+    /// <summary>owner-preview &lt;owner command args&gt;: the yes/no dialog text the owner would see, without asking or granting anything.</summary>
+    private static int OwnerPreview(string[] rest)
+    {
+        if (rest.Length == 0)
+        {
+            Console.Error.WriteLine("Usage: owner-preview roadmap accept R-ID | task approve | art accept SLOT | cr decide CR-n approve|reject \"why\" | tests unseal R-ID \"why\" | tests grandfather | golden | layout [EditMode \"View:F.V\"]");
+            return 64;
+        }
+        string Quote(string a) => a.IndexOf(' ') >= 0 || a.IndexOf(';') >= 0 ? "\"" + a + "\"" : a;
+        string tail = string.Join(" ", rest.Skip(1).Select(Quote));
+        string cmd = rest[0] == "golden" ? "GOLDEN_WRITE=1 dotnet test Tools/LogicTests"
+            : rest[0] == "layout" ? ("LAYOUT_WRITE=1 ./Tools/run-unity-tests.sh " + tail).TrimEnd()
+            : "./Tools/test-gate.sh " + string.Join(" ", rest.Select(Quote));
+        var d = OwnerAsk.Decide(_root, cmd);
+        if (d == null)
+        {
+            Console.Error.WriteLine("Not an owner command: " + cmd);
+            return 64;
+        }
+        if (d.Kind != OwnerAskDecision.Ask)
+        {
+            Console.Error.WriteLine("Would be BLOCKED without asking: " + d.Reason);
+            return 1;
+        }
+        Console.WriteLine(d.Reason);
+        return 0;
+    }
+
     private static int Main(string[] args)
     {
         // Vietnamese plan text: the Windows console default code page turns it into '?', also in hook output the agent reads.
@@ -87,6 +115,8 @@ internal static class Program
                     return Scaffold.NewFeature(_root, args);
                 case "new-view":
                     return ViewScaffold.NewView(_root, args);
+                case "owner-preview":
+                    return OwnerPreview(args.Skip(1).ToArray());
                 case "hook-pre":
                     return AgentHooks.Pre(_root, HookInput.Parse(ReadStdin()));
                 case "hook-post":
