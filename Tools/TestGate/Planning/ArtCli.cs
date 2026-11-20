@@ -6,6 +6,9 @@ namespace TestGate.Planning
 {
     /// <summary>
     ///   art status            every slot: computed level, bound file, art gate result, measurement
+    ///   art brief [SLOT|--all] generated brief + AI prompt + compare page per slot (ArtBriefCli; `art compare` = same)
+    ///   art note SLOT "why"   record a rejection reason in the slot's style lock (ArtBriefCli)
+    ///   art add | versions | use | codex   art versions per slot (ArtVersionCli)
     ///   art accept SLOT-ID    OWNER (terminal, or yes/no in Claude Code): approve the CURRENT content of the bound art (hash); editing it later makes it STALE
     /// </summary>
     public static class ArtCli
@@ -13,6 +16,20 @@ namespace TestGate.Planning
         public static int Run(string root, string[] args)
         {
             string sub = args.Length > 1 ? args[1] : "status";
+            if (sub == "brief" || sub == "compare")
+                return ArtBriefCli.Brief(root, args);
+            if (sub == "note")
+                return ArtBriefCli.Note(root, args);
+            if (sub == "shots")
+                return ArtBriefCli.ShotsCommand(root, args);
+            if (sub == "add")
+                return ArtVersionCli.Add(root, args);
+            if (sub == "versions")
+                return ArtVersionCli.Versions(root, args);
+            if (sub == "use")
+                return ArtVersionCli.Use(root, args);
+            if (sub == "codex")
+                return ArtVersionCli.Codex(root, args);
             var slots = ArtStatus.Compute(root);
             if (sub == "accept")
                 return Accept(root, slots, args.Length > 2 ? args[2] : null, args);

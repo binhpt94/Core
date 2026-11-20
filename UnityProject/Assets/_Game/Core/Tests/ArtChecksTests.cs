@@ -66,5 +66,29 @@ namespace Game.Core.Tests
             var bad = new ArtSlotContract("NoDot", ArtSlotKind.UiImage, 10, 5, 1, 1, 50, 50, 0, 20, new[] { new ArtAction("A", "m", 5, 2) });
             Assert.That(bad.Problems(), Has.Count.EqualTo(3));
         }
-    }
+    
+        [Test]
+        public void OldConstructors_DefaultToNoIntentAndNoFrameSuggestion()
+        {
+            var c = Boss();
+            Assert.That(c.Intent, Is.EqualTo(""));
+            Assert.That(c.Actions.Single().Frames, Is.EqualTo(0));
+            Assert.That(c.Problems(), Is.Empty);
+        }
+
+        [Test]
+        public void IntentAndFrames_AreCarried_AndNegativeFramesAreADesignBug()
+        {
+            var ok = new ArtSlotContract("Forest.Bird", ArtSlotKind.UiImage, 10, 20, 10, 20, 50, 50, 5, 20,
+                new[] { new ArtAction("Flap", "up", 1, 3, 100, 100, false, 4) }, "Ambient bird");
+            Assert.That(ok.Intent, Is.EqualTo("Ambient bird"));
+            Assert.That(ok.Actions.Single().Frames, Is.EqualTo(4));
+            Assert.That(ok.Problems(), Is.Empty);
+
+            var bad = new ArtSlotContract("Forest.Bird", ArtSlotKind.UiImage, 10, 20, 10, 20, 50, 50, 5, 20,
+                new[] { new ArtAction("Flap", "up", 1, 3, 100, 100, false, -1) }, null);
+            Assert.That(bad.Intent, Is.EqualTo(""));
+            Assert.That(bad.Problems(), Has.Some.Contains("frames must be >= 0"));
+        }
+}
 }

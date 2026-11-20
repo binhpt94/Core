@@ -98,14 +98,16 @@ namespace TestGate.AgentControl
             {
                 Question = "Duyệt hình ảnh/hiệu ứng này là đạt (APPROVED)?",
                 What = "Gate đã gắn art vào ô \"" + s.Id + "\". Gate chỉ đo được kích thước, tâm, thời lượng; đẹp hay không là bạn quyết.",
-                Content = "File đang dùng: " + s.BoundFile + " (" + (s.BoundAs == "final" ? "bản chính thức" : "bản thử") + ")" +
+                Content = "File đang dùng: " + s.BoundFile + " (" + (s.BoundAs == "final" ? "bản chính thức" : "bản thử") + (s.Version != null ? ", version " + s.Version : "") + ")" +
                           (string.IsNullOrWhiteSpace(s.Detail) ? "" : "\n" + s.Detail),
                 Now = "Kiểm tra tự động: " + (s.Gate == "passed" ? "đạt" : s.Gate == "failed" ? "KHÔNG đạt" : "chưa chạy (cần Unity)") +
                       (s.Violations.Count > 0 ? " · " + string.Join("; ", s.Violations) : "") + (s.Measured != null ? " · đo được: " + s.Measured : ""),
                 Yes = "Đúng nội dung file hiện tại được ghi là đã duyệt. Ai sửa file đó sau này thì nó tự thành \"cần duyệt lại\".",
-                Check = "Mở Unity: Tools > Game > UI > View Preview hoặc chơi thử, xem ô này trên kích thước điện thoại." +
+                Check = "Mở Dashboard/Data/art/briefs/" + s.Id + ".compare.html (sinh bằng: ./Tools/test-gate.sh art compare " + s.Id +
+                        "; ảnh từ Tools > Game > Art > Snapshot): các level cạnh nhau, khung contract vẽ đè, và trong game trên từng máy." +
+                        " Hoặc chơi thử / View Preview." +
                         (s.Gate == "failed" ? " Kiểm tra tự động đang KHÔNG đạt: thường nên bấm No." : ""),
-                Undo = "Xóa dòng " + s.Id + " trong Docs/Plan/art-accepted.txt."
+                Undo = "Xóa dòng " + s.Id + " " + s.Hash + " trong Docs/Plan/art-accepted.txt."
             }.ToString();
         }
 

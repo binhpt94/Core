@@ -111,8 +111,35 @@ namespace Game.{name}.Tests
     }}
 }}
 ");
+        Write(dir, "Logic/Domain/" + name + "ArtSlots.cs", $@"using System.Collections.Generic;
+using Game.Core;
+
+namespace Game.{name}.Domain
+{{
+    /// <summary>
+    /// Art slots of {name}: the measurable promise art must keep (size envelope, pivot, timed actions, intent). Gameplay uses
+    /// the slot id only; the graybox is generated from the contract. Standard art process (Docs/PLANNING.md): declare a slot
+    /// here, show it in a view (its Cases.ArtPlacements), then `art brief` → Claude draws a candidate (`art add`) → owner judges
+    /// on the compare page (`art note`) → Codex final (`art codex`) → `art accept`. Add slots as static properties, e.g.
+    /// Hero = new ArtSlotContract(HeroId, ArtSlotKind.UiImage, ..., intent: ""what it is for"") and list them in Slots.
+    /// </summary>
+    internal sealed class {name}ArtSlots : IArtSlotCatalog
+    {{
+        public IReadOnlyList<ArtSlotContract> Slots => new ArtSlotContract[0];
+    }}
+}}
+");
         Write(dir, "Assets/Public/.gitkeep", "");
         Write(dir, "Assets/Private/.gitkeep", "");
+        Write(dir, "Assets/Private/Art/_feature.style.md", $@"# {name} style lock
+
+<!-- Everything except this title and one-line comments is pasted into every art brief and AI prompt of {name}.
+     Write the look once (palette, mood, outline, references); per-slot notes go to Art/<Name>/<Name>.style.md (`art note`). -->
+
+- Look: (e.g. flat 2D cartoon, thick dark outline)
+- Colours: (palette, contrast against the background)
+- Readability: (how big it shows on a phone; what must read at a glance)
+");
         Write(dir, "README.md", $@"# Feature: {name}
 
 ## Responsibility

@@ -197,11 +197,52 @@ Three branches that move at different speeds. The rules that keep them from bloc
 6. **Plan:** `[slots: F.Name]` + `[art: approved]` on a feature → missing level is **ART_DEBT** (actor: art, shown in the
    art lane, never assigned to agents); the feature can't be DONE with art debt. `[art-risk]` + a `[feasibility]`
    requirement → gameplay work is blocked until a human accepts feasibility (decide wolf/tiger *before* coding 3 skills).
+7. **Nobody writes art tickets.** The brief (human, `.md`) and the image-model prompt (`.prompt.txt`) are GENERATED per slot
+   from the contract (`intent`, envelope, pivot, actions with `frames`) plus the feature's style lock:
+   `Features/<F>/Assets/Private/Art/_feature.style.md` (shared) and `<Name>.style.md` (one slot). Looks are judged by eye,
+   not measured: when a version is rejected, `art note SLOT "why"` appends the reason to the slot's style file, and every
+   later brief/prompt carries it under "Avoid", so the same feedback is never given twice. Contracts reach TestGate through
+   a pure export (`ArtSlotExport` in LogicTests → `Dashboard/Data/art/slots.txt`), re-run automatically when a contract changes.
+   Pictures to judge by: *Tools > Game > Art > Snapshot* (Editor open) or `art shots` (Editor closed, batchmode with a GPU) renders every UiImage slot alone
+   at each level (pivot at the centre, max envelope × 5/2) and every view on every device (`smoke` fixture) into
+   `Dashboard/Data/art/shots/`; the brief embeds them and `<slot>.compare.html` shows the levels side by side with the
+   contract drawn over them, plus a note box per picture that builds the `art note` command.
 
 ```bash
+./Tools/test-gate.sh art brief [SLOT|--all]     # brief + prompt + compare page → Dashboard/Data/art/briefs/ (--print: stdout, for agents)
+./Tools/test-gate.sh art note MathQuiz.Slime "too dark on the lane"   # rejection reason → Slime.style.md → next prompt
 ./Tools/test-gate.sh art status                 # every slot: level, bound file, art gate, measurement
 ./Tools/test-gate.sh art accept MathQuiz.Slime  # OWNER (terminal or yes/no): approve this exact content
 ./Tools/test-gate.sh roadmap next               # ...includes the art lane (artists / reviewers)
+```
+
+### Standard art process (every feature, every game made from this template)
+
+Who: **Claude** draws every candidate (SVG → PNG), **Codex CLI** paints the final from an approved candidate, the **owner**
+judges by eye and approves. Nobody writes tickets, nobody wires art by hand, every attempt is kept as a version.
+
+| Step | Who | What |
+|---|---|---|
+| 1. Slot | code | `Logic/Domain/<F>ArtSlots.cs`: envelope, pivot, actions (`frames`), one-line `intent`. Shown in a view via its Cases' `ArtPlacements` (fixture + how to find it). `new-feature` / `new-view` scaffold both. |
+| 2. Style | owner | `Assets/Private/Art/_feature.style.md` (look, palette, readability), once per feature. |
+| 3. Brief | tool | `art brief SLOT [--print]`: brief, image prompt and compare page, all generated from 1 + 2 + earlier rejections. |
+| 4. Candidate | Claude | Draws an SVG from the brief (`viewBox` = delivery size, 2× contract units; tight to the subject; pivot where the contract says) → `art add SLOT draft.svg --tier candidate --by claude` → new version `vNNN` (SVG kept, PNG rendered by Inkscape). |
+| 5. Bind | Unity | `ArtImport` (on import, or *Tools > Game > Art > Sync*) turns the version each tier **uses** into `<Name>.<tier>.prefab` (size = PNG / 2, pivot = contract) behind one binding asset `<Name>.art.asset`. Features reference that asset once. |
+| 6. Check | tests + tool | EditMode `Art:<slot>` (size/pivot/timing vs contract; in the gate). Pictures are a tool, not a test: `art shots` (Editor closed) or *Tools > Game > Art > Snapshot* (Editor open); they need a GPU. |
+| 7. Judge | owner | `art compare SLOT` → page with every version (contract drawn over it), the bound levels and the slot in the game on each device. A one-line note per picture → `art note` (kept in `Art/<Name>/<Name>.style.md`, carried by every later prompt). Back to 4 until it reads right. |
+| 8. Final | Codex | Only when the owner asks (costs money): `art codex SLOT [--from vNNN]` → Codex `image_gen` keeps the reference design → new final version. Same checks and page. |
+| 9. Approve | owner | `art accept SLOT` (yes/no). Approval is per content hash: switching back to an approved version is approved again; editing makes it STALE. |
+
+Versions live in `Assets/Private/Art/<Name>/`: `vNNN.png` (+ `vNNN.svg`), never rewritten, and `versions.txt` (history +
+`use candidate vNNN` / `use final vNNN`, written only by the tools). `art versions SLOT` lists them; `art use SLOT vNNN [--as TIER]`
+switches or rolls back. The layout baseline (L3) records art slot nodes by **pivot only**, so changing art never needs a new
+layout baseline; their size is the art gate's job.
+
+```bash
+./Tools/test-gate.sh art add MathQuiz.Slime .scratch/slime.svg --tier candidate --by claude --note "rounder, bigger eyes"
+./Tools/test-gate.sh art versions MathQuiz.Slime
+./Tools/test-gate.sh art use MathQuiz.Slime v002          # switch / roll back (refresh Unity → rebinds)
+./Tools/test-gate.sh art codex MathQuiz.Slime --from v002 # FINAL via Codex, only on the owner's request (--dry-run shows it)
 ```
 
 **Limits.** A `[Covers]` link proves a test is *meant* to check a requirement, not that it checks it well: review tests like

@@ -38,6 +38,7 @@ namespace TestGate.Planning
         public string BoundFile { get; set; }      // prefab (or other asset) currently bound
         public string BoundAs { get; set; }        // candidate | final
         public string Hash { get; set; }           // content hash of the bound art (+ files it references)
+        public string Version { get; set; }        // art version in use for the bound tier (Art/<Name>/versions.txt), null when not versioned
         public string Gate { get; set; }           // passed | failed | not run
         public string Measured { get; set; }
         public List<string> Violations { get; set; } = new List<string>();
@@ -79,9 +80,10 @@ namespace TestGate.Planning
                 s.BoundFile = file;
                 s.Hash = ContentHash(root, file, guids);
                 ReadGate(root, s);
-                if (accepted.TryGetValue(d.Id, out var h))
+                s.Version = ArtVersions.InUse(root, d.Id, s.BoundAs);
+                if (accepted.TryGetValue(d.Id, out var hashes))
                 {
-                    if (h == s.Hash)
+                    if (hashes.Contains(s.Hash)) // any approved content: going back to an approved version is approved again
                     {
                         s.Level = s.BoundAs == "final" && s.Gate == "passed" ? ArtLevels.Final : ArtLevels.Approved;
                         s.Detail = "approved by a human for this content" + (s.Level == ArtLevels.Final ? ", final, art gate passed" : "");
@@ -134,16 +136,21 @@ namespace TestGate.Planning
             s.Gate = s.Violations.Count == 0 ? "passed" : "failed";
         }
 
-        public static Dictionary<string, string> LoadAccepted(string root)
+        /// <summary>Slot → every content hash a human approved (one line per approval; switching versions keeps them).</summary>
+        public static Dictionary<string, HashSet<string>> LoadAccepted(string root)
         {
-            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            var map = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             string p = Path.Combine(root, AcceptedPath);
             if (File.Exists(p))
                 foreach (var line in File.ReadAllLines(p))
                 {
                     var parts = line.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length >= 2 && !parts[0].StartsWith("#", StringComparison.Ordinal))
-                        map[parts[0]] = parts[1];
+                    {
+                        if (!map.TryGetValue(parts[0], out var set))
+                            map[parts[0]] = set = new HashSet<string>(StringComparer.Ordinal);
+                        set.Add(parts[1]);
+                    }
                 }
             return map;
         }
@@ -151,9 +158,9 @@ namespace TestGate.Planning
         public static void Accept(string root, SlotState s)
         {
             string p = Path.Combine(root, AcceptedPath);
-            var lines = File.Exists(p) ? File.ReadAllLines(p).Where(l => !l.StartsWith(s.Id + " ", StringComparison.Ordinal)).ToList()
-                : new List<string> { "# Art accepted by a human: <slot> <content hash> <date> <file>. Written by `art accept`." };
-            lines.Add(s.Id + " " + s.Hash + " " + DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + " " + s.BoundFile);
+            var lines = File.Exists(p) ? File.ReadAllLines(p).Where(l => !l.StartsWith(s.Id + " " + s.Hash + " ", StringComparison.Ordinal)).ToList()
+                : new List<string> { "# Art accepted by a human: <slot> <content hash> <date> <file> [version]. Written by `art accept`; one line per approved content." };
+            lines.Add(s.Id + " " + s.Hash + " " + DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + " " + s.BoundFile + (s.Version != null ? " " + s.Version : ""));
             Directory.CreateDirectory(Path.GetDirectoryName(p));
             File.WriteAllLines(p, lines);
         }
