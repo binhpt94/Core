@@ -21,7 +21,7 @@ flowchart LR
 | Public face | MathQuizAssets, MathQuizInstaller, MathQuizModule, QuizConfigAsset, QuizView |
 | Vendors | unitask |
 | Assets (Public/Private) | 1/9 |
-| Tests | 100 |
+| Tests | 99 |
 
 ## State machine: QuizSession.Transitions (QuizState)
 

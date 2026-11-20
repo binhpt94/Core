@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Game.Architecture.Rules;
 
@@ -30,18 +31,24 @@ namespace TestGate.AgentControl
 
         /// <param name="before">content at the base commit (null = new file)</param>
         /// <param name="after">current content (null = deleted)</param>
-        public static List<string> Check(string path, string before, string after)
+        /// <param name="retired">requirements the task retires: tests covering only them may go (task start --retire)</param>
+        public static List<string> Check(string path, string before, string after, ICollection<string> retired = null)
         {
             var findings = new List<string>();
             if (!IsTestFile(path) || before == null)
                 return findings; // new test files only add coverage
+            string b = SourceText.StripComments(before);
+            if (retired != null && retired.Count > 0)
+                b = WithoutRetired(b, retired);
             if (after == null)
             {
-                findings.Add(path + ": test file deleted (" + Count(TestAttr, before) + " tests)");
+                int left = Count(TestAttr, b);
+                if (left > 0)
+                    findings.Add(path + ": test file deleted (" + left + " tests" + (retired != null && retired.Count > 0 ? " not covering only retired requirements" : "") + ")");
                 return findings;
             }
 
-            string b = SourceText.StripComments(before), a = SourceText.StripComments(after);
+            string a = SourceText.StripComments(after);
             int ab = Count(Assertion, b), aa = Count(Assertion, a);
             if (aa < ab)
                 findings.Add(path + ": assertions " + ab + " -> " + aa);
@@ -58,5 +65,51 @@ namespace TestGate.AgentControl
         }
 
         private static int Count(Regex r, string text) => r.Matches(text).Count;
+
+        private static readonly Regex CoversAttr = new Regex(@"\bCovers\s*\(\s*""(?<id>[^""]*)""\s*\)");
+        private static readonly Regex NextDecl = new Regex(@"\bclass\s+\w+|\b(?:void|Task|UniTask|IEnumerator)\s+\w+\s*\(");
+
+        /// <summary>
+        /// Comment-stripped test code minus the methods/classes whose [Covers] all name retired requirements: what the
+        /// task must keep. Members are cut from the end of the previous member to their closing brace (or `=> …;`).
+        /// </summary>
+        public static string WithoutRetired(string code, ICollection<string> retired)
+        {
+            var groups = CoversAttr.Matches(code).Cast<Match>()
+                .Select(m => (m, decl: NextDecl.Match(code, m.Index + m.Length)))
+                .Where(x => x.decl.Success)
+                .GroupBy(x => x.decl.Index)
+                .Where(g => g.All(x => retired.Contains(x.m.Groups["id"].Value)))
+                .Select(g => (start: code.LastIndexOfAny(new[] { '}', ';', '{' }, g.Min(x => x.m.Index)) + 1, decl: g.Key))
+                .OrderByDescending(x => x.decl)
+                .ToList();
+            foreach (var (start, decl) in groups)
+            {
+                int end = EndOfMember(code, decl);
+                if (end > start)
+                    code = code.Remove(start, end - start);
+            }
+            return code;
+        }
+
+        private static int EndOfMember(string code, int decl)
+        {
+            int brace = code.IndexOf('{', decl), arrow = code.IndexOf("=>", decl, StringComparison.Ordinal);
+            if (arrow >= 0 && (brace < 0 || arrow < brace))
+            {
+                int semi = code.IndexOf(';', arrow);
+                return semi < 0 ? code.Length : semi + 1;
+            }
+            if (brace < 0)
+                return -1;
+            int depth = 0;
+            for (int i = brace; i < code.Length; i++)
+            {
+                if (code[i] == '{') depth++;
+                else if (code[i] == '}' && --depth == 0)
+                    return i + 1;
+            }
+            return code.Length;
+        }
     }
 }

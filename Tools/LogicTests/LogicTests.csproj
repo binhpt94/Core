@@ -33,6 +33,7 @@
     <Compile Include="../TestGate/Agent/*.cs" />
     <Compile Include="../TestGate/Planning/*.cs" />
     <Compile Include="../TestGate/Files/*.cs" />
+    <Compile Include="../TestGate/DeadCode/*.cs" />
     <Compile Include="AgentControl/**/*.cs" />
   </ItemGroup>
 
@@ -43,5 +44,6 @@
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
     <!-- Same version as UnityProject/Packages/manifest.json (com.cysharp.unitask). -->
     <PackageReference Include="UniTask" Version="2.5.10" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
   </ItemGroup>
 </Project>

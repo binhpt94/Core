@@ -12,4 +12,8 @@
     <!-- The same rule engine the tests and the Unity gates use (linked, not copied). -->
     <Compile Include="../../UnityProject/Assets/_Game/Architecture/Rules/*.cs" Link="Rules/%(Filename)%(Extension)" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- ARCH033 (DeadCode/): syntax trees of game code. Only here, never in the Unity-linked rule engine. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+  </ItemGroup>
 </Project>

@@ -163,6 +163,8 @@ namespace TestGate.Planning
         /// <summary>Change requests between modules (Docs/Plan/CRs) and "now" for their age.</summary>
         public Dictionary<string, CrEntry> Crs { get; set; } = new Dictionary<string, CrEntry>(StringComparer.Ordinal);
         public DateTime Now { get; set; } = DateTime.UtcNow;
+        /// <summary>What dropped requirements left behind ([Covers], mentions in code): RETIRE gaps.</summary>
+        public List<RetireLeftover> RetireLeftovers { get; set; } = new List<RetireLeftover>();
 
         public static PlanInputs Load(string root)
         {
@@ -198,7 +200,8 @@ namespace TestGate.Planning
                 Slots = ArtStatus.Compute(root),
                 Proposals = Directory.Exists(inbox) ? Directory.GetFiles(inbox, "*.md").Select(Path.GetFileName).OrderBy(x => x, StringComparer.Ordinal).ToList() : new List<string>(),
                 ChangedModules = changed,
-                Crs = crs
+                Crs = crs,
+                RetireLeftovers = plan == null ? new List<RetireLeftover>() : RetireScan.Leftovers(root, plan.DroppedRequirements.Select(r => r.Id))
             };
         }
 
@@ -242,12 +245,13 @@ namespace TestGate.Planning
                 var watched = f.Modules.Concat(f.Dependencies.Where(d => d.Kind != DependencyKind.Soft).SelectMany(d => plan.Feature(d.Feature)?.Modules ?? new List<string>())).Distinct().ToList();
                 foreach (var r in f.Requirements)
                     fs.Requirements.Add(Requirement(input, f, r, watched));
-                fs.Total = fs.Requirements.Count;
-                fs.Verified = fs.Requirements.Count(r => ReqStatus.IsDone(r.Status));
-                fs.StoryTotal = fs.Requirements.Count(r => r.Discipline == "story");
-                fs.StoryVerified = fs.Requirements.Count(r => r.Discipline == "story" && ReqStatus.IsDone(r.Status));
-                fs.GameplayTotal = fs.Requirements.Count(r => r.Discipline == "gameplay");
-                fs.GameplayVerified = fs.Requirements.Count(r => r.Discipline == "gameplay" && ReqStatus.IsDone(r.Status));
+                var live = fs.Requirements.Where(r => r.Status != ReqStatus.Dropped).ToList(); // a dropped requirement never holds DONE back
+                fs.Total = live.Count;
+                fs.Verified = live.Count(r => ReqStatus.IsDone(r.Status));
+                fs.StoryTotal = live.Count(r => r.Discipline == "story");
+                fs.StoryVerified = live.Count(r => r.Discipline == "story" && ReqStatus.IsDone(r.Status));
+                fs.GameplayTotal = live.Count(r => r.Discipline == "gameplay");
+                fs.GameplayVerified = live.Count(r => r.Discipline == "gameplay" && ReqStatus.IsDone(r.Status));
                 fs.Slots = f.Slots.ToList();
                 fs.ArtRequired = f.ArtLevel;
                 if (f.Slots.Count > 0)
@@ -272,7 +276,7 @@ namespace TestGate.Planning
 
             foreach (var fs in report.Features.Where(x => x.Status != FeatureStatus.Deferred && x.Status != FeatureStatus.Dropped))
             {
-                foreach (var r in fs.Requirements.Where(x => !ReqStatus.IsDone(x.Status)))
+                foreach (var r in fs.Requirements.Where(x => !ReqStatus.IsDone(x.Status) && x.Status != ReqStatus.Dropped))
                     report.Gaps.Add(new Gap
                     {
                         Kind = r.Status, Feature = fs.Id, Requirement = r.Id, Detail = r.Detail,
@@ -287,6 +291,13 @@ namespace TestGate.Planning
                 foreach (var d in fs.Debt)
                     report.Gaps.Add(new Gap { Kind = "DEBT", Feature = fs.Id, Detail = d, Actor = "agent", Severity = 2 });
             }
+            // Cancelled requirements whose tests/code/mentions are still in the project (any feature status): retire them first.
+            foreach (var g in input.RetireLeftovers.GroupBy(l => l.Requirement))
+                report.Gaps.Add(new Gap
+                {
+                    Kind = "RETIRE", Feature = plan.Requirement(g.Key)?.Feature, Requirement = g.Key, Actor = RetireScan.Actor, Severity = -1,
+                    Detail = g.Count() + " leftover(s): " + string.Join(", ", g.Take(3).Select(l => l.Path + ":" + l.Line)) + (g.Count() > 3 ? ", …" : "")
+                });
             var planned = new HashSet<string>(plan.Features.Where(f => f.Active).SelectMany(f => f.Modules), StringComparer.Ordinal);
             foreach (var m in input.ChangedModules.Where(m => !planned.Contains(m)))
                 report.Gaps.Add(new Gap { Kind = "UNPLANNED_CODE", Feature = null, Detail = "Features/" + m + " changed but no active feature lists it in [modules]", Actor = "human", Severity = 6 });
@@ -310,7 +321,7 @@ namespace TestGate.Planning
             var covers = input.Covers.Where(c => c.Requirement == r.Id).ToList();
             s.Tests = covers.Select(c => c.TestKey).Distinct().ToList();
 
-            if (f.Dropped) { s.Status = ReqStatus.Dropped; s.Detail = "feature dropped"; return s; }
+            if (f.Dropped || r.IsDropped) { s.Status = ReqStatus.Dropped; s.Detail = f.Dropped ? "feature dropped" : "requirement dropped"; return s; }
             if (f.Deferred) { s.Status = ReqStatus.Deferred; s.Detail = "feature deferred"; return s; }
 
             if (r.IsManual)

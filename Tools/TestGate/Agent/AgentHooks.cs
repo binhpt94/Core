@@ -556,7 +556,7 @@ namespace TestGate.AgentControl
                 {
                     string full = Path.Combine(root, kv.Key);
                     bool byHuman = unobserved.Contains(kv.Key) || Attribution.AuthorOf(kv.Key, authors) == "human";
-                    foreach (var f in TestGuard.Check(kv.Key, baseContent(kv.Key), File.Exists(full) ? File.ReadAllText(full) : null))
+                    foreach (var f in TestGuard.Check(kv.Key, baseContent(kv.Key), File.Exists(full) ? File.ReadAllText(full) : null, task != null && task.IsActive ? task.Retire : null))
                     {
                         if (byHuman && human != null)
                             human.Add(new Fix { Who = "human", Problem = "TESTS " + f, Hint = Attribution.TestGuardHint(kv.Key), Files = { kv.Key } });
@@ -578,6 +578,10 @@ namespace TestGate.AgentControl
                 findings.Add("STALE task " + task.Id + ": " + st + ". Re-read the requirement; adapt the work (and its tests), then `task close` and start a new task with --req.");
                 Recorder.Emit(Recorder.New(EventTypes.TaskStale, "testgate").With("id", task.Id).With("reason", st));
             }
+            // A retire task is done only when its dropped requirements are gone from game code (tests, mentions).
+            if (task != null && task.IsActive && task.Retire != null && task.Retire.Count > 0)
+                foreach (var l in TestGate.Planning.RetireScan.Leftovers(root, task.Retire))
+                    findings.Add(l + ": remove it (task --retire " + l.Requirement + ")");
             foreach (var f in findings)
                 Recorder.Emit(Recorder.New(EventTypes.PolicyViolation, "testgate").With("rule", f.Split(' ')[0].ToLowerInvariant()).With("reason", f));
             return findings;

@@ -48,7 +48,7 @@ flowchart LR
 | Feature | Uses | Used by | Vendors | States | Tests |
 |---|---|---|---|---|---|
 | [Ads](features/Ads.md) | Core | - | demo-ads, unitask | 0 | 0 |
-| [MathQuiz](features/MathQuiz.md) | Core, Progress.Contracts | Bootstrap | unitask | 1 | 100 |
+| [MathQuiz](features/MathQuiz.md) | Core, Progress.Contracts | Bootstrap | unitask | 1 | 99 |
 | [Progress](features/Progress.md) | Core | Bootstrap, MathQuiz | - | 0 | 8 |
 
 ## Third-party

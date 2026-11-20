@@ -6,6 +6,8 @@
 #   ./Tools/test-gate.sh run --base main   # compare against another branch (default: origin/main, else HEAD)
 #   ./Tools/test-gate.sh check [--all|--staged] [paths...]   # static rules only, milliseconds
 #   ./Tools/test-gate.sh refs Assets/_Game/Features/X  # incoming references (run before deleting X)
+#   ./Tools/test-gate.sh deadcode [--all] [paths...]   # ARCH033: code nothing references (changed files by default)
+#   ./Tools/test-gate.sh task start "Retire R-X" --retire R-X   # remove a [dropped] requirement's tests, code, mentions
 #   ./Tools/test-gate.sh new-view MathQuiz ResultPopup   # view/popup testable in isolation (ARCH100/101 ready)
 #   ./Tools/test-gate.sh reset             # clear the Unity retry budget after a real fix
 # Unity gates run only when UNITY_PATH points to the editor executable.

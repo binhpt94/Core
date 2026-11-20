@@ -17,6 +17,7 @@ namespace TestGate.AgentControl
     ///   task request --core "&lt;why&gt;"                                          core maintenance: owner-only files writable (human approves)
     ///   task need &lt;F-ID|Module|Core&gt; "&lt;what&gt;" [--api L]… [--patch P]  another module must change: a CR, never a chat message (CrCli)
     ///   task start … --from CR-n                                             work on an approved CR (= --req CR-n)
+    ///   task start "&lt;what&gt;" --retire R-ID                                  remove a [dropped] requirement's tests, code and mentions
     ///   task approve                                                         OWNER: a terminal, or the owner's yes/no in Claude Code (OwnerAsk)
     ///   task show | task close
     ///   events verify | events tail [n] | reconcile
@@ -58,9 +59,21 @@ namespace TestGate.AgentControl
                         features = features.Union(modules).ToList();
                         notes = rush;
                     }
+                    var retire = Values(args, "--retire").Distinct().ToList();
+                    if (retire.Count > 0)
+                    {
+                        var (modules, errors) = TaskPlanLink.PrepareRetire(root, retire);
+                        if (errors.Count > 0)
+                        {
+                            Console.Error.WriteLine("Cannot start: " + string.Join("; ", errors));
+                            Recorder.Emit(Recorder.New(EventTypes.PolicyDenied, "task-cli").With("target", "task start --retire " + string.Join(" ", retire)).With("reason", string.Join("; ", errors)));
+                            return 1;
+                        }
+                        features = features.Union(modules).ToList();
+                    }
                     if (string.IsNullOrWhiteSpace(text) || (features.Count == 0 && paths.Count == 0))
                     {
-                        Console.Error.WriteLine("Usage: task start \"<what>\" (--req R-ID ... | --feature <Feature>) [--role tests|impl|arbiter] [--path P] [--tests]   (see: roadmap next)");
+                        Console.Error.WriteLine("Usage: task start \"<what>\" (--req R-ID ... | --retire R-ID ... | --feature <Feature>) [--role tests|impl|arbiter] [--path P] [--tests]   (see: roadmap next)");
                         return 64;
                     }
                     string role = Value(args, "--role");
@@ -87,6 +100,7 @@ namespace TestGate.AgentControl
                     foreach (var id in reqs)
                         task.Requirements[id] = plan.Requirement(id).Hash;
                     task.RushDebt = notes;
+                    task.Retire = retire;
                     // Working on a CR filed in another worktree: its lines travel with this branch (the tests covering it need them).
                     var crs = CrStore.Load(root);
                     foreach (var id in reqs)
@@ -101,7 +115,7 @@ namespace TestGate.AgentControl
                     TaskRegistry.Upsert(root, task, reqs);
                     Recorder.Emit(Recorder.New(EventTypes.TaskCreated, "task-cli").With("id", task.Id).With("title", text).With("status", task.Status)
                         .With("scope", task.ScopeText).With("baselineFiles", task.Baseline.Count.ToString()).With("role", role)
-                        .With("requirements", reqs.Count > 0 ? string.Join(",", reqs) : null).With("rush", notes.Count > 0 ? string.Join(" | ", notes) : null));
+                        .With("requirements", reqs.Count > 0 ? string.Join(",", reqs) : null).With("retire", retire.Count > 0 ? string.Join(",", retire) : null).With("rush", notes.Count > 0 ? string.Join(" | ", notes) : null));
                     foreach (var n in notes)
                         Console.WriteLine(n);
                     Console.WriteLine("Task " + task.Id + ": " + task.Status + " · scope " + task.ScopeText + (unknown.Count > 0 ? " (new feature: " + string.Join(", ", unknown) + ")" : ""));
@@ -460,7 +474,7 @@ namespace TestGate.AgentControl
         private static string Value(string[] args, string name) => Values(args, name).FirstOrDefault();
 
         private static bool IsValueOf(string[] args, int index) =>
-            index > 0 && (args[index - 1] == "--feature" || args[index - 1] == "--path" || args[index - 1] == "--out" || args[index - 1] == "--port" || args[index - 1] == "--session" || args[index - 1] == "--req" || args[index - 1] == "--role"
+            index > 0 && (args[index - 1] == "--feature" || args[index - 1] == "--path" || args[index - 1] == "--out" || args[index - 1] == "--port" || args[index - 1] == "--session" || args[index - 1] == "--req" || args[index - 1] == "--retire" || args[index - 1] == "--role"
                              || args[index - 1] == "--from" || args[index - 1] == "--api" || args[index - 1] == "--patch");
     }
 }

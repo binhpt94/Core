@@ -44,7 +44,10 @@ namespace TestGate.AgentControl
         public Dictionary<string, string> CoverBaseline { get; set; }
 
         /// <summary>Where the work comes from: plan requirements / approved CRs, core maintenance, or none (maintenance: no behaviour change).</summary>
-        public string Provenance => CoreMaintenance ? "core" : Requirements.Count > 0 ? "plan" : "maintenance";
+        /// <summary>Dropped requirements this task removes (`task start --retire`): their tests may go, their leftovers must.</summary>
+        public List<string> Retire { get; set; } = new List<string>();
+
+        public string Provenance => CoreMaintenance ? "core" : Requirements.Count > 0 ? "plan" : Retire.Count > 0 ? "retire" : "maintenance";
 
         public const string Active = "active";
         public const string PendingApproval = "pending_approval";
