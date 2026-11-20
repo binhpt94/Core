@@ -36,14 +36,20 @@ namespace Game.Architecture.Rules
         public string Reason { get; }
         /// <summary>Art slot ids whose art gate must run.</summary>
         public IReadOnlyList<string> Slots { get; }
+        /// <summary>
+        /// True when the file IS art of those slots (binding, bound prefab, sprite, clip): a red art gate blocks (it replaces the human's
+        /// look at every candidate). False for contracts and shared art code: art that no longer fits is art debt, never a block for dev.
+        /// </summary>
+        public bool ArtContent { get; }
 
-        public FileImpact(string path, IReadOnlyList<ChangeRole> roles, IReadOnlyList<string> views, string reason, IReadOnlyList<string> slots = null)
+        public FileImpact(string path, IReadOnlyList<ChangeRole> roles, IReadOnlyList<string> views, string reason, IReadOnlyList<string> slots = null, bool artContent = false)
         {
             Path = path;
             Roles = roles;
             Views = views;
             Reason = reason;
             Slots = slots ?? new string[0];
+            ArtContent = artContent;
         }
 
         public bool Has(ChangeRole role) => Roles.Contains(role);
@@ -108,7 +114,7 @@ namespace Game.Architecture.Rules
             // Art: binding assets, files bound (directly or through one prefab) to a slot, slot catalogs, shared art code.
             var art = ArtSlotsOf(p);
             if (art.Count > 0)
-                return new FileImpact(p, new[] { ChangeRole.Art }, new string[0], "art of slot(s) " + string.Join(", ", art) + " (via GUID)", art);
+                return new FileImpact(p, new[] { ChangeRole.Art }, new string[0], "art of slot(s) " + string.Join(", ", art) + " (via GUID)", art, artContent: true);
             if (p.EndsWith("ArtSlots.cs", StringComparison.Ordinal) && p.Contains("/Logic/Domain/"))
             {
                 var slots = ArtRules.Declarations(_root).Where(d => d.File == p).Select(d => d.Id).ToList();

@@ -17,7 +17,7 @@
 - R-TIMER-FPS  Kết quả không phụ thuộc FPS
 deps: hard F-QUIZ-CORE
 
-## F-ARENA  Slime tấn công căn cứ  [P0] [modules: MathQuiz] [slots: MathQuiz.Slime] [art: approved]
+## F-ARENA  Slime tấn công căn cứ  [P0] [modules: MathQuiz] [slots: MathQuiz.Slime] [art: final]
 - R-ARENA-ZAP  Trả lời đúng diệt slime gần căn cứ nhất
 - R-ARENA-RAGE  Trả lời sai hoặc hết giờ làm slime nổi giận và sinh thêm slime
 - R-ARENA-DEFEAT  Slime chạm căn cứ thì mất máu; hết máu thì thua
@@ -51,7 +51,7 @@ Rush: làm phần MathQuiz trước với IAdsService giả; nợ tích hợp đ
 - R-AD-EXTEND  Xem xong thì thêm 5 giây; hủy hoặc lỗi thì tính là sai
 deps: hard F-TIMER · contract F-ADS (IAdsService)
 
-## F-BAT-WAVE  Đợt dơi ban đêm  [P2] [modules: MathQuiz] [slots: MathQuiz.Bat] [art: approved] [art-risk]
+## F-BAT-WAVE  Đợt dơi ban đêm  [P2] [modules: MathQuiz] [slots: MathQuiz.Bat] [art: final] [art-risk]
 Ý đồ: một đợt quái khác hẳn slime để đổi nhịp. Dơi là ứng viên nội dung; design lint hiện báo dơi phá R-ARENA-BREATHER.
 - R-BAT-FEAS  Art dơi khả thi: dáng đọc được ở 40–96 canvas unit, có cảm giác bay  [feasibility]
 - R-BAT-WAVE  Mỗi vòng có một đợt dơi sau câu thứ 5
@@ -63,7 +63,7 @@ deps: hard F-ARENA
 - R-PAUSE-RESUME  Tiếp tục đúng trạng thái trước khi dừng
 deps: hard F-TIMER
 
-## F-COINS  Xu thưởng khi thắng  [P2] [modules: MathQuiz, Progress] [slots: MathQuiz.CoinFx] [art: approved]
+## F-COINS  Xu thưởng khi thắng  [P2] [modules: MathQuiz, Progress] [slots: MathQuiz.CoinFx] [art: final]
 Thắng = qua hết 10 câu của vòng mà căn cứ còn máu. Xu được tích lũy qua các vòng (để sau này dùng ở cửa hàng).
 - R-COIN-WIN  Thắng vòng thì nhận xu; thua thì không nhận xu nào
 - R-COIN-AMOUNT  Số xu = 5 xu thắng vòng + 2 xu cho mỗi câu trả lời đúng

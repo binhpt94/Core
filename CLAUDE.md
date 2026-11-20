@@ -138,7 +138,7 @@ thread and checks the lifetime.
 - **Red because of a HUMAN** (their plan typo, misplaced file, inspector/gameplay tweak, removed assert: the event log proves
   you didn't write it): Stop lets you finish and lists it as "waiting for a HUMAN". It is **not yours**: don't fix it, don't work
   around it, just mention it in your final message. The human gets the commands in their terminal and on the dashboard.
-- **Owner commands** (`task approve`, `roadmap accept R`, `art accept S`, `cr decide CR-n approve|reject "why"`, `tests unseal R "why"`,
+- **Owner commands** (`task approve`, `roadmap accept R`, `art accept S` | `art accept --draft "FILE"`, `cr decide CR-n approve|reject "why"`, `tests unseal R "why"`,
   `tests grandfather`, `api accept <Game.Core|Game.F.Contracts>` (ARCH023 baseline), `policy vendor add k=v… | update <id>`
   (ARCH093/094), `mcp allow read|write|exec <tool|'prefix*'>`, `GOLDEN_WRITE=1 …`, `LAYOUT_WRITE=1 …`): only when the owner asked for it or a gate tells you to. Run the
   command **alone** (no `;`, `&&`, `|`, `$(…)`, `bash -c`); the hook shows the owner what the gate computed and they answer
@@ -183,7 +183,10 @@ thread and checks the lifetime.
 - **Story · Gameplay · Art:** story goals are `[story]` requirements checked by design-lint tests over content data
   (archetypes in `Logic/Domain`), not hard-coded content. Art goes through **slots** (`<F>ArtSlots.cs` contracts; graybox is
   generated from them): never reference art prefabs from gameplay, never resize/retime gameplay to fit art (change the
-  contract → ask the human). Art debt is for artists; `art accept` is the owner's (yes/no).
+  contract → ask the human). Candidates need only the automatic art gate; `art accept` (owner, yes/no) is for the final only.
+  Owner says "sync file duyệt art": Read the newest `~/Downloads/art-accept.draft*.txt` (or the path they give), then run
+  `./Tools/test-gate.sh art accept --draft "<absolute path>"` alone; never edit the draft.
+  Art never blocks dev: art debt is for artists and never holds DONE, dependants or `task start`.
 
 ## 10. Files: where things go, what is junk
 - **Scratch work goes to `.scratch/`** (gitignored, outside Assets/, never imported): throwaway scenes, dumps, notes.

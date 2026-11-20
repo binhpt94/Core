@@ -96,8 +96,9 @@ namespace TestGate.AgentControl
         {
             return new Card
             {
-                Question = "Duyệt hình ảnh/hiệu ứng này là đạt (APPROVED)?",
-                What = "Gate đã gắn art vào ô \"" + s.Id + "\". Gate chỉ đo được kích thước, tâm, thời lượng; đẹp hay không là bạn quyết.",
+                Question = "Duyệt bản art CHÍNH THỨC (final) này là đạt (FINAL)?",
+                What = "Bản final của ô \"" + s.Id + "\" đã qua kiểm tra tự động (kích thước, tâm, thời lượng). Chỉ bản final cần bạn duyệt; " +
+                       "các bản thử trước đó chỉ cần qua kiểm tra tự động. Đẹp hay không là bạn quyết.",
                 Content = "File đang dùng: " + s.BoundFile + " (" + (s.BoundAs == "final" ? "bản chính thức" : "bản thử") + (s.Version != null ? ", version " + s.Version : "") + ")" +
                           (string.IsNullOrWhiteSpace(s.Detail) ? "" : "\n" + s.Detail),
                 Now = "Kiểm tra tự động: " + (s.Gate == "passed" ? "đạt" : s.Gate == "failed" ? "KHÔNG đạt" : "chưa chạy (cần Unity)") +
@@ -108,6 +109,27 @@ namespace TestGate.AgentControl
                         " Hoặc chơi thử / View Preview." +
                         (s.Gate == "failed" ? " Kiểm tra tự động đang KHÔNG đạt: thường nên bấm No." : ""),
                 Undo = "Xóa dòng " + s.Id + " " + s.Hash + " trong Docs/Plan/art-accepted.txt."
+            }.ToString();
+        }
+
+        /// <summary>The dashboard draft: the finals the owner ticked that still match the real art, and what was left out (with why).</summary>
+        public static string ArtAcceptDraft(ArtAcceptDraft.Result r, string file)
+        {
+            string Version(SlotState s) => s.Version != null ? s.Version : "không rõ version";
+            return new Card
+            {
+                Question = "Duyệt " + r.Accept.Count + " bản art CHÍNH THỨC (final) bạn đã tick trên dashboard?",
+                What = "Bạn đã tick các bản final trên tab Art và lưu file " + file + ". Gate đã tính lại từ file art thật: chỉ những dòng còn " +
+                       "khớp đúng với thứ bạn đã xem (cùng version, cùng nội dung) và đã qua kiểm tra tự động mới được đưa vào danh sách duyệt.",
+                Content = "Sẽ duyệt:\n" + string.Join("\n", r.Accept.Select(s => "✓ " + s.Id + " · " + Version(s) + " · " + s.BoundFile)) +
+                          (r.Rejected.Count > 0 ? "\nBị loại (không duyệt):\n" + string.Join("\n", r.Rejected.Select(x => "✗ " + x.Slot + ": " + x.Reason)) : "") +
+                          (r.Skipped.Count > 0 ? "\nĐã duyệt từ trước (bỏ qua):\n" + string.Join("\n", r.Skipped.Select(x => "= " + x.Slot)) : "") +
+                          (r.Notes.Count > 0 ? "\nGhi chú:\n" + string.Join("\n", r.Notes) : ""),
+                Now = "Kiểm tra tự động: cả " + r.Accept.Count + " bản đều đạt (kích thước, tâm, thời lượng).",
+                Yes = "Ghi " + r.Accept.Count + " dòng vào Docs/Plan/art-accepted.txt, mỗi bản một dòng (đúng nội dung file hiện tại). Ai sửa một file " +
+                      "sau này thì riêng bản đó thành \"cần duyệt lại\". Nếu art bị đổi trong lúc bạn đọc hộp thoại này, lệnh sẽ từ chối, không duyệt gì.",
+                Check = "Trang so sánh của từng slot (tab Art trên dashboard, nút \"Xem so sánh\"). Bản bị loại: xem lại rồi lưu nháp mới.",
+                Undo = "Xóa các dòng " + string.Join(", ", r.Accept.Select(s => s.Id + " " + s.Hash)) + " trong Docs/Plan/art-accepted.txt."
             }.ToString();
         }
 

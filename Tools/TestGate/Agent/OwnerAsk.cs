@@ -123,7 +123,9 @@ namespace TestGate.AgentControl
                 case "roadmap accept":
                     return args.Length == 3 ? RoadmapCli.DescribeAccept(root, A(2)) : (null, "usage: roadmap accept R-ID");
                 case "art accept":
-                    return args.Length == 3 ? ArtCli.DescribeAccept(root, A(2)) : (null, "usage: art accept SLOT-ID");
+                    if (A(2) == "--draft")
+                        return args.Length == 4 ? ArtAcceptDraftCli.Describe(root, A(3)) : (null, "usage: art accept --draft \"FILE\"");
+                    return args.Length == 3 ? ArtCli.DescribeAccept(root, A(2)) : (null, "usage: art accept SLOT-ID | art accept --draft \"FILE\"");
                 case "cr decide":
                     if (args.Length == 2)
                         return (null, "the cr decide loop is for a terminal; here decide one CR: cr decide CR-n approve|reject \"<why>\"");
@@ -152,6 +154,7 @@ namespace TestGate.AgentControl
             switch (args[0] + " " + args[1])
             {
                 case "api accept": return ApiBaseline.Pending(root, args[2]).change?.Hash;
+                case "art accept": return args.Length == 4 && args[2] == "--draft" ? ArtAcceptDraftCli.Evaluate(root, args[3]).result?.Bind : null;
                 case "policy vendor":
                 case "mcp allow": return PlanOf(root, args).plan?.Bind;
             }
@@ -169,6 +172,8 @@ namespace TestGate.AgentControl
                 case "roadmap accept":
                     return OwnerAskText.RoadmapAccept(root, Game.Architecture.Rules.PlanParser.Load(root).Requirement(A(2)));
                 case "art accept":
+                    if (A(2) == "--draft")
+                        return OwnerAskText.ArtAcceptDraft(ArtAcceptDraftCli.Evaluate(root, A(3)).result, A(3));
                     return OwnerAskText.ArtAccept(ArtStatus.Compute(root)[A(2)]);
                 case "cr decide":
                     return OwnerAskText.CrDecide(CrStore.Load(root)[A(2)], A(3) == "approve", A(4));

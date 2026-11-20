@@ -79,7 +79,7 @@ namespace TestGate.Planning
                     Console.WriteLine(Pad(f.Id, 16) + Pad(f.Status, 12) + Pad(f.Priority, 4) + Pad(f.Verified + "/" + f.Total, 7) +
                                       Pad(f.StoryTotal > 0 ? "S" + f.StoryVerified + "/" + f.StoryTotal : "-", 6) + Pad(f.ArtLevel ?? "-", 10) + f.Title +
                                       (f.Tags.Count > 0 ? " [" + string.Join(",", f.Tags) + "]" : "") +
-                                      (f.Debt.Count > 0 ? " · nợ " + f.Debt.Count : "") + (f.ArtDebt.Count > 0 ? " · nợ art " + f.ArtDebt.Count : "") + (f.BlockedBy.Count > 0 ? " · chờ: " + string.Join("; ", f.BlockedBy) : ""));
+                                      (f.Debt.Count > 0 ? " · nợ " + f.Debt.Count : "") + (f.ArtDebt.Count > 0 ? " · nợ art " + f.ArtDebt.Count + " (không chặn)" : "") + (f.ArtRisk.Count > 0 ? " · art-risk chưa quyết" : "") + (f.BlockedBy.Count > 0 ? " · chờ: " + string.Join("; ", f.BlockedBy) : ""));
                 int agent = r.Gaps.Count(g => g.Actor == "agent"), human = r.Gaps.Count(g => g.Actor == "human");
                 Console.WriteLine("gaps: " + agent + " việc cho agent, " + human + " chờ người quyết · `roadmap gaps` · `roadmap next`");
                 return 0;
@@ -98,7 +98,9 @@ namespace TestGate.Planning
             if (fs.Slots.Count > 0)
                 Console.WriteLine("  art: " + string.Join(", ", fs.Slots) + " · mức " + (fs.ArtLevel ?? "-") + (fs.ArtRequired != null ? " (cần " + fs.ArtRequired + ")" : ""));
             foreach (var d in fs.ArtDebt)
-                Console.WriteLine("  NỢ ART " + d);
+                Console.WriteLine("  NỢ ART (không chặn dev) " + d);
+            foreach (var d in fs.ArtRisk)
+                Console.WriteLine("  CẢNH BÁO " + d);
             foreach (var q in fs.Requirements)
                 Console.WriteLine("  " + Pad(q.Status, 13) + Pad(q.Id, 20) + q.Text + "\n" + new string(' ', 15) + q.Detail +
                                   (q.Tests.Count > 0 ? " · tests: " + string.Join(", ", q.Tests.Take(4)) : ""));

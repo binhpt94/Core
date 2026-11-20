@@ -11,7 +11,7 @@ Read `Docs/PLANNING.md` → "Standard art process" once. The tools do the bookke
 - Task scope must include the slot's feature (`./Tools/test-gate.sh task show`).
 - `./Tools/test-gate.sh art brief <SLOT> --print` → read the brief AND the prompt: size range (delivery px = 2× units),
   pivot, intent, style lock, the **Avoid** list (earlier rejections: never repeat one).
-- `./Tools/test-gate.sh art versions <SLOT>` → what exists, what each tier uses, what is approved.
+- `./Tools/test-gate.sh art versions <SLOT>` → what exists, what each tier uses, which final is accepted.
 - Never read `Dashboard/Data/` (it is the owner's); everything you need comes from `--print` and command output.
 
 ## 1. Draw the candidate (SVG, by hand)
@@ -45,8 +45,12 @@ Inkscape renders the PNG; the new version is used as the candidate. A render err
 ## 5. Final (Codex) - ONLY when the owner asks
 - It costs money and minutes. Show the plan first: `./Tools/test-gate.sh art codex <SLOT> --from vNNN --dry-run`.
 - Then `art codex <SLOT> --from vNNN` (run in background; it adds a `final` version by codex). Same checks, same page.
-- Approval is the owner's: `./Tools/test-gate.sh art accept <SLOT>` is an owner command (run it alone only when asked;
-  they answer yes/no).
+- Candidates are never accepted: passing `Art:<SLOT>` (the automatic art gate) is all a candidate needs.
+- The owner usually accepts several finals at once on the dashboard (tab Art → tick → save draft). When they say "sync file duyệt
+  art": Read the newest `~/Downloads/art-accept.draft*.txt` (or their path), then run `./Tools/test-gate.sh art accept --draft "<path>"`
+  alone; the gate shows them what is accepted and what is left out, they answer yes/no once. Never edit the draft.
+- Acceptance is for the final only, after its art gate passed: `./Tools/test-gate.sh art accept <SLOT>` is an owner command
+  (run it alone only when asked; they answer yes/no).
 
 ## Report
 Version id, what changed, test results (`Art:<SLOT>`), whether pictures were taken (`art shots`), the compare page path, anything pending (Unity not run,

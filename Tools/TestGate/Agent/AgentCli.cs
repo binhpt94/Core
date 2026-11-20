@@ -301,8 +301,9 @@ namespace TestGate.AgentControl
                 s.Attention.PlanErrors.AddRange(roadmap.Errors);
                 foreach (var g in roadmap.Gaps.Where(g => g.Actor == "human" && g.Kind == "NEEDS_REVIEW"))
                     s.Attention.Approvals.Add(new Approval { Kind = "requirement", Id = g.Requirement, What = g.Requirement + ": tự kiểm tra rồi chấp nhận (" + g.Feature + ")", Command = "./Tools/test-gate.sh roadmap accept " + g.Requirement });
-                foreach (var sl in roadmap.Slots.Where(x => x.Level == "CANDIDATE" || x.Level == "STALE"))
-                    s.Attention.Approvals.Add(new Approval { Kind = "art", Id = sl.Id, What = sl.Id + ": " + (sl.Level == "STALE" ? "art đã đổi sau khi duyệt, cần xem lại" : "art ứng viên chờ duyệt") + " (" + sl.BoundFile + ")", Command = "./Tools/test-gate.sh art accept " + sl.Id });
+                // Only finals that passed the automatic art gate wait for the owner; candidates never do.
+                foreach (var sl in roadmap.Slots.Where(x => x.BoundAs == "final" && x.Gate == "passed" && (x.Level == "CANDIDATE" || x.Level == "STALE")))
+                    s.Attention.Approvals.Add(new Approval { Kind = "art", Id = sl.Id, What = sl.Id + ": " + (sl.Level == "STALE" ? "bản final đã đổi sau khi duyệt, cần xem lại" : "bản final chờ duyệt") + " (" + sl.BoundFile + ")", Command = "./Tools/test-gate.sh art accept " + sl.Id });
                 foreach (var c in ApiBaseline.PendingAll(root))
                     s.Attention.Approvals.Add(new Approval { Kind = "api", Id = c.Group, What = "API công khai của " + c.Group + " đã đổi (+" + c.Added.Count + " / -" + c.Removed.Count + (c.Breaking ? ", CÓ PHÁ VỠ" : ", chỉ thêm") + "): bảo AI chạy lệnh rồi bấm Yes/No", Command = "./Tools/test-gate.sh api accept " + c.Group });
                 foreach (var p in roadmap.Proposals)

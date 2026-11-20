@@ -73,6 +73,8 @@ function render(M) {
   $("foundation").innerHTML = foundation(M);
   $("progress").innerHTML = progress(M);
   $("notes").innerHTML = notes(M);
+  $("art").innerHTML = art(M);
+  if (zoomed) zoom(zoomed);
   showTab(tab);
 }
 
@@ -150,7 +152,8 @@ function featureDetail(f, now) {
   const [t, c] = label(FEATURE, f.status);
   const rows = f.requirements.map(q => { const [qs, qc] = label(REQ, q.status); return `<tr><td><code>${esc(q.id)}</code></td><td>${tag(qs, qc === "none" ? "" : qc)}</td><td>${esc(q.text)}${q.detail ? `<div class="muted">${esc(q.detail)}</div>` : ""}</td></tr>`; });
   const blocked = f.blockedBy && f.blockedBy.length ? `<p class="err">Bị chặn bởi: ${esc(f.blockedBy.join(", "))}</p>` : "";
-  const art = f.slots.length ? `<p class="muted">Art slot: ${esc(f.slots.join(", "))} · mức hiện tại <b>${esc(f.artLevel || "?")}</b>` +
+  const slotLinks = f.slots.map(id => { const A = artSlotsOf(window.MODEL).find(x => x.id === id); return A && A.compare ? `<a href="${esc(A.compare)}" target="_blank" rel="noopener">${esc(id)} ↗</a>` : esc(id); });
+  const art = f.slots.length ? `<p class="muted">Art slot: ${slotLinks.join(", ")} · mức hiện tại <b>${esc(f.artLevel || "?")}</b>` +
     (f.artRequired ? ` · feature cần <b>${esc(f.artRequired)}</b>` : " · feature không đòi mức art") + `</p>` +
     f.artDebt.map(d => `<p class="err">Nợ art: ${esc(d)}</p>`).join("") : "";
   return `<h2><code>${esc(f.id)}</code> ${esc(f.title)} ${tag(t, c)}</h2><div class="badges">${badges(f, now)}</div>${blocked}${art}${chart(f.requirements)}` +
@@ -172,11 +175,114 @@ function notes(M) {
   return `<div class="card notes">${items.length ? items.join("") : `<p class="muted">Chưa có ghi chú. Nhờ AI thêm vào <code>Docs/Plan/Notes.md</code> (thêm, sửa, xóa đều qua AI).</p>`}${errors}</div>`;
 }
 
+// ---------------------------------------------------------------- tab 4: art slots, tick finals, save a draft for `art accept --draft`
+// The page never writes the repo: "Lưu" downloads art-accept.draft.txt; the owner asks an AI to sync it and answers yes/no once.
+const artSlotsOf = M => M && M.roadmap && M.roadmap.artSlots ? M.roadmap.artSlots : [];
+const picked = new Set((() => { try { return JSON.parse(localStorage.getItem("dash-art-picked") || "[]"); } catch (e) { return []; } })());
+let artFilter = pref("artf", "all");
+const ART_STATE = { FINAL: ["Đã duyệt", "ok"], STALE: ["Final đổi sau khi duyệt", "warn"], GRAYBOX: ["Chưa có art", ""] };
+const artState = A => A.level === "CANDIDATE" ? (A.tier === "final" ? ["Final chờ duyệt", "info"] : ["Bản thử", ""]) : label(ART_STATE, A.level);
+const gateTag = A => A.gate === "passed" ? tag("Kiểm tra ✓ đạt", "ok") : A.gate === "failed" ? tag("Kiểm tra ✗ không đạt", "bad") : tag("Kiểm tra chưa chạy", "");
+const pickBox = (A, where) => A.acceptable
+  ? `<label class="pick"><input type="checkbox" id="pick-${where}-${esc(A.id)}" data-pick="${esc(A.id)}"${picked.has(A.id) ? " checked" : ""}> Duyệt</label>`
+  : `<label class="pick off" title="${esc(A.refusal)}"><input type="checkbox" id="pick-${where}-${esc(A.id)}" disabled${A.accepted ? " checked" : ""}> ${A.accepted ? "Đã duyệt" : "Không cần duyệt"}</label>`;
+const compareLink = A => A.compare ? `<a href="${esc(A.compare)}" target="_blank" rel="noopener">Xem so sánh ↗</a>`
+  : `<span class="muted small">Chưa có trang so sánh: <code>./Tools/test-gate.sh art compare ${esc(A.id)}</code></span>`;
+
+function artWhere(A) {
+  const path = A.png || A.file || A.contract || "";
+  const shown = A.png ? `<code title="${esc(A.file || "")}">${esc(A.png)}</code>` : A.file ? `<code>${esc(A.file)}</code>` : `<span>contract</span> <code>${esc(A.contract || "")}</code>`;
+  return `<p class="where"><span>Module <b>${esc(A.module)}</b></span><span>·</span>${shown}${path ? `<button class="copy" type="button" data-copy="${esc(path)}">Copy</button>` : ""}</p>`;
+}
+
+function artRow(A) {
+  const [st, sc] = artState(A);
+  const thumb = A.thumb ? `<button class="thumb" type="button" data-zoom="${esc(A.id)}" aria-label="Phóng to ${esc(A.id)}"><img src="${esc(A.thumb)}" alt="${esc(A.id)} ${esc(A.version)}"></button>`
+    : `<div class="thumb empty" aria-hidden="true"></div>`;
+  const size = A.thumbWidth ? ` · ${A.thumbWidth / 2}×${A.thumbHeight / 2}` : "";
+  const meta = A.version ? `${esc(A.version)} · ${esc(A.tier)}${A.by ? " · " + esc(A.by) : ""}${A.date ? " · " + esc(A.date) : ""}${size}` : "chưa có version";
+  return `<li class="slot">${thumb}<div class="info"><div class="name"><b>${esc(A.id)}</b>${tag(st, sc)}${gateTag(A)}${A.debt ? tag("Nợ art", "warn") : ""}</div>` +
+    `<p class="meta">${meta}${A.features.length ? " · " + esc(A.features.join(", ")) : ""}</p>${artWhere(A)}` +
+    (A.refusal ? `<p class="why">${esc(A.refusal)}</p>` : "") + `</div><div class="act">${pickBox(A, "row")}${compareLink(A)}</div></li>`;
+}
+
+function art(M) {
+  const all = artSlotsOf(M);
+  all.forEach(A => { if (!A.acceptable) picked.delete(A.id); });
+  if (!all.length) return `<div class="card"><p class="muted">Chưa có art slot nào (khai báo trong <code>Logic/Domain/&lt;F&gt;ArtSlots.cs</code>).</p></div>`;
+  const keep = { all: () => true, wait: A => A.acceptable, done: A => A.accepted, debt: A => A.debt };
+  const shown = all.filter(keep[artFilter] || keep.all);
+  const waiting = all.filter(A => A.acceptable).length, done = all.filter(A => A.accepted).length;
+  const radio = (v, text) => `<label><input type="radio" name="artf" id="artf-${v}" value="${v}"${artFilter === v ? " checked" : ""}> ${text}</label>`;
+  return `<div class="card"><div class="head"><div><h2>Art · ${all.length} slot · ${waiting} bản final chờ duyệt</h2>` +
+    `<p class="muted small">Chỉ bản final đã qua kiểm tra tự động mới cần bạn duyệt. Bản thử chỉ cần qua kiểm tra.</p></div>` +
+    `<button class="save" id="artSave" type="button"${picked.size ? "" : " disabled"}>Lưu lựa chọn duyệt (${picked.size})</button></div>` +
+    `<p class="muted small">Lưu xong, bảo AI: <b>"sync file duyệt art"</b>. AI đọc file <code>~/Downloads/art-accept.draft.txt</code>, gate tính lại từ art thật, rồi hỏi bạn Yes/No một lần.</p>` +
+    `<div class="filters">${radio("all", "Tất cả")}${radio("wait", "Chờ duyệt (" + waiting + ")")}${radio("done", "Đã duyệt (" + done + ")")}${radio("debt", "Nợ art")}</div>` +
+    `<ul class="slots">${shown.length ? shown.map(artRow).join("") : `<li class="slot"><span></span><p class="muted">Không có slot nào ở mục này.</p></li>`}</ul></div>`;
+}
+
+function artDraft(M) {
+  const lines = ["# art accept draft · saved " + new Date().toISOString().replace(/\.\d+Z$/, "Z") + " · dashboard data " + M.generated,
+                 "# slot version hash: the gate recomputes each from the real art before asking the owner yes/no"];
+  artSlotsOf(M).filter(A => picked.has(A.id)).forEach(A => lines.push(A.id + " " + (A.version || "-") + " " + A.hash));
+  return lines.join("\n") + "\n";
+}
+
+function saveDraft(M) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([artDraft(M)], { type: "text/plain" }));
+  a.download = "art-accept.draft.txt";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// Zoom: the version's picture placed with its pivot at the centre, the contract's min/max boxes drawn over it (as on compare.html).
+let zoomed = "", lastFocus = null;
+function zoom(id) {
+  const A = artSlotsOf(window.MODEL).find(x => x.id === id); if (!A || !A.thumb) return;
+  const B = A.box || { minWidth: 0, maxWidth: A.thumbWidth / 2, minHeight: 0, maxHeight: A.thumbHeight / 2, pivotX: 50, pivotY: 50 };
+  const side = Math.max(B.maxWidth, B.maxHeight) * 2.5, cx = side / 2, cy = side / 2, iw = A.thumbWidth / 2, ih = A.thumbHeight / 2;
+  const rect = (w, h, cls) => w ? `<rect class="${cls}" x="${cx - w * B.pivotX / 100}" y="${cy - h * (100 - B.pivotY) / 100}" width="${w}" height="${h}"/>` : "";
+  const arm = side / 14;
+  $("zoomStage").innerHTML = `<svg viewBox="0 0 ${side} ${side}" role="img" aria-label="${esc(A.id)} ${esc(A.version)}">` +
+    `<image href="${esc(A.thumb)}" x="${cx - iw * B.pivotX / 100}" y="${cy - ih * (100 - B.pivotY) / 100}" width="${iw}" height="${ih}"/>` +
+    (A.box ? rect(B.maxWidth, B.maxHeight, "max") + rect(B.minWidth, B.minHeight, "min") + `<path class="piv" d="M${cx - arm} ${cy}H${cx + arm}M${cx} ${cy - arm}V${cy + arm}"/>` : "") + `</svg>`;
+  $("zoomCap").innerHTML = `<b>${esc(A.id)}</b><span>Module ${esc(A.module)} · ${esc(A.version)} ${esc(A.tier)} · ${iw}×${ih}</span>${pickBox(A, "box")}${compareLink(A)}`;
+  zoomed = id;
+  if ($("zoom").hidden) { lastFocus = document.activeElement; $("zoom").hidden = false; $("zoomClose").focus(); }
+}
+function unzoom() { $("zoom").hidden = true; zoomed = ""; if (lastFocus) lastFocus.focus(); }
+
+function copyPath(btn) {
+  const done = t => { btn.textContent = t; setTimeout(() => { btn.textContent = "Copy"; }, 1500); };
+  const select = () => { const r = document.createRange(); r.selectNodeContents(btn.previousElementSibling); const s = getSelection(); s.removeAllRanges(); s.addRange(r); done("Đã chọn, Ctrl+C"); };
+  try { navigator.clipboard.writeText(btn.dataset.copy).then(() => done("Đã copy"), select); } catch (e) { select(); }
+}
+
+document.addEventListener("click", e => {
+  const z = e.target.closest("[data-zoom]"); if (z) { zoom(z.dataset.zoom); return; }
+  const c = e.target.closest("[data-copy]"); if (c) { copyPath(c); return; }
+  if (e.target.closest("#artSave")) { saveDraft(window.MODEL); return; }
+  if (e.target === $("zoom") || e.target.closest("#zoomClose")) unzoom();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("zoom").hidden) unzoom(); });
+document.addEventListener("change", e => {
+  const id = e.target.dataset && e.target.dataset.pick;
+  if (id) {
+    if (e.target.checked) picked.add(id); else picked.delete(id);
+    try { localStorage.setItem("dash-art-picked", JSON.stringify([...picked])); } catch (err) { }
+    $("art").innerHTML = art(window.MODEL);
+    if (zoomed) zoom(zoomed);
+  } else if (e.target.name === "artf") { artFilter = e.target.value; setPref("artf", artFilter); $("art").innerHTML = art(window.MODEL); }
+});
+
 // ---------------------------------------------------------------- tabs + selection
+const TABS = ["foundation", "progress", "art", "notes"];
 function showTab(name) {
-  tab = ["foundation", "progress", "notes"].includes(name) ? name : "foundation";
+  tab = TABS.includes(name) ? name : "foundation";
   document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
-  ["foundation", "progress", "notes"].forEach(id => { $(id).hidden = id !== tab; });
+  TABS.forEach(id => { $(id).hidden = id !== tab; });
 }
 document.addEventListener("change", e => {
   const k = e.target.dataset && e.target.dataset.filter; if (!k) return;

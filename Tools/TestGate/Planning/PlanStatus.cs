@@ -96,7 +96,11 @@ namespace TestGate.Planning
         public List<string> Slots { get; set; } = new List<string>();
         public string ArtRequired { get; set; }
         public string ArtLevel { get; set; }
+        /// <summary>Art below the planned level or a failing art gate: work for the art lane; never blocks DONE, dependencies or task start.</summary>
         public List<string> ArtDebt { get; set; } = new List<string>();
+        public bool ArtComplete => ArtDebt.Count == 0;
+        /// <summary>[art-risk] feasibility requirements a human has not accepted yet: a warning for the owner, never a block.</summary>
+        public List<string> ArtRisk { get; set; } = new List<string>();
         public List<string> BlockedBy { get; set; } = new List<string>();
         public List<RequirementState> Requirements { get; set; } = new List<RequirementState>();
         public List<DependencyState> Dependencies { get; set; } = new List<DependencyState>();
@@ -276,6 +280,8 @@ namespace TestGate.Planning
                     });
                 foreach (var a in fs.ArtDebt)
                     report.Gaps.Add(new Gap { Kind = "ART_DEBT", Feature = fs.Id, Detail = a, Actor = "art", Severity = 5 });
+                foreach (var a in fs.ArtRisk)
+                    report.Gaps.Add(new Gap { Kind = "ART_RISK", Feature = fs.Id, Detail = a, Actor = "art", Severity = 4 });
                 if (fs.Total == 0)
                     report.Gaps.Add(new Gap { Kind = "NO_REQUIREMENTS", Feature = fs.Id, Detail = "feature has no requirement yet", Actor = "human", Severity = 6 });
                 foreach (var d in fs.Debt)
@@ -440,10 +446,10 @@ namespace TestGate.Planning
                 }
             }
 
-            // [art-risk]: deep gameplay waits until a human accepted that the art is feasible (decide Sói/Hổ BEFORE coding 3 skills).
+            // [art-risk]: the owner should decide art feasibility early (Sói/Hổ BEFORE 3 skills), but art never blocks dev: a warning only.
             if (f.ArtRisk)
                 foreach (var r in fs.Requirements.Where(x => plan.Requirement(x.Id).IsFeasibility && !ReqStatus.IsDone(x.Status)))
-                    fs.BlockedBy.Add("art feasibility " + r.Id + " chưa được người duyệt");
+                    fs.ArtRisk.Add("art feasibility " + r.Id + " chưa được người duyệt (gameplay vẫn làm được; quyết sớm để tránh làm lại)");
 
             // What this feature asked other modules for (CRs): owed until delivered; it works on a fake meanwhile, never waits idle.
             foreach (var debt in CrPlanning.Debt(report, input.Crs, fs.Id))
@@ -452,7 +458,7 @@ namespace TestGate.Planning
                 fs.Debt.Add(debt);
             }
 
-            bool allReq = fs.Total > 0 && fs.Verified == fs.Total && fs.ArtDebt.Count == 0;
+            bool allReq = fs.Total > 0 && fs.Verified == fs.Total; // art debt is tracked apart (ArtComplete): it never holds DONE back
             bool started = fs.Requirements.Any(r => r.Status != ReqStatus.NoTest && r.Status != ReqStatus.NeedsReview);
             string status = allReq && depsOk ? FeatureStatus.Done
                 : fs.BlockedBy.Count > 0 && !started ? FeatureStatus.Blocked

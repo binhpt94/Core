@@ -122,7 +122,12 @@ namespace Game.Architecture.Rules
         private static readonly Regex DepItem = new Regex(@"^(?<kind>hard|contract|soft)\s+(?<id>F-[A-Z0-9][A-Z0-9-]*)(\s*\((?<iface>[A-Za-z_][A-Za-z0-9_.]*)\))?$");
         private static readonly HashSet<string> FeatureTags = new HashSet<string> { "rush", "deferred", "dropped", "art-risk" };
         private static readonly HashSet<string> RequirementTags = new HashSet<string> { "manual", "story", "art", "feasibility", "critical" };
-        public static readonly string[] ArtLevels = { "graybox", "candidate", "approved", "final" };
+        /// <summary>graybox &lt; candidate (bound, passes the automatic art gate) &lt; final (owner `art accept`). Art debt never blocks dev.</summary>
+        public static readonly string[] ArtLevels = { "graybox", "candidate", "final" };
+
+        /// <summary>The legacy level "approved" (before acceptance moved to finals only) reads as candidate.</summary>
+        public static string NormalizeArtLevel(string level) => level == "approved" ? "candidate" : level;
+
 
         public static Plan Load(string repoRoot)
         {
@@ -175,7 +180,7 @@ namespace Game.Architecture.Rules
                             current.Slots.AddRange(tag.Substring(6).Split(',').Select(x => x.Trim()).Where(x => x.Length > 0));
                         else if (tag.StartsWith("art:", StringComparison.Ordinal))
                         {
-                            current.ArtLevel = tag.Substring(4).Trim();
+                            current.ArtLevel = NormalizeArtLevel(tag.Substring(4).Trim());
                             if (Array.IndexOf(ArtLevels, current.ArtLevel) < 0)
                                 plan.Errors.Add("line " + n + ": [art: " + current.ArtLevel + "] must be one of " + string.Join(", ", ArtLevels));
                         }

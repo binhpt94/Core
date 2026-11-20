@@ -18,6 +18,8 @@ namespace TestGate.Planning
         public List<string> Proposals { get; set; } = new List<string>();
         public List<RegisteredTask> OpenTasks { get; set; } = new List<RegisteredTask>();
         public List<SlotState> Slots { get; set; } = new List<SlotState>();
+        /// <summary>The Art tab: every slot with module, files, thumbnail and whether the owner can tick it (finals only).</summary>
+        public List<ArtSlotView> ArtSlots { get; set; } = new List<ArtSlotView>();
         /// <summary>Work for artists / the human (not agents): art debt, approvals, feasibility.</summary>
         public List<Gap> ArtLane { get; set; } = new List<Gap>();
         /// <summary>Change requests between modules not closed yet (who decides an open one: gate / arbiter / owner).</summary>
@@ -38,6 +40,7 @@ namespace TestGate.Planning
                 Features = report.Features, Gaps = report.Gaps, Next = PlanScheduler.Next(report, open),
                 Proposals = report.Proposals, OpenTasks = open,
                 Slots = inputs.Slots.Values.OrderBy(x => x.Id, System.StringComparer.Ordinal).ToList(),
+                ArtSlots = ArtSlotView.Build(root, inputs.Slots.Values, report.Features),
                 ArtLane = report.Gaps.Where(g => g.Actor == "art" || (g.Actor == "human" && g.Kind == ReqStatus.NeedsReview)).ToList(),
                 Crs = report.Crs,
                 Owner = report.Gaps.Where(g => g.Actor == "human").Concat(MessageTrace.Gaps(root)).ToList()

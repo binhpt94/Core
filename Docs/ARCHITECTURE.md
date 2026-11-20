@@ -396,15 +396,17 @@ gameplay waits for art. The fix keeps each branch's truth where it can be checke
 - Content swaps (archetypes) are data; when a story goal breaks, the lint names it with numbers (e.g. the bat candidate:
   "breather: first contact after 83 ticks < 100") and the human decides. No change-request bureaucracy for swaps that keep the goals.
 - Graybox = generated from the contract → always conforms → gameplay never waits for art.
-- Art level (GRAYBOX/CANDIDATE/APPROVED/FINAL, STALE after edits) and ART_DEBT are computed; `[art-risk]` + `[feasibility]` puts the
-  art question *before* deep gameplay work. Dashboard: Story/Gameplay/Art columns, an *Art* tab with slots and the art lane.
+- Art level (GRAYBOX/CANDIDATE/FINAL, STALE when an accepted final is edited) and ART_DEBT are computed. Candidates pass on the
+  automatic art gate alone; only a final needs the owner's `art accept`. Art never blocks dev: art debt does not hold DONE,
+  dependants or `task start`, and a red art gate blocks Stop only for changes that are art. `[art-risk]` + `[feasibility]` warns
+  the owner to settle the art question early, without blocking gameplay. Dashboard: Story/Gameplay/Art columns, an *Art* tab with slots and the art lane.
 - Art production is a fixed pipeline (Docs/PLANNING.md, "Standard art process"): the brief and image prompt are generated from
   the contract + a style lock; Claude draws candidates as SVG, Codex paints finals; every attempt is an immutable version
   (`Art/<Name>/vNNN`, `versions.txt` says which version each tier uses); Unity's `ArtImport` builds the prefab + binding from it.
   Looks are judged by eye on a generated compare page (versions, bound levels, the slot in the game per device); rejection
   reasons accumulate in the slot's style file and feed every later prompt. The L3 layout baseline records art slots by pivot only.
 - Limits: measuring runs only in Unity (EditMode art gate; pictures need a GPU). 3D rig compatibility is out of scope
-  (contracts cover size, pivot and timing; the import pipeline handles UiImage slots). "Looks good" stays a human `art accept`.
+  (contracts cover size, pivot and timing; the import pipeline handles UiImage slots). "Looks good" stays a human `art accept`, once, on the final.
 
 ## 18. Files: no registry, nothing to reconcile
 
