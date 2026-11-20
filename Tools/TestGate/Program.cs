@@ -28,6 +28,8 @@
 //   files [orphans|clean|unused|du]  loose/orphan/junk files (derived from git + event log), unused assets (GUID graph), disk use
 //   tests seal|dispute|rule|status   requirement tests by roles: a tests session seals (lint + red first), impl codes, arbiter rules
 //   art status|accept             art slots: computed level (graybox/candidate/approved/final), human approval by content hash
+//   api status|accept             PublicApi.txt baselines (ARCH023): what differs, owner accepts the new API (yes/no)
+//   policy vendor add|update · mcp allow   owner files (ArchitecturePolicy.txt, mcp-policy.txt): one line per owner yes/no
 //   events verify|tail · reconcile · dash · serve   tamper-evident event log → deterministic dashboard (Agent/)
 //   hook-pre                      PreToolUse: scope guard blocks writes BEFORE they happen; snapshot before Bash
 //   hook-post                     PostToolUse: record tool/file events (Bash edits via git snapshot diff) + per-file rules
@@ -59,10 +61,10 @@ internal static class Program
     {
         if (rest.Length == 0)
         {
-            Console.Error.WriteLine("Usage: owner-preview roadmap accept R-ID | task approve | art accept SLOT | cr decide CR-n approve|reject \"why\" | tests unseal R-ID \"why\" | tests grandfather | golden | layout [EditMode \"View:F.V\"]");
+            Console.Error.WriteLine("Usage: owner-preview roadmap accept R-ID | task approve | art accept SLOT | cr decide CR-n approve|reject \"why\" | tests unseal R-ID \"why\" | tests grandfather | api accept GROUP | policy vendor add|update … | mcp allow read|write|exec TOOL | golden | layout [EditMode \"View:F.V\"]");
             return 64;
         }
-        string Quote(string a) => a.IndexOf(' ') >= 0 || a.IndexOf(';') >= 0 ? "\"" + a + "\"" : a;
+        string Quote(string a) => a.IndexOfAny(new[] { ' ', ';', '*' }) >= 0 ? "\"" + a + "\"" : a;
         string tail = string.Join(" ", rest.Skip(1).Select(Quote));
         string cmd = rest[0] == "golden" ? "GOLDEN_WRITE=1 dotnet test Tools/LogicTests"
             : rest[0] == "layout" ? ("LAYOUT_WRITE=1 ./Tools/run-unity-tests.sh " + tail).TrimEnd()
@@ -141,6 +143,11 @@ internal static class Program
                     return TestGate.Files.FilesCli.Run(_root, args);
                 case "art":
                     return TestGate.Planning.ArtCli.Run(_root, args);
+                case "api":
+                    return ApiBaseline.Cli(_root, args);
+                case "policy":
+                case "mcp":
+                    return PolicyCli.Cli(_root, args);
                 case "roadmap":
                     return TestGate.Planning.RoadmapCli.Run(_root, args);
                 case "dash":
@@ -152,7 +159,7 @@ internal static class Program
                     Console.WriteLine("Unity retry budget reset.");
                     return 0;
                 default:
-                    Console.Error.WriteLine("Usage: TestGate plan|run|reset|check|refs|graph|vendor-hash|new-feature|new-view|roadmap|art|files|task|cr|tests|events|reconcile|dash|serve|hook-pre|hook-post|hook-stop|hook-session|hook-subagent-stop");
+                    Console.Error.WriteLine("Usage: TestGate plan|run|reset|check|refs|graph|vendor-hash|new-feature|new-view|roadmap|art|api|policy|mcp|files|task|cr|tests|events|reconcile|dash|serve|hook-pre|hook-post|hook-stop|hook-session|hook-subagent-stop");
                     return 64;
             }
         }
@@ -188,7 +195,10 @@ internal static class Program
         public List<string> UnityReasons = new List<string>();
         public bool DotnetTests;
         public SortedSet<string> Views = new SortedSet<string>(StringComparer.Ordinal);
+        /// <summary>Art gate that BLOCKS: the change is art of these slots (the automatic gate replaces a human look at candidates).</summary>
         public SortedSet<string> Slots = new SortedSet<string>(StringComparer.Ordinal);
+        /// <summary>Art gate that only RECORDS (art debt for the art lane): contracts / shared art code changed, or a full run. Never blocks dev.</summary>
+        public SortedSet<string> ArtDebtSlots = new SortedSet<string>(StringComparer.Ordinal);
         public List<FileImpact> Impacts = new List<FileImpact>();
     }
 
@@ -220,7 +230,7 @@ internal static class Program
             foreach (var v in impact.Views)
                 plan.Views.Add(v.Id);
             foreach (var d in ArtRules.Declarations(_root))
-                plan.Slots.Add(d.Id);
+                plan.ArtDebtSlots.Add(d.Id); // art is measured and recorded, but it is debt, not a gate failure
             foreach (var a in asmdefs.Where(a => a.IsTest && a.Name != LayoutGateAssembly))
                 (a.EditorOnly ? plan.EditModeTests : plan.PlayModeTests).Add(a.Name);
             plan.UnityRequired = true;
@@ -235,8 +245,9 @@ internal static class Program
             foreach (var v in i.Views)
                 plan.Views.Add(v);
             foreach (var a in i.Slots)
-                plan.Slots.Add(a);
+                (i.ArtContent ? plan.Slots : plan.ArtDebtSlots).Add(a);
         }
+        plan.ArtDebtSlots.ExceptWith(plan.Slots);
 
         // Only integration files go through the assembly graph (views have their own, much smaller gate).
         foreach (var file in plan.Impacts.Where(i => i.Has(ChangeRole.Integration)).Select(i => i.Path))
@@ -300,7 +311,9 @@ internal static class Program
         Console.WriteLine("UI     layout gate (Unity EditMode, per view): " + (plan.Views.Count == 0
             ? "not needed"
             : Join(plan.Views) + "  [-testCategory \"" + ViewCategories(plan) + "\"]"));
-        Console.WriteLine("ART    art gate (Unity EditMode, per slot): " + (plan.Slots.Count == 0 ? "not needed" : Join(plan.Slots)));
+        Console.WriteLine("ART    art gate (Unity EditMode, per slot): " + (plan.Slots.Count == 0 ? "not needed" : Join(plan.Slots) + " (art changed: blocks)"));
+        if (plan.ArtDebtSlots.Count > 0)
+            Console.WriteLine("       art debt check (records only, never blocks): " + Join(plan.ArtDebtSlots));
         if (!plan.UnityRequired)
         {
             Console.WriteLine("G2/G3  Unity integration: not needed (no installer, Bootstrap, scene, settings or asmdef changed)");
@@ -314,6 +327,9 @@ internal static class Program
     }
 
     private static string ViewCategories(Plan plan) => string.Join(";", plan.Views.Select(v => "View:" + v.Replace('/', '.')).Concat(plan.Slots.Select(s => "Art:" + s)));
+
+    private static string PendingArt(Plan plan) =>
+        (plan.Slots.Count > 0 ? " Pending art gate: " + Join(plan.Slots) + "." : "") + (plan.ArtDebtSlots.Count > 0 ? " Pending art debt check: " + Join(plan.ArtDebtSlots) + "." : "");
 
     // ------------------------------------------------------------------ run
 
@@ -370,7 +386,7 @@ internal static class Program
         if (plan.DotnetTests && !RunDotnetTests())
             return 1;
 
-        bool unityWork = plan.Views.Count > 0 || plan.Slots.Count > 0 || (plan.UnityRequired && (plan.EditModeTests.Count > 0 || plan.PlayModeTests.Count > 0));
+        bool unityWork = plan.Views.Count > 0 || plan.Slots.Count > 0 || plan.ArtDebtSlots.Count > 0 || (plan.UnityRequired && (plan.EditModeTests.Count > 0 || plan.PlayModeTests.Count > 0));
         if (!unityWork)
         {
             Console.WriteLine("GATE PASSED (Unity gate not required).");
@@ -390,8 +406,20 @@ internal static class Program
         {
             _unityPending = true;
             RecordTests("Unity", "pending", 0, 0, 0, null, "UNITY_PATH not set" + (plan.Views.Count > 0 ? "; layout gate pending for " + string.Join(", ", plan.Views) : ""));
-            Console.WriteLine("UNITY GATE NOT RUN: UNITY_PATH is not set. " + (plan.DotnetTests ? "G0+G1 passed." : "G0 passed (G1 not needed).") + (plan.Views.Count > 0 ? " Pending layout gate: " + Join(plan.Views) + "." : "") + (plan.Slots.Count > 0 ? " Pending art gate: " + Join(plan.Slots) + "." : ""));
+            Console.WriteLine("UNITY GATE NOT RUN: UNITY_PATH is not set. " + (plan.DotnetTests ? "G0+G1 passed." : "G0 passed (G1 not needed).") + (plan.Views.Count > 0 ? " Pending layout gate: " + Join(plan.Views) + "." : "") + PendingArt(plan));
             Console.WriteLine("Report this as 'Unity tests pending' (CI or a human must run them).");
+            return 0;
+        }
+
+        // An editor open on this project holds Temp/UnityLockfile: batchmode would fail ("another Unity instance"), which is not a test
+        // failure. Report it as pending and keep the retry budget.
+        if (UnityEditorOpen())
+        {
+            _unityPending = true;
+            RecordTests("Unity", "pending", 0, 0, 0, null, "Unity Editor is open on this project");
+            Console.WriteLine("UNITY GATE NOT RUN: the Unity Editor has this project open (batchmode can't open it twice). " + (plan.DotnetTests ? "G0+G1 passed." : "G0 passed (G1 not needed).")
+                              + (plan.Views.Count > 0 ? " Pending layout gate: " + Join(plan.Views) + "." : "") + PendingArt(plan));
+            Console.WriteLine("Close the editor and run ./Tools/test-gate.sh run again (or run the tests in the editor's Test Runner). Report this as 'Unity tests pending'.");
             return 0;
         }
 
@@ -403,9 +431,38 @@ internal static class Program
         if (ok && plan.UnityRequired && plan.PlayModeTests.Count > 0)
             ok &= RunUnityTests(unity, "PlayMode", plan.PlayModeTests);
 
+        // Art debt check: measures and records (Dashboard/Data/art → ART_DEBT in the art lane); its result never changes the exit code.
+        if (plan.ArtDebtSlots.Count > 0 && !RunUnityTests(unity, "EditMode", new List<string> { LayoutGateAssembly },
+                string.Join(";", plan.ArtDebtSlots.Select(s => "Art:" + s)), "ArtDebt", blocking: false))
+            Console.WriteLine("ART DEBT (not a gate failure): art of " + Join(plan.ArtDebtSlots) + " no longer meets its contract; the art lane fixes it (roadmap gaps).");
+
         WriteUnityFailures(ok ? 0 : failures + 1);
         Console.WriteLine(ok ? "GATE PASSED." : "GATE FAILED (Unity). Attempts left: " + (MaxUnityFailures - failures - 1));
         return ok ? 0 : 2;
+    }
+
+    /// <summary>
+    /// Is an editor holding UnityProject/Temp/UnityLockfile? Unity locks it exclusively while the project is open (Windows share lock,
+    /// flock on macOS/Linux, which .NET's FileShare.None also takes), so a failed exclusive open = open. A stale file after a crash opens fine.
+    /// </summary>
+    private static bool UnityEditorOpen()
+    {
+        string lockFile = Path.Combine(_root, "UnityProject", "Temp", "UnityLockfile");
+        if (!File.Exists(lockFile))
+            return false;
+        try
+        {
+            using (new FileStream(lockFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
 
     private static bool RunDotnetTests()
@@ -484,7 +541,10 @@ internal static class Program
         return false;
     }
 
-    private static bool RunUnityTests(string unity, string platform, List<string> assemblies, string categories = null, string label = null)
+    /// <summary>Categories a headless (-nographics) run can't execute; same list as Tools/run-unity-tests.sh.</summary>
+    public const string HeadlessExcluded = "!ArtShots";
+
+    private static bool RunUnityTests(string unity, string platform, List<string> assemblies, string categories = null, string label = null, bool blocking = true)
     {
         string dir = Path.Combine(_root, "Dashboard", "Data");
         Directory.CreateDirectory(dir);
@@ -494,6 +554,9 @@ internal static class Program
         if (File.Exists(results))
             File.Delete(results);
 
+        // Batchmode runs with -nographics: tests that render pictures (ArtShots) can't run here. They run in the Editor (Test Runner /
+        // MCP run_tests), so an unfiltered run excludes them instead of failing on the missing graphics device.
+        categories ??= HeadlessExcluded;
         Console.WriteLine("Running Unity " + name + ": " + string.Join(";", assemblies) + (categories != null ? " [" + categories + "]" : ""));
         var (code, _) = Exec(unity,
             "-batchmode -nographics -projectPath \"" + Path.Combine(_root, "UnityProject") + "\" -runTests -testPlatform " + platform +
@@ -515,7 +578,7 @@ internal static class Program
         var cases = doc.Descendants("test-case").ToList();
         // Inconclusive/Skipped is UNKNOWN, and UNKNOWN never counts as passed.
         var failed = cases.Where(c => (string)c.Attribute("result") == "Failed" || (string)c.Attribute("result") == "Inconclusive").ToList();
-        RecordTests("Unity " + name, failed.Count == 0 && cases.Count > 0 ? "passed" : "failed", cases.Count - failed.Count, failed.Count, cases.Count, results,
+        RecordTests("Unity " + name, failed.Count == 0 && cases.Count > 0 ? "passed" : blocking ? "failed" : "debt", cases.Count - failed.Count, failed.Count, cases.Count, results,
             categories != null ? "categories " + categories : null);
         if (cases.Count == 0 && categories != null)
         {
@@ -528,9 +591,12 @@ internal static class Program
             return true;
         }
 
-        _lastFailedStage = "unity";
-        _lastFailedTests.AddRange(failed.Select(c => (string)c.Attribute("name")));
-        Console.WriteLine("Unity " + name + " FAILED: " + failed.Count + "/" + cases.Count);
+        if (blocking)
+        {
+            _lastFailedStage = "unity";
+            _lastFailedTests.AddRange(failed.Select(c => (string)c.Attribute("name")));
+        }
+        Console.WriteLine("Unity " + name + (blocking ? " FAILED: " : " found art debt: ") + failed.Count + "/" + cases.Count);
         foreach (var c in failed.Take(15))
         {
             Console.WriteLine("- " + (string)c.Attribute("fullname"));

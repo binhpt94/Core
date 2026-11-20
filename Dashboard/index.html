@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Project Dashboard</title>
-<!-- View only, read-only. Data: Dashboard/Data/data.js, written by ./Tools/test-gate.sh dash from
+<!-- View only, read-only (the Art tab's "Lưu" only downloads a draft file to the owner's Downloads). Data: Dashboard/Data/data.js, written by ./Tools/test-gate.sh dash from
      Docs/Plan/Core.md, Docs/Plan/features.md (+ test results) and Docs/Plan/Notes.md. To change data, ask an AI to edit those files. -->
 <link rel="stylesheet" href="style.css">
 </head>
@@ -17,14 +17,24 @@
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="foundation">Nền tảng dự án</button>
     <button role="tab" data-tab="progress">Tiến độ</button>
+    <button role="tab" data-tab="art">Art</button>
     <button role="tab" data-tab="notes">Ghi chú</button>
   </nav>
 </header>
 <main>
   <section id="foundation" role="tabpanel"></section>
   <section id="progress" role="tabpanel" hidden></section>
+  <section id="art" role="tabpanel" hidden></section>
   <section id="notes" role="tabpanel" hidden></section>
 </main>
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Ảnh phóng to">
+  <button class="close" id="zoomClose" type="button" aria-label="Đóng">✕</button>
+  <figure>
+    <div class="stage" id="zoomStage"></div>
+    <figcaption id="zoomCap"></figcaption>
+    <p class="legend">Khung xanh: kích thước tối đa · khung cam: tối thiểu · dấu + đỏ: tâm (pivot) · Esc, bấm nền hoặc ✕ để đóng</p>
+  </figure>
+</div>
 <p class="muted foot" id="noData" hidden>Chưa có dữ liệu. Chạy <code>./Tools/test-gate.sh dash</code> rồi mở lại trang này.</p>
 <script src="Data/data.js"></script>
 <script src="app.js"></script>

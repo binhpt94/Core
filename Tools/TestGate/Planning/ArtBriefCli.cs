@@ -72,15 +72,23 @@ namespace TestGate.Planning
             foreach (var a in new[] { "-batchmode", "-projectPath", Layout.Full(root, "UnityProject"), "-executeMethod",
                          "Game.Core.EditorTools.ArtSnapshot.CaptureFromCommandLine", "-logFile", log })
                 psi.ArgumentList.Add(a);
-            int code;
-            using (var p = Process.Start(psi))
+            int code = 1;
+            string text = "";
+            for (int attempt = 1; attempt <= 2; attempt++)
             {
-                p.StandardOutput.ReadToEnd();
-                p.StandardError.ReadToEnd();
-                p.WaitForExit();
-                code = p.ExitCode;
+                using (var p = Process.Start(psi))
+                {
+                    p.StandardOutput.ReadToEnd();
+                    p.StandardError.ReadToEnd();
+                    p.WaitForExit();
+                    code = p.ExitCode;
+                }
+                text = File.Exists(log) ? File.ReadAllText(log) : "";
+                // A first open after new assets can end before the method ran (import + restart): one more try, never more.
+                if (code == 0 || text.Contains("[ArtSnapshot]") || text.Contains("another Unity instance is running"))
+                    break;
+                Console.WriteLine("Unity ended before taking pictures (first import?); trying once more...");
             }
-            string text = File.Exists(log) ? File.ReadAllText(log) : "";
             if (text.Contains("another Unity instance is running"))
             {
                 Console.Error.WriteLine("The Unity Editor has this project open: use Tools > Game > Art > Snapshot there, then ./Tools/test-gate.sh art compare --all");

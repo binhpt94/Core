@@ -116,6 +116,12 @@ namespace TestGate.AgentControl
         public static int Pre(string root, HookInput h)
         {
             Recorder.Use(h);
+            if (h.ToolName == "Read" || h.ToolName == "Grep")
+            {
+                // Reads are most tool calls: only a read of the gate's output is ours (asked yes/no, one yes = one read).
+                int read = OwnerRead.Pre(root, h);
+                return read < 0 ? 0 : read;
+            }
             var task = TaskStore.Load(root);
             RememberSession(root, h);
             OwnerAsk.RevokeStale(root, h);   // a grant the owner said no to dies before this call runs
@@ -266,7 +272,8 @@ namespace TestGate.AgentControl
                 why = h.ToolName + " is denied by " + McpPolicy.File_;
             else if (kind == McpKind.Exec)
                 why = h.ToolName + " runs arbitrary code in the editor/DCC: its effects can't be scoped or observed (it can write outside the repo). "
-                      + "Use a specific tool (create/modify/...) or ask the human to allow it in " + McpPolicy.File_;
+                      + "Use a specific tool (create/modify/...), or if nothing else can do it run ./Tools/test-gate.sh mcp allow exec " + h.ToolName
+                      + " alone: the owner is asked yes/no";
             else if (kind == McpKind.Write || kind == McpKind.ExecAllowed)
             {
                 if (task == null || !task.IsActive)
@@ -310,6 +317,9 @@ namespace TestGate.AgentControl
             (@"task\s+approve", "approving a task's scope is the owner's (a terminal, or ./Tools/test-gate.sh task approve alone: the owner is asked yes/no)"),
             (@"cr\s+decide", "deciding change requests is the owner's (a terminal, or ./Tools/test-gate.sh cr decide CR-n approve|reject \"why\" alone: the owner is asked yes/no)"),
             (@"tests\s+(?:unseal|grandfather)", "unsealing / grandfathering tests is the owner's last resort (a terminal, or the command alone: the owner is asked yes/no)"),
+            (@"api\s+accept", "accepting a public API baseline is the owner's (a terminal, or ./Tools/test-gate.sh api accept <Group> alone: the owner is asked yes/no)"),
+            (@"policy\s+vendor", "registering a vendor is the owner's (a terminal, or ./Tools/test-gate.sh policy vendor add|update … alone: the owner is asked yes/no)"),
+            (@"mcp\s+allow", "allowing an MCP tool is the owner's (a terminal, or ./Tools/test-gate.sh mcp allow read|write|exec <tool> alone: the owner is asked yes/no)"),
         }.Select(x => (new Regex(@"(?:test-gate\.sh|TestGate(?:\.dll|\.exe)?|Tools[/\\]TestGate)[""']?\s+(?:-\S*\s+)*" + x.Item1 + @"\b"), x.Item2)).ToArray();
 
         /// <summary>Does this command really invoke an owner-only gate subcommand (not just mention one)?</summary>
@@ -328,6 +338,9 @@ namespace TestGate.AgentControl
                     return why;
             if (!viaGate && c.Contains(".agent"))
                 return ".agent/ (event log, task) is written only by the test gate";
+            if (!viaGate && OwnerRead.PathInShell.IsMatch(c))
+                return OwnerRead.Dir + "/ is the gate's output for the owner: read one file with the Read tool (or Grep with its path), "
+                       + "the owner is asked yes/no and one yes = one read";
             return null;
         }
 
@@ -337,6 +350,7 @@ namespace TestGate.AgentControl
         public static int Post(string root, HookInput h, Func<IEnumerable<string>, List<string>> checkFiles)
         {
             Recorder.Use(h);
+            OwnerRead.Post(root, h);   // a read of Dashboard/Data ran = the owner said yes to it
             var task = TaskStore.Load(root);
             var feedback = new List<string>();
 

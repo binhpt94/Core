@@ -52,12 +52,15 @@ namespace Game.MathQuiz.Presentation
         [SerializeField] private Color optionCorrect = new Color(0.20f, 0.70f, 0.35f);
         [SerializeField] private Color optionWrong = new Color(0.85f, 0.25f, 0.25f);
         [SerializeField] private Color optionDimmed = new Color(0.55f, 0.58f, 0.65f);
+        [Tooltip("Real slime art keeps its own colours (white = no tint); raging multiplies it by this light red. The graybox keeps correct/wrong.")]
+        [SerializeField] private Color artRageTint = new Color(1f, 0.55f, 0.55f);
 
         private bool _hooked;
 
         // Presentation-only state: marker objects and smoothed positions. Never read by the simulation.
         private readonly Dictionary<int, RectTransform> _markers = new Dictionary<int, RectTransform>();
         private readonly Dictionary<int, float> _targets = new Dictionary<int, float>();
+        private readonly HashSet<int> _artMarkers = new HashSet<int>();
         private bool _raging;
 
         private Action<int> _optionSelected;
@@ -195,6 +198,7 @@ namespace Game.MathQuiz.Presentation
                 Destroy(_markers[id].gameObject); // zapped or reached the base: a VFX hook would go here
                 _markers.Remove(id);
                 _targets.Remove(id);
+                _artMarkers.Remove(id);
             }
         }
 
@@ -206,7 +210,11 @@ namespace Game.MathQuiz.Presentation
             {
                 var rt = pair.Value;
                 MoveX(rt, Mathf.Lerp(rt.anchorMin.x, _targets[pair.Key], k));
-                rt.GetComponent<Image>().color = _raging ? optionWrong : optionCorrect;
+                var image = rt.GetComponent<Image>();
+                if (image != null)
+                    image.color = _artMarkers.Contains(pair.Key)
+                        ? (_raging ? artRageTint : Color.white)          // real art: its own colours, light red when raging
+                        : (_raging ? optionWrong : optionCorrect);       // graybox: the state colour is all it has
             }
         }
 
@@ -218,6 +226,8 @@ namespace Game.MathQuiz.Presentation
             var anchorMax = slimeTemplate.anchorMax;
             rt.anchorMin = anchorMin; // layout: dynamic
             rt.anchorMax = anchorMax; // layout: dynamic
+            if (art != null)
+                _artMarkers.Add(id);
             rt.name = "Slime" + id;
             rt.gameObject.SetActive(true);
             MoveX(rt, position);

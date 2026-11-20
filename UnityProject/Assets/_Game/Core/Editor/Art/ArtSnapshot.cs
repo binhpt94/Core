@@ -59,6 +59,9 @@ namespace Game.Core.EditorTools
                 }
                 else
                 {
+                    var changes = ArtImport.Sync(); // bind the versions in use first: pictures show what the game shows
+                    if (changes.Count > 0)
+                        Debug.Log("[ArtSnapshot] ArtImport: " + string.Join("; ", changes));
                     var files = CaptureAll();
                     Debug.Log("[ArtSnapshot] " + files.Count + " pictures written.");
                     foreach (var f in files.Where(IsBlank))

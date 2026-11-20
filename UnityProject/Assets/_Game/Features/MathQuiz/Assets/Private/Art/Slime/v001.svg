@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="104" height="170" viewBox="0 0 104 170">
+  <!-- MathQuiz.Slime v001 (Claude): tall jelly blob, flat cartoon, thick dark outline; pivot 50/50 = canvas centre -->
+  <!-- body -->
+  <path d="M52 5 C78 5 99 48 99 98 C99 140 90 165 52 165 C14 165 5 140 5 98 C5 48 26 5 52 5 Z"
+        fill="#5ad65c" stroke="#173a1c" stroke-width="7" stroke-linejoin="round"/>
+  <!-- cel shade (lower right) -->
+  <path d="M95.5 98 C95.5 138 87 161.5 52 161.5 C72 150 86 128 89 92 Z" fill="#3aa843"/>
+  <!-- ground contact shade -->
+  <path d="M14 150 C24 160 80 160 90 150 C82 162 22 162 14 150 Z" fill="#2f8f39"/>
+  <!-- highlight -->
+  <ellipse cx="33" cy="42" rx="9" ry="17" fill="#ffffff" fill-opacity="0.75" transform="rotate(-22 33 42)"/>
+  <circle cx="46" cy="22" r="4" fill="#ffffff" fill-opacity="0.75"/>
+  <!-- eyes -->
+  <ellipse cx="35" cy="90" rx="14" ry="17" fill="#ffffff" stroke="#173a1c" stroke-width="4"/>
+  <ellipse cx="69" cy="90" rx="14" ry="17" fill="#ffffff" stroke="#173a1c" stroke-width="4"/>
+  <circle cx="38" cy="95" r="8" fill="#173a1c"/>
+  <circle cx="72" cy="95" r="8" fill="#173a1c"/>
+  <circle cx="41" cy="91" r="3" fill="#ffffff"/>
+  <circle cx="75" cy="91" r="3" fill="#ffffff"/>
+  <!-- cheeks -->
+  <ellipse cx="22" cy="118" rx="7" ry="4.5" fill="#ff8fa3" fill-opacity="0.8"/>
+  <ellipse cx="82" cy="118" rx="7" ry="4.5" fill="#ff8fa3" fill-opacity="0.8"/>
+  <!-- mouth -->
+  <path d="M42 121 Q52 132 62 121" fill="none" stroke="#173a1c" stroke-width="5" stroke-linecap="round"/>
+</svg>

@@ -85,7 +85,9 @@ Allowed: `[Serializable]` DTOs named `*Data`.
 ## ARCH023
 **Public API must match `PublicApi.txt`** (Core: `Core/Runtime/PublicApi.txt`; each Contracts folder: `Contracts/PublicApi.txt`).
 The test writes the compiled API to `Dashboard/Data/api/*.received.txt` and prints the diff. Breaking a contract is a deliberate decision:
-the baseline files are CODEOWNERS-protected and denied to the agent. Report the diff, don't update it yourself.
+the baseline files are CODEOWNERS-protected and denied to the agent. Prefer adding over removing. If the change is intended, run
+`./Tools/test-gate.sh api accept <Group>` alone: the owner sees the `+`/`-` lines (breaking or additive, who uses it) and answers yes/no;
+the CLI recompiles the API and writes nothing if it changed after the owner was asked. `api status` lists what waits.
 
 ## Code shape
 
@@ -319,13 +321,16 @@ uncheck *Auto Reference*; the adapter references it explicitly (`overrideReferen
 `vendor source=` folder in `Tools/ArchitecturePolicy.txt` whose `sha256` matches (no "quick fixes" in vendor code, no game code hidden in
 `Assets/Plugins`). Locally the hash is cached per file (path, size, mtime) in `Dashboard/Data/vendor-hash-cache.txt`, so an
 unchanged multi-GB SDK costs only file stats; CI (`CI=true`) and `GAME_ARCH_NO_CACHE=1` always hash the full content. UPM vendors are pinned by `package=` + `version=` against `Packages/manifest.json`.
-Fix: never edit vendor files; to upgrade, a code owner updates the folder and records `./Tools/test-gate.sh vendor-hash <folder>`.
+Fix: never edit vendor files; to upgrade, update the folder/manifest, then run `./Tools/test-gate.sh policy vendor update <id>` alone
+(the gate re-pins version/sha256, the owner answers yes/no).
 Source plugins without an asmdef land in `Assembly-CSharp-firstpass`, which asmdefs cannot reference: give the vendor folder an asmdef/asmref.
 
 ## ARCH094
 **Third-party usage follows its tier.** `foundation` (UniTask): everywhere. `presentation` (DOTween, TextMeshPro): Unity layers only,
 never Logic/Contracts. `sdk` (ads, IAP, analytics, Firebase): **only its declared `adapter=` assembly** (and that feature's tests).
 Unregistered third-party references fail. Fix: depend on the adapter feature's Contracts (e.g. `IAdsService`), never on the SDK.
+A new vendor: `./Tools/test-gate.sh policy vendor add id=… tier=… assemblies=… (package=… version=… | source=Assets/ThirdParty/X) [adapter=…]`
+alone (validated first, sha256 computed by the gate, the owner answers yes/no).
 
 ## ARCH095
 **Exceptions are first-party, scoped, explained and time-boxed:**

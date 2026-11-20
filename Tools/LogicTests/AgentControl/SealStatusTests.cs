@@ -12,7 +12,7 @@ namespace LogicTests.AgentControl
     public sealed class SealStatusTests
     {
         private static readonly DateTime Run = new DateTime(2026, 11, 20, 10, 0, 0, DateTimeKind.Utc);
-        private const string Plan = "## F-A  A  [P0] [modules: M]\n- R-1  one\n- R-2  two\n";
+        private const string Plan = "## F-A  A  [P0] [modules: M]\n- R-1  one  [critical]\n- R-2  two  [critical]\n";
 
         private static PlanInputs Inputs(bool r1Passes = true)
         {

@@ -133,20 +133,22 @@ thread and checks the lifetime.
 - At Stop: every changed file must be in scope, tests must not be weakened (fewer asserts/tests, new Ignore/Assume/#if), then the gate.
 - **MCP (Unity, Blender):** read tools (get/list/find/screenshot/run_tests) are free. Tools that change things need a task and
   are observed like Bash: every file they change is yours (scope, rules, Stop), including a prefab Unity saves later. Tools that
-  run arbitrary code (`execute_blender_code`, `execute_menu_item`, ...) are blocked: use the specific tool, or ask the human
-  (`Tools/mcp-policy.txt` is theirs). Save scenes/prefabs in the editor before you finish: the gate only sees the disk.
+  run arbitrary code (`execute_blender_code`, `execute_menu_item`, ...) are blocked: use the specific tool; if none can do it,
+  `mcp allow exec <tool>` (an owner command, below; `Tools/mcp-policy.txt` is theirs). Save scenes/prefabs in the editor before you finish: the gate only sees the disk.
 - **Red because of a HUMAN** (their plan typo, misplaced file, inspector/gameplay tweak, removed assert: the event log proves
   you didn't write it): Stop lets you finish and lists it as "waiting for a HUMAN". It is **not yours**: don't fix it, don't work
   around it, just mention it in your final message. The human gets the commands in their terminal and on the dashboard.
-- **Owner commands** (`task approve`, `roadmap accept R`, `art accept S`, `cr decide CR-n approve|reject "why"`, `tests unseal R "why"`,
-  `tests grandfather`, `GOLDEN_WRITE=1 …`, `LAYOUT_WRITE=1 …`): only when the owner asked for it or a gate tells you to. Run the
+- **Owner commands** (`task approve`, `roadmap accept R`, `art accept S` | `art accept --draft "FILE"`, `cr decide CR-n approve|reject "why"`, `tests unseal R "why"`,
+  `tests grandfather`, `api accept <Game.Core|Game.F.Contracts>` (ARCH023 baseline), `policy vendor add k=v… | update <id>`
+  (ARCH093/094), `mcp allow read|write|exec <tool|'prefix*'>`, `GOLDEN_WRITE=1 …`, `LAYOUT_WRITE=1 …`): only when the owner asked for it or a gate tells you to. Run the
   command **alone** (no `;`, `&&`, `|`, `$(…)`, `bash -c`); the hook shows the owner what the gate computed and they answer
   yes/no. One yes = one run of exactly those args (`OwnerAsk`). Chained/wrapped forms stay blocked; a "no" is final: don't retry.
   The dialog text (plain Vietnamese: what, content, status, Yes/No, what to check, undo) is `OwnerAskText`; show it to the owner
   beforehand with `./Tools/test-gate.sh owner-preview <args>` (`golden`, `layout …` for baselines); it asks and grants nothing.
 - `.agent/` (event log, task) is written only by the gate. Your final message is recorded as a CLAIM and shown next to the evidence.
 - Useful: `task show` · `events tail 20` · `roadmap next` · `task close` when done. Ask these commands (short, computed answers);
-  never read `Dashboard/Data/` or `.agent/`: the dashboard is for the human, and reading it costs tokens for nothing.
+  never read `.agent/`. `Dashboard/Data/` is the human's: prefer the commands; when you need the raw output (e.g. which Unity
+  test failed in `EditMode.xml`), Grep/Read exactly that file: the owner is asked yes/no, one yes = one read (no `cat` via Bash).
 
 ## 9. Roadmap: what to build (Docs/Plan/features.md, owned by the human)
 - **Don't plan from memory.** `./Tools/test-gate.sh roadmap next` says what can be done now (parallel lanes, the exact
@@ -154,7 +156,10 @@ thread and checks the lifetime.
 - Start planned work with `--req`: the task's scope comes from the feature's `[modules]`; blocked items are refused
   (hard dependency not DONE, contract not frozen, or not `[rush]`). Rush prints the integration debt it creates.
 - New tests that implement a requirement get `[Covers("R-ID")]` (`using Game.TestSupport;`). Unknown ids fail ARCH111.
-- **Separation of duties (requirement tests):** the session that writes a requirement's tests never writes its code. `roadmap next`
+- **Plain requirements (default):** one task (`task start … --req R-…`, no `--role`) writes the tests and the code; VERIFIED when
+  the tests pass. `task close` prints what the tests you added/changed check (`tests summary [R-ID|F-ID]` any time): keep test
+  names and asserts readable, that summary is what the owner reads.
+- **Separation of duties (`[critical]` requirements only):** the session that writes their tests never writes their code. `roadmap next`
   gives three lanes, each with its exact command:
   - `--role tests`: write tests in `Features/<F>/Tests/` plus a skeleton (new members with `=> default` bodies, never `throw`), commit,
     then `./Tools/test-gate.sh tests seal R-…` (lint: real asserts; red first: they must FAIL ON AN ASSERTION, twice the same).
@@ -178,7 +183,10 @@ thread and checks the lifetime.
 - **Story · Gameplay · Art:** story goals are `[story]` requirements checked by design-lint tests over content data
   (archetypes in `Logic/Domain`), not hard-coded content. Art goes through **slots** (`<F>ArtSlots.cs` contracts; graybox is
   generated from them): never reference art prefabs from gameplay, never resize/retime gameplay to fit art (change the
-  contract → ask the human). Art debt is for artists; `art accept` is the owner's (yes/no).
+  contract → ask the human). Candidates need only the automatic art gate; `art accept` (owner, yes/no) is for the final only.
+  Owner says "sync file duyệt art": Read the newest `~/Downloads/art-accept.draft*.txt` (or the path they give), then run
+  `./Tools/test-gate.sh art accept --draft "<absolute path>"` alone; never edit the draft.
+  Art never blocks dev: art debt is for artists and never holds DONE, dependants or `task start`.
 
 ## 10. Files: where things go, what is junk
 - **Scratch work goes to `.scratch/`** (gitignored, outside Assets/, never imported): throwaway scenes, dumps, notes.
@@ -196,8 +204,8 @@ thread and checks the lifetime.
 for replay/dispose/stale-result tests, assert `Logger.Errors` empty in `TearDown`. C# 9 + NUnit 3.5 APIs only.
 
 ## 12. Workflow
-1. Restate the task; `roadmap next` → `task start ... --role tests|impl|arbiter --req R-...` (or `--feature F` for unplanned maintenance).
-2. `test-gate.sh plan` → role tests: failing test first, commit, `tests seal`; role impl: implement until the sealed tests pass → `dotnet test Tools/LogicTests`.
+1. Restate the task; `roadmap next` → `task start ... --req R-...` (`[critical]`: `--role tests|impl|arbiter`; `--feature F` for unplanned maintenance).
+2. `test-gate.sh plan` → failing test first, then the code (`[critical]`: role tests commits and runs `tests seal`; role impl implements until the sealed tests pass) → `dotnet test Tools/LogicTests`.
 3. Unity-side changes are batched; `test-gate.sh run` once at the end.
 4. Update the feature README if API/lifetimes/invariants changed.
 5. Report: what changed, which gates ran / didn't, anything you couldn't follow and why.
@@ -207,7 +215,7 @@ for replay/dispose/stale-result tests, assert `Logger.Errors` empty in `TearDown
   `Tools/ArchitecturePolicy.txt`, `Docs/Architecture/`, `Assets/ThirdParty/`, `Assets/Plugins/`, `.claude/`, `.github/`, `ProjectSettings/`,
   `Assets/_Game/Core/Editor/`, `**/Tests/Replays/`, `**/Tests/Layout/`, `Docs/Plan/accepted.txt`, `Docs/Plan/art-accepted.txt`;
   `Docs/Plan/features.md` and `Docs/Plan/Core.md` only via Edit/Write after the owner's yes, see §9):
-  they are denied to you and CODEOWNERS-reviewed. Need a new vendor or exception? Ask the human.
+  they are denied to you and CODEOWNERS-reviewed. New vendor: `policy vendor add …` (owner yes/no). Exception: ask the human.
   Core maintenance (changing the rules or tools themselves): `task request --core "<why>"`; only after the human approves it
   may that task edit protected files (never `.agent/`). It ends with `task close`.
 - Bypass a gate: `--no-verify`, changing `core.hooksPath`, `[Ignore]`, weakening a test, disabling the Play Mode gate.

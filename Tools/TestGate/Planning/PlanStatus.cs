@@ -19,7 +19,7 @@ namespace TestGate.Planning
         public const string Unverified = "UNVERIFIED";      // code of its modules changed after the last test run
         public const string Stale = "STALE";                // its wording changed after it was verified
         public const string NeedsReview = "NEEDS_REVIEW";   // [manual], waiting for a human
-        public const string Unsealed = "UNSEALED";          // tests exist but no independent session sealed them (TestRoles)
+        public const string Unsealed = "UNSEALED";          // [critical]: tests exist but no independent session sealed them (TestRoles)
         public const string Tampered = "TAMPERED";          // sealed tests changed after sealing
         public const string Disputed = "DISPUTED";          // the impl session says a sealed test is wrong: an arbiter (or the owner) decides
         public const string Deferred = "DEFERRED";
@@ -65,7 +65,7 @@ namespace TestGate.Planning
         public string Hash { get; set; }
         public List<string> Tests { get; set; } = new List<string>();
         public bool OwnerDecides { get; set; }           // a dispute escalated to the owner (reword the requirement)
-        public string Role { get; set; }                 // who works this gap: tests | impl | arbiter (TestRoles)
+        public string Role { get; set; }                 // who works this gap: tests | impl | arbiter (TestRoles; [critical] only), null = one task without --role
     }
 
     public sealed class DependencyState
@@ -96,7 +96,11 @@ namespace TestGate.Planning
         public List<string> Slots { get; set; } = new List<string>();
         public string ArtRequired { get; set; }
         public string ArtLevel { get; set; }
+        /// <summary>Art below the planned level or a failing art gate: work for the art lane; never blocks DONE, dependencies or task start.</summary>
         public List<string> ArtDebt { get; set; } = new List<string>();
+        public bool ArtComplete => ArtDebt.Count == 0;
+        /// <summary>[art-risk] feasibility requirements a human has not accepted yet: a warning for the owner, never a block.</summary>
+        public List<string> ArtRisk { get; set; } = new List<string>();
         public List<string> BlockedBy { get; set; } = new List<string>();
         public List<RequirementState> Requirements { get; set; } = new List<RequirementState>();
         public List<DependencyState> Dependencies { get; set; } = new List<DependencyState>();
@@ -276,6 +280,8 @@ namespace TestGate.Planning
                     });
                 foreach (var a in fs.ArtDebt)
                     report.Gaps.Add(new Gap { Kind = "ART_DEBT", Feature = fs.Id, Detail = a, Actor = "art", Severity = 5 });
+                foreach (var a in fs.ArtRisk)
+                    report.Gaps.Add(new Gap { Kind = "ART_RISK", Feature = fs.Id, Detail = a, Actor = "art", Severity = 4 });
                 if (fs.Total == 0)
                     report.Gaps.Add(new Gap { Kind = "NO_REQUIREMENTS", Feature = fs.Id, Detail = "feature has no requirement yet", Actor = "human", Severity = 6 });
                 foreach (var d in fs.Debt)
@@ -325,13 +331,14 @@ namespace TestGate.Planning
             if (covers.Count == 0)
             {
                 s.Status = ReqStatus.NoTest;
-                s.Role = TestRoles.Tests;
+                s.Role = r.IsCritical ? TestRoles.Tests : null;
                 s.Detail = "no test has [Covers(\"" + r.Id + "\")]";
                 return s;
             }
-            if (SealProblem(input, r, s))
+            // Separation of duties only for [critical]: other requirements count when their tests pass (one task, no --role).
+            if (r.IsCritical && SealProblem(input, r, s))
                 return s;
-            s.Role = TestRoles.Impl;
+            s.Role = r.IsCritical ? TestRoles.Impl : null;
             var outcomes = covers.Select(c => (c, input.Results.Find(c.TestKey))).ToList();
             var missing = outcomes.Where(o => o.Item2.Count == 0).Select(o => o.c.TestKey).ToList();
             var failed = outcomes.SelectMany(o => o.Item2).Where(o => !o.Passed).Select(o => o.Key).Distinct().ToList();
@@ -349,10 +356,10 @@ namespace TestGate.Planning
             }
             if (input.Ledger.TryGetValue(r.Id, out var e) && e.RequirementHash != r.Hash)
             {
-                s.Role = TestRoles.Tests;
+                s.Role = r.IsCritical ? TestRoles.Tests : null;
                 s.Status = ReqStatus.Stale;
                 s.Detail = e.TestsHash == input.TestsHash(r.Id)
-                    ? "wording changed after verification and no covering test was updated (update the tests, or a human runs `roadmap accept`)"
+                    ? "wording changed after verification and no covering test was updated (update the tests, or run `roadmap accept` alone: the owner answers yes/no)"
                     : "wording changed; tests were updated: run the gate to verify again";
                 return s;
             }
@@ -369,7 +376,7 @@ namespace TestGate.Planning
             return s;
         }
 
-        /// <summary>Separation of duties: a requirement counts only with tests sealed by another session, unchanged since, and undisputed.</summary>
+        /// <summary>Separation of duties ([critical] only): it counts only with tests sealed by another session, unchanged since, and undisputed.</summary>
         private static bool SealProblem(PlanInputs input, PlanRequirement r, RequirementState s)
         {
             input.Seals.TryGetValue(r.Id, out var seal);
@@ -439,10 +446,10 @@ namespace TestGate.Planning
                 }
             }
 
-            // [art-risk]: deep gameplay waits until a human accepted that the art is feasible (decide Sói/Hổ BEFORE coding 3 skills).
+            // [art-risk]: the owner should decide art feasibility early (Sói/Hổ BEFORE 3 skills), but art never blocks dev: a warning only.
             if (f.ArtRisk)
                 foreach (var r in fs.Requirements.Where(x => plan.Requirement(x.Id).IsFeasibility && !ReqStatus.IsDone(x.Status)))
-                    fs.BlockedBy.Add("art feasibility " + r.Id + " chưa được người duyệt");
+                    fs.ArtRisk.Add("art feasibility " + r.Id + " chưa được người duyệt (gameplay vẫn làm được; quyết sớm để tránh làm lại)");
 
             // What this feature asked other modules for (CRs): owed until delivered; it works on a fake meanwhile, never waits idle.
             foreach (var debt in CrPlanning.Debt(report, input.Crs, fs.Id))
@@ -451,7 +458,7 @@ namespace TestGate.Planning
                 fs.Debt.Add(debt);
             }
 
-            bool allReq = fs.Total > 0 && fs.Verified == fs.Total && fs.ArtDebt.Count == 0;
+            bool allReq = fs.Total > 0 && fs.Verified == fs.Total; // art debt is tracked apart (ArtComplete): it never holds DONE back
             bool started = fs.Requirements.Any(r => r.Status != ReqStatus.NoTest && r.Status != ReqStatus.NeedsReview);
             string status = allReq && depsOk ? FeatureStatus.Done
                 : fs.BlockedBy.Count > 0 && !started ? FeatureStatus.Blocked

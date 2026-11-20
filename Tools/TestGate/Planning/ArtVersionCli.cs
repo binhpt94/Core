@@ -56,7 +56,7 @@ namespace TestGate.Planning
             {
                 var uses = log.Use.Where(u => u.Value == v.Id).Select(u => "uses:" + u.Key);
                 Console.WriteLine(v.Id + "  " + v.Date + "  " + v.Tier.PadRight(9) + " " + v.By.PadRight(6) + " from " + v.Parent.PadRight(4) + "  " +
-                                  string.Join(" ", uses.Concat(approved.Contains(v.Id) ? new[] { "approved" } : new string[0])) + (v.Note.Length > 0 ? "  \"" + v.Note + "\"" : ""));
+                                  string.Join(" ", uses.Concat(approved.Contains(v.Id) ? new[] { "accepted" } : new string[0])) + (v.Note.Length > 0 ? "  \"" + v.Note + "\"" : ""));
             }
             return 0;
         }
@@ -166,7 +166,7 @@ namespace TestGate.Planning
                 foreach (var line in File.ReadAllLines(p))
                 {
                     var f = line.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (f.Length >= 5 && f[0] == slotId && f[4].StartsWith("v", StringComparison.Ordinal))
+                    if (f.Length >= 5 && f[0] == slotId && f[4].StartsWith("v", StringComparison.Ordinal) && f[3].IndexOf(".candidate.", StringComparison.Ordinal) < 0) // finals only
                         set.Add(f[4]);
                 }
             return set;

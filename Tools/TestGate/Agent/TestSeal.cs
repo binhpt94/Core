@@ -64,6 +64,12 @@ namespace TestGate.AgentControl
             return null;
         }
 
+        public const string NotCritical = "not [critical]: only [critical] requirements are sealed (separation of duties); " +
+                                          "the others count when their tests pass, written and implemented in one task without --role";
+
+        /// <summary>Seals, disputes and rulings matter only for [critical] requirements (a requirement no longer in the plan: no).</summary>
+        public static bool IsCritical(Plan plan, string id) => plan?.Requirement(id)?.IsCritical == true;
+
         // ------------------------------------------------------------------ seal
 
         public static SealOutcome Seal(string root, AgentTask task, IEnumerable<string> reqs, string session, string now)
@@ -80,6 +86,7 @@ namespace TestGate.AgentControl
                 string fail = r == null ? id + ": not in the plan"
                     : !task.Requirements.ContainsKey(id) ? id + ": not a requirement of task " + task.Id
                     : r.IsManual ? id + ": [manual] requirements are accepted by a human, not sealed"
+                    : !r.IsCritical ? id + ": " + NotCritical
                     : null;
                 var mine = covers.Where(c => c.Requirement == id).ToList();
                 if (fail == null && mine.Count == 0)
@@ -248,8 +255,9 @@ namespace TestGate.AgentControl
         {
             var keys = new HashSet<string>(StringComparer.Ordinal);
             var seals = SealStore.Load(root);
+            var plan = PlanParser.Load(root);
             foreach (var c in PlanRules.Covers(root))
-                if (seals.TryGetValue(c.Requirement, out var s) && !s.Void && !s.Verified && s.Red != "legacy")
+                if (IsCritical(plan, c.Requirement) && seals.TryGetValue(c.Requirement, out var s) && !s.Void && !s.Verified && s.Red != "legacy")
                     keys.Add(c.TestKey);
             return keys;
         }
@@ -267,7 +275,7 @@ namespace TestGate.AgentControl
             var done = new List<string>();
             var covers = PlanRules.Covers(root);
             string now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
-            foreach (var s in SealStore.Load(root).Values.Where(x => !x.Void && !x.Verified && x.Red != "legacy"))
+            foreach (var s in SealStore.Load(root).Values.Where(x => !x.Void && !x.Verified && x.Red != "legacy" && IsCritical(plan, x.Requirement)))
             {
                 var mine = covers.Where(c => c.Requirement == s.Requirement).ToList();
                 if (mine.Count == 0 || mine.Any(c => results.Find(c.TestKey).Count == 0) || mine.SelectMany(c => results.Find(c.TestKey)).Any(o => !o.Passed))
@@ -288,6 +296,8 @@ namespace TestGate.AgentControl
                 return SealOutcome.Fail("dispute runs in a task with --role impl");
             if (!task.Requirements.ContainsKey(id))
                 return SealOutcome.Fail(id + ": not a requirement of task " + task.Id);
+            if (!IsCritical(PlanParser.Load(root), id))
+                return SealOutcome.Fail(id + ": " + NotCritical);
             if (string.IsNullOrWhiteSpace(reason))
                 return SealOutcome.Fail("say why the test is wrong, with evidence (what the requirement says vs what the test demands)");
             var seals = SealStore.Load(root);
@@ -311,6 +321,8 @@ namespace TestGate.AgentControl
                 return SealOutcome.Fail("rule runs in a task with --role arbiter");
             if (!task.Requirements.ContainsKey(id))
                 return SealOutcome.Fail(id + ": not a requirement of task " + task.Id);
+            if (!IsCritical(PlanParser.Load(root), id))
+                return SealOutcome.Fail(id + ": " + NotCritical);
             if (ruling != "keep" && ruling != "fix" && ruling != "ask")
                 return SealOutcome.Fail("ruling: keep (the test is right) | fix (the test is wrong: fix it and seal again) | ask (the requirement is ambiguous)");
             if (string.IsNullOrWhiteSpace(reason))
@@ -411,13 +423,15 @@ namespace TestGate.AgentControl
                         return 3;
                     o = sub == "unseal" ? Unseal(root, Arg(2), Arg(3), now) : Grandfather(root, now);
                     break;
+                case "summary":
+                    return TestSummary.Cli(root, Arg(2));
                 case "status":
                     foreach (var s in SealStore.Load(root).Values.OrderBy(x => x.Feature).ThenBy(x => x.Requirement))
                         Console.WriteLine(s.Requirement.PadRight(22) + (s.Void ? "unsealed" : s.Ask ? "ask owner" : s.OpenDispute ? "disputed" : s.Suspect ? "re-check" : "sealed") +
                                           "  author=" + s.Author + "  red=" + s.Red + (s.DisputeCount > 0 ? "  disputes=" + s.DisputeCount : ""));
                     return 0;
                 default:
-                    Console.Error.WriteLine("usage: tests seal R-ID… | dispute R-ID \"why\" | rule R-ID keep|fix|ask \"why\" | status | (owner) unseal R-ID \"why\" | grandfather");
+                    Console.Error.WriteLine("usage: tests summary [R-ID|F-ID] | ([critical] only) seal R-ID… | dispute R-ID \"why\" | rule R-ID keep|fix|ask \"why\" | status | (owner) unseal R-ID \"why\" | grandfather");
                     return 2;
             }
             foreach (var m in o.Messages)

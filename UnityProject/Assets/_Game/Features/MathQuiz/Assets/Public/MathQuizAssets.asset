@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63ff214773111624081fc97e7b142fd0, type: 3}
+  m_Name: MathQuizAssets
+  m_EditorClassIdentifier: Game.MathQuiz.Unity::Game.MathQuiz.Presentation.MathQuizAssets
+  config: {fileID: 0}
+  viewPrefab: {fileID: 4008675201238961865, guid: bb2fb4fbabd16055a83b12e525692e54, type: 3}

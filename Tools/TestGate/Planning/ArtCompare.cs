@@ -27,7 +27,8 @@ namespace TestGate.Planning
             var sb = new StringBuilder();
             sb.Append("<!doctype html><html lang=\"vi\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
             sb.Append("<title>").Append(E(s.Id)).Append(" · so sánh art</title><style>").Append(Css).Append("</style></head><body>");
-            sb.Append("<header><h1>").Append(E(s.Id)).Append("</h1><p class=\"intent\">").Append(E(s.Intent.Length > 0 ? s.Intent : "(contract chưa có intent)"))
+            // Briefs live in Dashboard/Data/art/briefs/: the dashboard is three folders up (its Art tab is where finals are ticked).
+            sb.Append("<header><p class=\"meta\"><a href=\"../../../index.html\">← Dashboard (tab Art: tick bản final để duyệt)</a></p><h1>").Append(E(s.Id)).Append("</h1><p class=\"intent\">").Append(E(s.Intent.Length > 0 ? s.Intent : "(contract chưa có intent)"))
               .Append("</p><p class=\"meta\">Mức hiện tại: <b>").Append(E(level ?? ArtLevels.Graybox)).Append("</b> · khung ")
               .Append(s.MinWidth).Append("–").Append(s.MaxWidth).Append(" × ").Append(s.MinHeight).Append("–").Append(s.MaxHeight)
               .Append(" · pivot ").Append(s.PivotXPercent).Append("%,").Append(s.PivotYPercent).Append("% ±").Append(s.PivotTolerancePercent).Append("%</p>");

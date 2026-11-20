@@ -9,7 +9,7 @@ namespace TestGate.Planning
     /// <summary>Ties a task to plan requirements: readiness at start, STALE when the human rewords/removes them mid-task.</summary>
     public static class TaskPlanLink
     {
-        /// <summary>Requirements of the task whose wording changed (or that were removed) since the task started.</summary>
+        /// <summary>Requirements of the task whose wording changed (or that were removed, or became [critical] under a task without --role) since the task started.</summary>
         public static List<string> Stale(Plan plan, AgentTask task)
         {
             var result = new List<string>();
@@ -24,6 +24,8 @@ namespace TestGate.Planning
                     result.Add(kv.Key + " was changed in the plan (now: \"" + r.Text + "\")");
                 else if (plan.Feature(r.Feature) is PlanFeature f && (f.Deferred || f.Dropped))
                     result.Add(kv.Key + ": feature " + f.Id + " is now " + (f.Dropped ? "dropped" : "deferred"));
+                else if (r.IsCritical && task.Role == null)
+                    result.Add(kv.Key + " is [critical] now: a task without --role cannot make it count. task close, then work it in 3 roles (roadmap next: --role tests, then --role impl in another session)");
             }
             return result;
         }

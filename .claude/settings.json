@@ -17,7 +17,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash|Task|Agent|SendMessage|mcp__.*",
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash|Task|Agent|SendMessage|Read|Grep|mcp__.*",
         "hooks": [
           {
             "type": "command",
@@ -87,7 +87,13 @@
       "Bash(./Tools/test-gate.sh tests unseal:*)",
       "Bash(Tools/test-gate.sh tests unseal:*)",
       "Bash(./Tools/test-gate.sh tests grandfather:*)",
-      "Bash(Tools/test-gate.sh tests grandfather:*)"
+      "Bash(Tools/test-gate.sh tests grandfather:*)",
+      "Bash(./Tools/test-gate.sh api accept:*)",
+      "Bash(Tools/test-gate.sh api accept:*)",
+      "Bash(./Tools/test-gate.sh policy vendor:*)",
+      "Bash(Tools/test-gate.sh policy vendor:*)",
+      "Bash(./Tools/test-gate.sh mcp allow:*)",
+      "Bash(Tools/test-gate.sh mcp allow:*)"
     ],
     "deny": [
       "Edit(**/*.unity)",
@@ -106,7 +112,6 @@
       "Edit(.agent/**)",
       "Write(.agent/**)",
       "Bash(./Tools/test-gate.sh files clean --regenerable --library:*)",
-      "Read(Dashboard/Data/**)",
       "Read(.agent/**)"
     ]
   }

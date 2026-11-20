@@ -11,23 +11,22 @@ namespace TestGate.Planning
     public static class ArtLevels
     {
         public const string Graybox = "GRAYBOX";      // nothing bound: the generated placeholder (always meets the contract)
-        public const string Candidate = "CANDIDATE";  // real art bound, not approved by a human
-        public const string Stale = "STALE";          // approved once, but the art file changed since (approval is per content hash)
-        public const string Approved = "APPROVED";    // a human accepted THIS content (`art accept`)
-        public const string Final = "FINAL";          // approved, bound as final, and the art gate passed on it
+        public const string Candidate = "CANDIDATE";  // real art bound (candidate, or a final not accepted yet): only the automatic art gate applies
+        public const string Stale = "STALE";          // a final accepted once, but its content changed since (acceptance is per content hash)
+        public const string Final = "FINAL";          // bound as final, a human accepted THIS content (`art accept`), art gate passed
 
         public static int Rank(string level)
         {
             switch (level)
             {
-                case Final: return 3;
-                case Approved: return 2;
+                case Final: return 2;
                 case Candidate: case Stale: return 1;
                 default: return 0;
             }
         }
 
-        public static int RankOfPlan(string planLevel) => planLevel == null ? -1 : Array.IndexOf(PlanParser.ArtLevels, planLevel);
+        /// <summary>Rank a plan level ([art: graybox|candidate|final]) needs; the legacy "approved" reads as candidate.</summary>
+        public static int RankOfPlan(string planLevel) => planLevel == null ? -1 : Array.IndexOf(PlanParser.ArtLevels, PlanParser.NormalizeArtLevel(planLevel));
     }
 
     public sealed class SlotState
@@ -81,23 +80,28 @@ namespace TestGate.Planning
                 s.Hash = ContentHash(root, file, guids);
                 ReadGate(root, s);
                 s.Version = ArtVersions.InUse(root, d.Id, s.BoundAs);
-                if (accepted.TryGetValue(d.Id, out var hashes))
+                accepted.TryGetValue(d.Id, out var hashes);
+                // Only a FINAL needs a human (`art accept`); every earlier version only has to pass the automatic art gate.
+                if (s.BoundAs != "final")
                 {
-                    if (hashes.Contains(s.Hash)) // any approved content: going back to an approved version is approved again
-                    {
-                        s.Level = s.BoundAs == "final" && s.Gate == "passed" ? ArtLevels.Final : ArtLevels.Approved;
-                        s.Detail = "approved by a human for this content" + (s.Level == ArtLevels.Final ? ", final, art gate passed" : "");
-                    }
-                    else
-                    {
-                        s.Level = ArtLevels.Stale;
-                        s.Detail = "the art changed after approval: a human must look again (`art accept " + d.Id + "`)";
-                    }
+                    s.Level = ArtLevels.Candidate;
+                    s.Detail = "real art bound (candidate): needs only the automatic art gate" + (s.Gate == "passed" ? " (passed)" : s.Gate == "not run" ? " (pending)" : "");
+                }
+                else if (hashes != null && hashes.Contains(s.Hash)) // going back to an accepted final is accepted again
+                {
+                    s.Level = s.Gate == "passed" ? ArtLevels.Final : ArtLevels.Candidate;
+                    s.Detail = s.Level == ArtLevels.Final ? "final, accepted by a human, art gate passed" : "final accepted by a human, waiting for the art gate";
+                }
+                else if (hashes != null && hashes.Count > 0)
+                {
+                    s.Level = ArtLevels.Stale;
+                    s.Detail = "the final changed after acceptance: a human must look again (`art accept " + d.Id + "`)";
                 }
                 else
                 {
                     s.Level = ArtLevels.Candidate;
-                    s.Detail = "real art bound (" + s.BoundAs + "), waiting for human approval";
+                    s.Detail = s.Gate == "passed" ? "final bound, art gate passed: waiting for the owner (`art accept " + d.Id + "` or the dashboard's Art tab)"
+                        : "final bound, waiting for the art gate and then the owner's acceptance";
                 }
                 if (s.Gate == "failed")
                     s.Detail += "; art gate FAILED: " + string.Join("; ", s.Violations.Take(3));
@@ -136,7 +140,7 @@ namespace TestGate.Planning
             s.Gate = s.Violations.Count == 0 ? "passed" : "failed";
         }
 
-        /// <summary>Slot → every content hash a human approved (one line per approval; switching versions keeps them).</summary>
+        /// <summary>Slot → every FINAL content hash a human accepted (one line per acceptance; switching versions keeps them).</summary>
         public static Dictionary<string, HashSet<string>> LoadAccepted(string root)
         {
             var map = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -145,7 +149,9 @@ namespace TestGate.Planning
                 foreach (var line in File.ReadAllLines(p))
                 {
                     var parts = line.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 2 && !parts[0].StartsWith("#", StringComparison.Ordinal))
+                    // Acceptance is for finals only: an old line for a candidate binding is history and counts for nothing.
+                    bool candidateLine = parts.Length >= 4 && parts[3].IndexOf(".candidate.", StringComparison.Ordinal) >= 0;
+                    if (parts.Length >= 2 && !parts[0].StartsWith("#", StringComparison.Ordinal) && !candidateLine)
                     {
                         if (!map.TryGetValue(parts[0], out var set))
                             map[parts[0]] = set = new HashSet<string>(StringComparer.Ordinal);

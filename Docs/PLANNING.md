@@ -38,9 +38,12 @@ deps: hard F-QUIZ-CORE · contract F-ADS (IAdsService) · soft F-ARENA
 
 - Feature tags: `[P0]`…`[P3]` (default P2), `[modules: A, B]`, `[rush]`, `[deferred]`, `[dropped]`.
 - Requirement tags: `[manual]` (verified by a human with `roadmap accept`, e.g. look and feel), `[story]` (an experience goal
-  of the story, checked by design-lint tests over content), `[art]`, `[feasibility]` (manual: "can art deliver this?").
-- Art (see "Story · Gameplay · Art" below): `[slots: F.Name, ...]` the art slots the feature shows, `[art: graybox|candidate|approved|final]`
-  the art level it needs to be DONE, `[art-risk]` gameplay requirements wait until the `[feasibility]` ones are accepted.
+  of the story, checked by design-lint tests over content), `[art]`, `[feasibility]` (manual: "can art deliver this?"),
+  `[critical]` (high risk: simulation rules, money, saved data; its tests go through separation of duties, see below. Not part
+  of the requirement's hash: tagging it makes nothing STALE).
+- Art (see "Story · Gameplay · Art" below): `[slots: F.Name, ...]` the art slots the feature shows, `[art: graybox|candidate|final]`
+  the art level it should ship with (below it = art debt, which never blocks DONE or dependants; the legacy `approved` reads as
+  `candidate`), `[art-risk]` warns the owner while the `[feasibility]` requirements are not accepted (it never blocks gameplay).
 - Dependencies:
   - `hard F-X`: needs F-X **DONE**. Never skipped, not even by rush.
   - `contract F-X (IName)`: needs only the interface. Normally F-X DONE; with `[rush]` it is enough that `IName` is
@@ -62,9 +65,9 @@ Requirement:
 | UNVERIFIED | code changed after the last test run | agent |
 | STALE | the human reworded it after it was verified, and no covering test changed since (re-running old tests doesn't count) | agent / human |
 | NEEDS_REVIEW | `[manual]`, waiting for a human | human |
-| UNSEALED | tests exist but no independent session sealed them (or the wording changed since, or red first is pending on Unity) | agent (role tests) |
-| TAMPERED | sealed tests changed after sealing | agent (role tests/arbiter) |
-| DISPUTED | the impl session says a sealed test is wrong: an arbiter rules; escalated (`ask`, or the 3rd dispute) it is the owner's | agent (arbiter) / human |
+| UNSEALED | `[critical]` only: tests exist but no independent session sealed them (or the wording changed since, or red first is pending on Unity) | agent (role tests) |
+| TAMPERED | `[critical]` only: sealed tests changed after sealing | agent (role tests/arbiter) |
+| DISPUTED | `[critical]` only: the impl session says a sealed test is wrong: an arbiter rules; escalated (`ask`, or the 3rd dispute) it is the owner's | agent (arbiter) / human |
 
 Feature: **DONE** = every requirement VERIFIED/ACCEPTED, every hard and contract dependency DONE, no debt.
 Otherwise IN_PROGRESS / PLANNED / BLOCKED (a hard dependency not done and nothing started) / DEFERRED / DROPPED.
@@ -73,9 +76,19 @@ Progress is shown as "5/7 requirement đã kiểm chứng": never a guessed perc
 Other gaps: `DEBT` (rush integration still owed), `NO_REQUIREMENTS`, `UNPLANNED_CODE` (a feature folder changed that no
 active feature lists in `[modules]`), `PROPOSAL` (inbox waiting for the human).
 
-## Separation of duties: who writes the tests
+## Separation of duties: who writes the tests (`[critical]` only)
 
-Code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestLint.cs`. Three roles, each a separate session
+**Default: no seal.** A requirement without `[critical]` is written and implemented in one task (`task start … --req R-…`, no
+`--role`) and is VERIFIED when its covering tests pass. Its old seals, disputes and re-checks are ignored; `--role`, `tests seal`,
+`dispute` and `rule` refuse it. What still guards it: TestGuard at Stop (fewer tests/asserts, new Ignore/Assume/#if) and the
+**test summary** printed at `task close` (each test the task added or changed, as words + shortened asserts, also logged as
+`TASK_TEST_SUMMARY`; any time: `tests summary [R-ID|F-ID]`). The trade-off is explicit: a plain requirement is not protected
+against an AI grading its own work; mark it `[critical]` when that matters.
+
+A requirement that becomes `[critical]` while a task without `--role` works on it makes that task STALE ("task close, then 3
+roles"); a task without `--role` cannot start on a `[critical]` one. The other way round, its seal stops mattering.
+
+For `[critical]` requirements, code: `Tools/TestGate/Agent/TestRoles.cs`, `TestSeal.cs`, `SealStore.cs`, `TestLint.cs`. Three roles, each a separate session
 (`task start --role …`; PreToolUse refuses a session that sealed the tests to write their code, or one that wrote or disputed them to rule):
 
 | Role | Writes | Ends with |
@@ -192,11 +205,16 @@ Three branches that move at different speeds. The rules that keep them from bloc
 4. **Art gate** (Unity EditMode, `Game.Core.Editor.Tests`, category `Art:<slot>`): measures bound art (rect/sprite/renderer
    bounds, pivot, clips and events) and checks the contract. Changing an art file runs the gate of that slot only
    (`ChangeImpact` maps files → slots through GUIDs, one prefab hop).
-5. **Art level is computed:** GRAYBOX (nothing bound) → CANDIDATE (bound) → APPROVED (a human ran `art accept SLOT` for
-   this content hash) → FINAL (approved, bound as final, art gate passed). Editing approved art makes it **STALE**.
-6. **Plan:** `[slots: F.Name]` + `[art: approved]` on a feature → missing level is **ART_DEBT** (actor: art, shown in the
-   art lane, never assigned to agents); the feature can't be DONE with art debt. `[art-risk]` + a `[feasibility]`
-   requirement → gameplay work is blocked until a human accepts feasibility (decide wolf/tiger *before* coding 3 skills).
+5. **Art level is computed:** GRAYBOX (nothing bound) → CANDIDATE (bound; every candidate version needs **only the
+   automatic art gate**, no human) → FINAL (bound as final, art gate passed, and the owner ran `art accept SLOT` for this
+   content hash). **Only the final is accepted by a human**: `art accept` refuses candidates and finals whose gate has not
+   passed. Editing an accepted final makes it **STALE**.
+6. **Art never blocks dev.** `[slots: F.Name]` + `[art: final]` on a feature → a missing level or a failing art gate is
+   **ART_DEBT** (actor: art, shown in the art lane, never assigned to agents). DONE means gameplay done: art debt does not
+   hold a feature back, nor its hard dependants, nor `task start`. A red art gate blocks Stop only when the change *is* art
+   (binding, bound prefab, sprite, clip); when a contract or shared art code changed, the art gate only records debt.
+   `[art-risk]` + a `[feasibility]` requirement → a warning (ART_RISK in the art lane) until the owner accepts feasibility:
+   decide wolf/tiger early, but gameplay work is not blocked.
 7. **Nobody writes art tickets.** The brief (human, `.md`) and the image-model prompt (`.prompt.txt`) are GENERATED per slot
    from the contract (`intent`, envelope, pivot, actions with `frames`) plus the feature's style lock:
    `Features/<F>/Assets/Private/Art/_feature.style.md` (shared) and `<Name>.style.md` (one slot). Looks are judged by eye,
@@ -212,14 +230,15 @@ Three branches that move at different speeds. The rules that keep them from bloc
 ./Tools/test-gate.sh art brief [SLOT|--all]     # brief + prompt + compare page → Dashboard/Data/art/briefs/ (--print: stdout, for agents)
 ./Tools/test-gate.sh art note MathQuiz.Slime "too dark on the lane"   # rejection reason → Slime.style.md → next prompt
 ./Tools/test-gate.sh art status                 # every slot: level, bound file, art gate, measurement
-./Tools/test-gate.sh art accept MathQuiz.Slime  # OWNER (terminal or yes/no): approve this exact content
+./Tools/test-gate.sh art accept MathQuiz.Slime  # OWNER (terminal or yes/no): accept this exact FINAL (after its art gate passed)
+./Tools/test-gate.sh art accept --draft "/home/me/Downloads/art-accept.draft.txt"  # OWNER: every final ticked on the dashboard, one yes/no
 ./Tools/test-gate.sh roadmap next               # ...includes the art lane (artists / reviewers)
 ```
 
 ### Standard art process (every feature, every game made from this template)
 
-Who: **Claude** draws every candidate (SVG → PNG), **Codex CLI** paints the final from an approved candidate, the **owner**
-judges by eye and approves. Nobody writes tickets, nobody wires art by hand, every attempt is kept as a version.
+Who: **Claude** draws every candidate (SVG → PNG), **Codex CLI** paints the final from the candidate the owner picked, the **owner**
+judges by eye and accepts the final only (candidates pass on the automatic art gate). Nobody writes tickets, nobody wires art by hand, every attempt is kept as a version.
 
 | Step | Who | What |
 |---|---|---|
@@ -231,7 +250,7 @@ judges by eye and approves. Nobody writes tickets, nobody wires art by hand, eve
 | 6. Check | tests + tool | EditMode `Art:<slot>` (size/pivot/timing vs contract; in the gate). Pictures are a tool, not a test: `art shots` (Editor closed) or *Tools > Game > Art > Snapshot* (Editor open); they need a GPU. |
 | 7. Judge | owner | `art compare SLOT` → page with every version (contract drawn over it), the bound levels and the slot in the game on each device. A one-line note per picture → `art note` (kept in `Art/<Name>/<Name>.style.md`, carried by every later prompt). Back to 4 until it reads right. |
 | 8. Final | Codex | Only when the owner asks (costs money): `art codex SLOT [--from vNNN]` → Codex `image_gen` keeps the reference design → new final version. Same checks and page. |
-| 9. Approve | owner | `art accept SLOT` (yes/no). Approval is per content hash: switching back to an approved version is approved again; editing makes it STALE. |
+| 9. Accept | owner | Final only, after its art gate passed: `art accept SLOT` (yes/no). Acceptance is per content hash: switching back to an accepted final is accepted again; editing makes it STALE. Candidates are never accepted. Several at once: dashboard tab **Art** (thumbnail, zoom with the contract drawn over it, module and file paths, link to each compare page) → tick finals → "Lưu lựa chọn duyệt" downloads `art-accept.draft.txt` (`slot version hash` per line) → the owner asks an AI to sync it → `art accept --draft FILE` recomputes every line from the real art, leaves out what changed after the owner looked (or isn't a passing final) and asks yes/no ONCE for the rest; the yes is bound to exactly that list. |
 
 Versions live in `Assets/Private/Art/<Name>/`: `vNNN.png` (+ `vNNN.svg`), never rewritten, and `versions.txt` (history +
 `use candidate vNNN` / `use final vNNN`, written only by the tools). `art versions SLOT` lists them; `art use SLOT vNNN [--as TIER]`
