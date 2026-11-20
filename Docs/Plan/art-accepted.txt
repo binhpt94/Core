@@ -1,2 +1,3 @@
 # Art accepted by a human: <slot> <content hash> <date> <file> [version]. Written by `art accept`; one line per approved content.
 MathQuiz.Slime b1d966c5c71d 2026-11-20 UnityProject/Assets/_Game/Features/MathQuiz/Assets/Private/Art/Slime/Slime.candidate.prefab v001
+MathQuiz.Slime 56382427f50e 2026-11-20 UnityProject/Assets/_Game/Features/MathQuiz/Assets/Private/Art/Slime/Slime.final.prefab v002

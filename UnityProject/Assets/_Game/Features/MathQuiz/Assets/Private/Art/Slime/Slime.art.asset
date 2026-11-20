@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Core.Unity::Game.Core.Presentation.ArtSlotAsset
   slotId: MathQuiz.Slime
   candidate: {fileID: 6518493189457726094, guid: 6d9e82db4f9bd6215b78fe4c0a103bf3, type: 3}
-  final: {fileID: 0}
+  final: {fileID: 7540706489727987675, guid: 7656a2b7edc2334548d5f05185235373, type: 3}
