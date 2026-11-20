@@ -12,7 +12,6 @@ namespace Game.MathQuiz.Domain
     {
         public const string SlimeId = "MathQuiz.Slime";
         public const string BatId = "MathQuiz.Bat";
-        public const string CoinFxId = "MathQuiz.CoinFx";
 
         /// <summary>Lane marker: fits the lane band (0.15–0.85 of a 110–140 high lane), readable, centred pivot.</summary>
         public static ArtSlotContract Slime { get; } = new ArtSlotContract(SlimeId, ArtSlotKind.UiImage,
@@ -27,14 +26,6 @@ namespace Game.MathQuiz.Domain
             tickRate: ArenaConfig.TickRate, actions: new ArtAction[0],
             intent: "Second enemy type sharing the lanes with the slime; must be told apart from the slime instantly by silhouette.");
 
-        /// <summary>Coin flying into the coin total on the round summary (F-COINS): small, round, centred; if it animates,
-        /// it must arrive within 0.5–1.5 s so the summary keeps its pace. A static coin is fine (approved by the owner 2026-11-20).</summary>
-        public static ArtSlotContract CoinFx { get; } = new ArtSlotContract(CoinFxId, ArtSlotKind.UiImage,
-            minWidth: 24, maxWidth: 64, minHeight: 24, maxHeight: 64, pivotXPercent: 50, pivotYPercent: 50, pivotTolerancePercent: 10,
-            tickRate: ArenaConfig.TickRate,
-            actions: new[] { new ArtAction("Fly", marker: "arrive", minTick: 10, maxTick: 30, minSpeedPercent: 80, maxSpeedPercent: 125, required: false, frames: 8) },
-            intent: "Coin flying into the coin total on the round summary: small, round, rewarding.");
-
-        public IReadOnlyList<ArtSlotContract> Slots => new[] { Slime, Bat, CoinFx };
+        public IReadOnlyList<ArtSlotContract> Slots => new[] { Slime, Bat };
     }
 }

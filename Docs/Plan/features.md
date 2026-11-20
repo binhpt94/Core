@@ -58,12 +58,12 @@ deps: hard F-TIMER · contract F-ADS (IAdsService)
 - R-BAT-FAIR  Đợt dơi vẫn giữ khoảng thở 5 giây  [story]
 deps: hard F-ARENA
 
-## F-PAUSE  Tạm dừng  [P2] [modules: MathQuiz]
+## F-PAUSE  Tạm dừng  [P2] [modules: MathQuiz] [dropped]
 - R-PAUSE-FREEZE  Tạm dừng thì không có tick nào chạy, kể cả đồng hồ
 - R-PAUSE-RESUME  Tiếp tục đúng trạng thái trước khi dừng
 deps: hard F-TIMER
 
-## F-COINS  Xu thưởng khi thắng  [P2] [modules: MathQuiz, Progress] [slots: MathQuiz.CoinFx] [art: final]
+## F-COINS  Xu thưởng khi thắng  [P2] [modules: MathQuiz, Progress] [dropped]
 Thắng = qua hết 10 câu của vòng mà căn cứ còn máu. Xu được tích lũy qua các vòng (để sau này dùng ở cửa hàng).
 - R-COIN-WIN  Thắng vòng thì nhận xu; thua thì không nhận xu nào
 - R-COIN-AMOUNT  Số xu = 5 xu thắng vòng + 2 xu cho mỗi câu trả lời đúng
